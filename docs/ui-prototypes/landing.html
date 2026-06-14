@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Открытый фонд помощи — прототип лендинга</title>
+    <style>
+      :root {
+        --border: rgba(91, 65, 51, 0.16);
+        --border-soft: rgba(91, 65, 51, 0.12);
+        --muted: #795f53;
+        --title: #35251d;
+        --green: #4f9d69;
+        --amber: #d98151;
+        --blue: #6f82d6;
+        --purple: #b982c7;
+        --link: #7c5fcb;
+        --code: #5e493f;
+        --code-bg: rgba(255, 255, 255, 0.72);
+        --card-bg: #fffaf2;
+        --page-bg: #fff7ec;
+        --rail-muted: rgba(91, 65, 51, 0.13);
+        --rail-main: rgba(91, 65, 51, 0.28);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--title);
+        background:
+          radial-gradient(circle at 18% 16%, rgba(255, 190, 145, 0.46), transparent 28%),
+          radial-gradient(circle at 84% 18%, rgba(136, 198, 153, 0.34), transparent 30%),
+          var(--page-bg);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      .page {
+        min-height: 100vh;
+      }
+
+      .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 30px;
+      }
+
+      .topline {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        margin-bottom: 42px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 760;
+        letter-spacing: -0.04em;
+      }
+
+      .mark {
+        width: 34px;
+        height: 34px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: #f2b184;
+        color: var(--title);
+      }
+
+      .links {
+        display: flex;
+        gap: 18px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 0.74fr 1.26fr;
+        gap: 36px;
+        align-items: start;
+      }
+
+      .kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .kicker::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--green);
+      }
+
+      h1 {
+        margin: 0 0 18px;
+        color: var(--title);
+        font-size: clamp(44px, 7vw, 82px);
+        line-height: 0.92;
+        letter-spacing: -0.085em;
+      }
+
+      .lead {
+        margin: 0 0 22px;
+        max-width: 560px;
+        color: #73584d;
+        font-size: 18px;
+        line-height: 1.55;
+      }
+
+      .cta {
+        display: flex;
+        gap: 11px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
+
+      .btn {
+        border: 1px solid rgba(91, 65, 51, 0.2);
+        border-radius: 999px;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.52);
+        color: var(--title);
+        font: inherit;
+        font-weight: 760;
+      }
+
+      .btn.primary {
+        color: var(--page-bg);
+        background: var(--title);
+        border-color: var(--title);
+      }
+
+      .note {
+        max-width: 540px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .metric {
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 13px;
+        background: rgba(255, 255, 255, 0.52);
+      }
+
+      .metric small {
+        display: block;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+
+      .metric b {
+        display: block;
+        letter-spacing: -0.03em;
+      }
+
+      .feed {
+        border: 1px solid var(--border);
+        border-radius: 30px;
+        background: rgba(255, 255, 255, 0.62);
+        box-shadow: 0 28px 90px rgba(91, 65, 51, 0.12);
+        overflow: hidden;
+      }
+
+      .feed-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.52);
+      }
+
+      .feed-head strong {
+        letter-spacing: -0.03em;
+      }
+
+      .feed-head span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .rail-labels {
+        display: grid;
+        grid-template-columns: 70px 104px 1fr;
+        gap: 12px;
+        padding: 9px 16px;
+        border-bottom: 1px solid var(--border-soft);
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .rail-mini {
+        position: relative;
+        height: 18px;
+      }
+
+      .rail-mini span {
+        position: absolute;
+        top: 0;
+        transform: translateX(-50%);
+      }
+
+      .rail-mini .in { left: 18px; color: var(--green); }
+      .rail-mini .out { left: 38px; color: var(--amber); }
+      .rail-mini .proof { left: 58px; color: var(--blue); }
+      .rail-mini .main { left: 78px; color: var(--title); }
+
+      .event {
+        display: grid;
+        grid-template-columns: 70px 104px 1fr;
+        gap: 12px;
+        min-height: 82px;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--border-soft);
+      }
+
+      .event:last-child {
+        border-bottom: 0;
+      }
+
+      .date {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+        text-align: right;
+        padding-top: 18px;
+      }
+
+      .date b {
+        display: block;
+        color: var(--title);
+        font-size: 12px;
+      }
+
+      .rail {
+        --x-main: 78px;
+        --x-in: 18px;
+        --x-out: 38px;
+        --x-proof: 58px;
+        position: relative;
+        min-height: 82px;
+      }
+
+      .lane {
+        position: absolute;
+        top: -1px;
+        bottom: -1px;
+        width: 2px;
+        border-radius: 999px;
+        background: var(--rail-muted);
+      }
+
+      .lane.main { left: var(--x-main); background: var(--rail-main); }
+      .lane.in { left: var(--x-in); }
+      .lane.out { left: var(--x-out); }
+      .lane.proof { left: var(--x-proof); }
+
+      .rail.in .lane.in { background: color-mix(in srgb, var(--green) 72%, var(--rail-muted)); }
+      .rail.out .lane.out { background: color-mix(in srgb, var(--amber) 72%, var(--rail-muted)); }
+      .rail.anchor .lane.proof { background: color-mix(in srgb, var(--blue) 72%, var(--rail-muted)); }
+
+      .merge {
+        position: absolute;
+        top: 32px;
+        height: 2px;
+        border-radius: 999px;
+        background: var(--rail-main);
+      }
+
+      .rail.in .merge {
+        left: var(--x-in);
+        width: 60px;
+        background: linear-gradient(to right, var(--green), var(--rail-main));
+      }
+
+      .rail.out .merge {
+        left: var(--x-out);
+        width: 40px;
+        background: linear-gradient(to right, var(--amber), var(--rail-main));
+      }
+
+      .rail.anchor .merge {
+        left: var(--x-proof);
+        width: 20px;
+        background: linear-gradient(to right, var(--blue), var(--rail-main));
+      }
+
+      .rail.system .merge,
+      .rail.head .merge {
+        left: var(--x-main);
+        width: 0;
+      }
+
+      .node {
+        position: absolute;
+        top: 22px;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        transform: translateX(-10px);
+        display: grid;
+        place-items: center;
+        z-index: 3;
+        background: var(--page-bg);
+        border: 1px solid var(--border);
+        color: var(--node-color);
+        font-size: 11px;
+        font-weight: 900;
+        box-shadow: 0 0 0 5px var(--page-bg);
+      }
+
+      .rail.in .node { left: var(--x-in); --node-color: var(--green); }
+      .rail.out .node { left: var(--x-out); --node-color: var(--amber); }
+      .rail.anchor .node { left: var(--x-proof); --node-color: var(--blue); border-radius: 7px; }
+      .rail.system .node,
+      .rail.head .node { left: var(--x-main); --node-color: var(--purple); }
+      .rail.head .node { --node-color: var(--blue); }
+
+      .card {
+        align-self: center;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background: var(--card-bg);
+        box-shadow: 0 10px 28px rgba(91, 65, 51, 0.07);
+        overflow: hidden;
+      }
+
+      .card-main {
+        padding: 13px;
+      }
+
+      .row-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: start;
+        margin-bottom: 8px;
+      }
+
+      .title {
+        color: var(--title);
+        font-weight: 780;
+        letter-spacing: -0.025em;
+      }
+
+      .amount {
+        font-weight: 850;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .amount.in { color: var(--green); }
+      .amount.out { color: var(--amber); }
+      .amount.anchor { color: var(--blue); }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .meta span {
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+      }
+
+      .meta code {
+        color: var(--code);
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        padding: 1px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 11px;
+      }
+
+      .meta a {
+        color: var(--link);
+        text-decoration: none;
+      }
+
+      .chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .chip {
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 4px 7px;
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.72);
+        font-size: 11px;
+      }
+
+      .card-extra {
+        border-top: 1px solid var(--border-soft);
+        padding: 10px 13px;
+        background: rgba(255, 255, 255, 0.48);
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      @media (max-width: 980px) {
+        .hero { grid-template-columns: 1fr; }
+        .links { display: none; }
+      }
+
+      @media (max-width: 760px) {
+        .wrap { padding: 20px; }
+        .topline { align-items: start; flex-direction: column; }
+        .metrics { grid-template-columns: 1fr; }
+        .rail-labels { display: none; }
+        .event { grid-template-columns: 28px 1fr; padding: 10px 14px; }
+        .date { grid-column: 2; text-align: left; padding-top: 0; order: 2; }
+        .rail { grid-column: 1; grid-row: 1 / span 2; min-height: auto; }
+        .rail .lane:not(.main), .rail .merge { display: none; }
+        .rail .lane.main { left: 12px; }
+        .node,
+        .rail.in .node,
+        .rail.out .node,
+        .rail.anchor .node,
+        .rail.system .node,
+        .rail.head .node { left: 12px; top: 10px; }
+        .card { grid-column: 2; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="wrap">
+        <header class="topline">
+          <div class="brand"><span class="mark">◦</span><span>Открытый фонд помощи</span></div>
+          <nav class="links" aria-label="Навигация прототипа">
+            <span>Помочь</span><span>История</span><span>Дашборд</span><span>Проверить</span>
+          </nav>
+        </header>
+
+        <main class="hero">
+          <section>
+            <div class="kicker">Публичная история помощи</div>
+            <h1>Живая история заботы.</h1>
+            <p class="lead">
+              Пожертвования, покупки карт и ежедневные подтверждения сходятся в одну публичную историю.
+              Получатели не раскрывают имён и контактов.
+            </p>
+            <div class="cta">
+              <button class="btn primary">Помочь оплатить сессии</button>
+              <button class="btn">Посмотреть историю</button>
+            </div>
+            <div class="metrics">
+              <div class="metric"><small>Доступно</small><b>4 350 USDC</b></div>
+              <div class="metric"><small>Оплачено</small><b>27 сессий</b></div>
+              <div class="metric"><small>Подтверждение</small><b>закреплено</b></div>
+            </div>
+          </section>
+
+          <section class="feed" aria-label="Публичная история фонда">
+            <div class="feed-head"><strong>Публичная история</strong></div>
+            <div class="rail-labels">
+              <span></span>
+              <div class="rail-mini"><span class="in">вход</span><span class="out">карты</span><span class="proof">доказательство</span><span class="main">реестр</span></div>
+              <span>детали события</span>
+            </div>
+
+            <div class="event">
+              <div class="date"><b>8 июн</b>09:10</div>
+              <div class="rail system"><span class="lane in"></span><span class="lane out"></span><span class="lane proof"></span><span class="lane main"></span><span class="merge"></span><span class="node">◇</span></div>
+              <article class="card"><div class="card-main"><div class="row-top"><span class="title">Фонд создан</span><span class="amount">#0001</span></div><div class="meta"><span>кошелёк <code>7vaU1t9Q...b3mK</code></span><span>prev_hash <code>0000000000000000</code></span></div></div></article>
+            </div>
+
+            <div class="event">
+              <div class="date"><b>8 июн</b>10:42</div>
+              <div class="rail in"><span class="lane in"></span><span class="lane out"></span><span class="lane proof"></span><span class="lane main"></span><span class="merge"></span><span class="node">+</span></div>
+              <article class="card"><div class="card-main"><div class="row-top"><span class="title">Анонимное пожертвование · Phantom</span><span class="amount in">+250 USDC</span></div><div class="meta"><span>tx <a href="#">solscan.io/tx/4pV9qL...8xQm</a></span><span>hash <code>1d9c8a2b7e31</code></span></div></div></article>
+            </div>
+
+            <div class="event">
+              <div class="date"><b>10 июн</b>15:03</div>
+              <div class="rail in"><span class="lane in"></span><span class="lane out"></span><span class="lane proof"></span><span class="lane main"></span><span class="merge"></span><span class="node">+</span></div>
+              <article class="card"><div class="card-main"><div class="row-top"><span class="title">Анонимное пожертвование · Solflare</span><span class="amount in">+1 000 USDC</span></div><div class="meta"><span>tx <a href="#">solscan.io/tx/5GkT3h...dP91</a></span><span>от <code>9Jm4...Kq2v</code></span></div></div></article>
+            </div>
+
+            <div class="event">
+              <div class="date"><b>10 июн</b>18:20</div>
+              <div class="rail out"><span class="lane in"></span><span class="lane out"></span><span class="lane proof"></span><span class="lane main"></span><span class="merge"></span><span class="node">−</span></div>
+              <article class="card"><div class="card-main"><div class="row-top"><span class="title">Куплены подарочные карты Alter ×5</span><span class="amount out">−500 USDC</span></div><div class="meta"><span>чек <a href="#">/receipts/ALT-2026-0610-001.png</a></span><span>получатели <code>ben-7x2</code>, <code>ben-k91</code></span></div><div class="chip-row"><span class="chip">без имён получателей</span><span class="chip">чек опубликован</span></div></div></article>
+            </div>
+
+            <div class="event">
+              <div class="date"><b>11 июн</b>09:00</div>
+              <div class="rail anchor"><span class="lane in"></span><span class="lane out"></span><span class="lane proof"></span><span class="lane main"></span><span class="merge"></span><span class="node">#</span></div>
+              <article class="card"><div class="card-main"><div class="row-top"><span class="title">Хэш реестра закреплён в Solana</span><span class="amount anchor">ok</span></div><div class="meta"><span>anchor tx <a href="#">solscan.io/tx/2PqhV...7mAb</a></span><span>sha256 <code>9fd7e2b7c4a1f83ad442b0e6</code></span></div></div><div class="card-extra">Любой может пересчитать публичный реестр и сравнить хэш с этим якорем.</div></article>
+            </div>
+
+            <div class="event">
+              <div class="date"><b>12 июн</b>11:30</div>
+              <div class="rail out"><span class="lane in"></span><span class="lane out"></span><span class="lane proof"></span><span class="lane main"></span><span class="merge"></span><span class="node">−</span></div>
+              <article class="card"><div class="card-main"><div class="row-top"><span class="title">Куплены подарочные карты Alter ×12</span><span class="amount out">−1 200 USDC</span></div><div class="meta"><span>чек <a href="#">/receipts/ALT-2026-0612-002.pdf</a></span><span>пакет <code>batch-ru-msk-02</code></span></div></div></article>
+            </div>
+
+            <div class="event">
+              <div class="date"><b>13 июн</b>20:15</div>
+              <div class="rail in"><span class="lane in"></span><span class="lane out"></span><span class="lane proof"></span><span class="lane main"></span><span class="merge"></span><span class="node">+</span></div>
+              <article class="card"><div class="card-main"><div class="row-top"><span class="title">Анонимное пожертвование · multisend batch</span><span class="amount in">+2 000 USDC</span></div><div class="meta"><span>tx <a href="#">solscan.io/tx/AS7qB...k20V</a></span><span>получено <code>08:42 UTC</code></span></div></div></article>
+            </div>
+
+            <div class="event">
+              <div class="date"><b>14 июн</b>сейчас</div>
+              <div class="rail head"><span class="lane in"></span><span class="lane out"></span><span class="lane proof"></span><span class="lane main"></span><span class="merge"></span><span class="node">H</span></div>
+              <article class="card"><div class="card-main"><div class="row-top"><span class="title">Текущее публичное состояние</span><span class="amount anchor">4 350 USDC</span></div><div class="meta"><span>HEAD <code>#0018</code></span><span>latest_hash <code>aa42c2e0…</code></span><span>следующий якорь 15 июн, 09:00 UTC</span></div></div></article>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
