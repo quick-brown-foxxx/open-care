@@ -54,6 +54,42 @@ for repeat donor engagement.
      a hard-coded address), so we can add hot/cold/multi-sig without
      rewriting.
 
+2. **Tamper-evident ledger: hash-chained DB + daily Solana anchor.**
+   - **Off-chain DB is the source of truth.** Append-only — no `UPDATE`,
+     no `DELETE` ever. Every record carries a `prev_hash` linking it to
+     the previous record (git-style). Editing any historical record
+     breaks the chain.
+   - **Once a day, a CI job publishes the latest ledger hash to
+     Solana** as a single small transaction (the hash goes in a memo
+     field on a self-transfer or a no-op instruction). The same wallet
+     that holds donations is the publishing wallet.
+   - **Public site exposes verification:** anyone can pull the on-chain
+     history of anchor transactions, recompute the hash chain from the
+     public DB, and confirm the latest published hash matches. This
+     gives donors a real, technical way to verify the ledger
+     end-to-end — not just "we said we don't edit it."
+   - **Anonymity preserved:** only the hash goes on-chain. No
+     beneficiary handles, no amounts, no timestamps — just opaque
+     digests. Nothing on-chain can be linked to a person.
+   - **Why Solana:** best fit for "one cheap, fast, public
+     verification transaction a day." USDC is a first-class SPL token
+     (no bridge), consumer wallets (Phantom, Solflare) and a familiar
+     explorer (Solscan) make donor verification easy, and
+     transaction cost is a fraction of a cent — so the "we anchor
+     daily" narrative is sustainable even at low donation volume.
+     Ethereum L1 fees ($1–$10+, volatile) would be bad optics for a
+     charity; L2s and Bitcoin are workable but have weaker stablecoin
+     / consumer-wallet stories.
+   - **Why not "fully on-chain":** gift-card receipts are off-chain
+     data (screenshots, platform-generated), so a fully on-chain
+     system still needs a DB — giving us *two* sources of truth,
+     worse on anonymity (every record public forever), and a long
+     learning curve in smart-contract development we don't need for
+     MVP.
+   - **Architecture is open to later upgrades:** multi-sig wallet
+     (Squads), on-chain donation program, cross-chain donations — all
+     possible without ripping out the hash-anchor pattern.
+
 2. **Public donor-facing site (landing + ledger).**
    - Total in / total out / current balance.
    - Two-column history: incoming donations vs. outgoing gift-card
@@ -62,6 +98,10 @@ for repeat donor engagement.
      receipt ID or anonymized screenshot URL), and **no beneficiary
      identity**.
    - Static, no auth. Read-only.
+   - **Verify surface:** a page (or button) that shows the latest
+     anchored hash, the on-chain transaction that published it, and
+     instructions for re-running the hash chain independently. This
+     is the donor's "proof we didn't tamper" affordance.
 
 3. **Manual operator workflow (structured, not freeform).**
    - Operator (me) records each conversion: amount, gift card count,
@@ -99,6 +139,22 @@ for repeat donor engagement.
 6. **Single-wallet MVP is acceptable.** Documented as a constraint,
    not a design choice. Recovery procedure, hot/cold split, multi-sig
    are deferred.
+
+7. **Daily anchor job (CI-driven).**
+   - A scheduled CI job (GitHub Actions or similar) computes the
+     hash of the latest ledger record once per day and publishes it
+     to Solana.
+   - Wallet key lives in a CI secret, never in code or in the repo.
+   - Job is idempotent and retryable; on success it logs the
+     transaction signature; on failure it surfaces a clear error
+     (the operator notices and can re-run manually if needed).
+   - Schedule: once a day, or after every disbursement batch —
+     whichever comes first. Cheap on Solana, so the difference is
+     just a habit.
+   - **Trust model:** the operator holds the key in CI secrets. A
+     fully decentralized key (multi-sig, on-chain program) is a
+     later upgrade. For MVP, "operator holds the key but the ledger
+     history is hash-anchored publicly" is the trust boundary.
 
 ### Out of scope for MVP (explicit deferrals)
 
@@ -163,46 +219,105 @@ will be produced via `brainstorming` and `planning-implementation`
 skills.
 
 ```
-                ┌──────────────────────────────────────────┐
-                │  Public donor site (static, read-only)   │
-                │  - incoming txns from chain              │
-                │  - outgoing gift-card purchases +        │
-                │    receipts (no PII)                     │
-                │  - totals / balance                      │
-                └────────────┬─────────────────────────────┘
-                             │ reads
-                             ▼
-                ┌──────────────────────────────────────────┐
-                │  Main database (the "vault")             │
-                │  - wallets (table, single row for MVP)   │
-                │  - donations (incoming txns)             │
-                │  - disbursements (outgoing: amount,      │
-                │    date, gift card count, service,       │
-                │    receipt ref, beneficiary HANDLE)      │
-                │  - NO real identities, NO Telegram IDs   │
-                └────────────▲─────────────────────────────┘
-                             │ writes (manual, by operator)
+                 ┌──────────────────────────────────────────┐
+                 │  Public donor site (static, read-only)   │
+                 │  - incoming txns from chain              │
+                 │  - outgoing gift-card purchases +        │
+                 │    receipts (no PII)                     │
+                 │  - totals / balance                      │
+                 │  - "verify" page: latest anchored hash   │
+                 │    + Solscan link + re-verify instructions│
+                 └────┬──────────────────┬──────────────────┘
+                      │ reads            │ reads
+                      ▼                  ▼
+   ┌─────────────────────────────┐  ┌──────────────────────┐
+   │  Main database (the "vault")│  │  Solana (anchor txns)│
+   │  - wallets (table)          │  │  - one tx / day:     │
+   │  - donations (incoming)     │  │    hash in memo      │
+   │  - disbursements (outgoing: │  │  - Solscan-readable  │
+   │    amount, date, count,     │  │  - public, no PII    │
+   │    service, receipt ref,    │  └─────────▲────────────┘
+   │    beneficiary HANDLE)      │            │
+   │  - prev_hash chain (append- │            │ reads
+   │    only, no UPDATE/DELETE)  │            │
+   │  - NO real identities,      │            │
+   │    NO Telegram IDs          │            │
+   └────────────▲────────────────┘            │
+                │                             │
+                │ writes (manual, by op)      │ writes
+                │                             │ (CI job, daily)
+   ┌────────────┴────────────┐    ┌────────────┴─────────────┐
+   │  Operator (me)          │    │  Daily anchor job (CI)  │
+   │  - sees handle          │    │  - compute latest hash  │
+   │  - publishes receipts   │    │  - sign + send tx       │
+   │  - manually buys        │    │  - key in CI secret     │
+   │    gift cards           │    │  - log signature        │
+   └─────────────────────────┘    └──────────────────────────┘
+                ▲
+                │ uses same wallet
+                │ for donations + anchor
+
+                ┌────────────────────────────────────────┐
+                │  Telegram bot (separate account)       │
+                │  - operator cannot read                │
+                │  - handle ↔ real ID mapping here       │
+                │  - optional share prompt (db-stored)   │
+                └────────────┬───────────────────────────┘
                              │
-   ┌───────────────────┐     │     ┌──────────────────────────┐
-   │  Operator (me)    │─────┘     │  Telegram bot             │
-   │  - sees handle    │           │  - separate account       │
-   │  - publishes      │           │  - operator cannot read   │
-   │    receipts       │           │  - handles ↔ real ID      │
-   │  - manually buys  │           │    mapping lives here     │
-   │    gift cards     │           │  - optional share prompt  │
-   └───────────────────┘           └─────────┬────────────────┘
-                                             │
-                                             ▼
-                                   ┌──────────────────┐
-                                   │  Beneficiaries   │
-                                   │  (Alter users)   │
-                                   └──────────────────┘
+                             ▼
+                   ┌──────────────────┐
+                   │  Beneficiaries   │
+                   │  (Alter users)   │
+                   └──────────────────┘
 ```
 
 **Key separation:** the main database never contains anything that
 identifies a beneficiary. The Telegram bot is the *only* place where
 real identity maps to handle. The operator workflow crosses both
 sides via the handle alone.
+
+**Trust layering:**
+- **What the database proves:** that records exist and form a
+  consistent append-only chain.
+- **What the Solana anchor proves:** that a specific point in that
+  chain was published publicly at a specific time, with a specific
+  transaction signature.
+- **What the public site proves:** that the records and the receipts
+  it shows are exactly the ones in the chain, end-to-end.
+- **What the Solana anchor does *not* prove:** that the receipts
+  are *true* (i.e., that a gift card was actually bought). That
+  still relies on the receipt being genuine, which is an
+  operational, not a cryptographic, property. Documented honestly
+  in the "What this is not" section below.
+
+---
+
+## What This Is Not (honest limits)
+
+A donor reading the architecture might mistakenly conclude that the
+on-chain anchor proves more than it does. To be explicit:
+
+- **It does not prove the receipts are real.** A real, published
+  receipt (screenshot from Alter, with a valid gift card code) is
+  the trust anchor for the off-chain truth. The hash chain proves
+  we didn't tamper with what we published; the receipt itself
+  proves we didn't fabricate it. Verification of receipt
+  authenticity is a future feature (Phase 2) that requires either
+  a real Alter API integration or opt-in beneficiary proof — both
+  deferred.
+- **It does not prove beneficiary identity is protected.** It
+  proves that *we* don't link beneficiary handles to real
+  identities in the public ledger. It cannot prove what the
+  Telegram bot does or does not store in its private channel —
+  that's operational discipline plus future bot-side engineering
+  (e.g., self-hosted bot, no operator admin access).
+- **It does not prove the operator won't lose the key.** A lost
+  Solana key means the anchor stops publishing and donors notice.
+  That is a *catastrophic but visible* failure mode, not a silent
+  one. Better than the alternative, but worth naming.
+
+These limits are documented in the donor-facing FAQ at launch so
+expectations match reality.
 
 ---
 
@@ -221,6 +336,11 @@ sides via the handle alone.
    operator-blind mode enforced by code? (Operator-blind by code is
    stronger but more engineering; operator-blind by discipline is
    faster but fragile.)
+6. **Solana RPC provider for the daily anchor job:** public RPC
+   (free, occasionally rate-limited) vs. paid (Helius / QuickNode /
+   Triton, a few $/month, much more reliable). For MVP, free is
+   fine if the script retries. For donor-facing "we publish daily"
+   reliability, paid is cheap insurance. Decide at spec.
 
 ---
 
@@ -239,3 +359,10 @@ sides via the handle alone.
 ## Change Log
 
 - 2026-06-14: Initial concept doc, captured from ideation session.
+- 2026-06-14: Add tamper-evident architecture — hash-chained DB with
+  a daily Solana anchor transaction (CI-driven). Adds the "Verify"
+  surface on the public site, the daily anchor job to MVP scope, an
+  updated architecture sketch, and a "What this is not" section
+  documenting the honest limits of the trust story. Solana chosen
+  over Ethereum L1 / L2s / Bitcoin for cost, stablecoin story, and
+  consumer-wallet ergonomics.
