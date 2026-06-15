@@ -1,0 +1,12 @@
+{
+  "name": "crypto-charity-vault",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.6.0",
+  "scripts": {
+    "cloudflare-wrangler": "wrangler"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}
