@@ -133,7 +133,15 @@ docs are updated together.
 - Public route `load` functions use `src/lib/api/**` and fetch only from
   read-only endpoints:
   `/api/totals`, `/api/donations`, `/api/disbursements`, `/api/ledger-events`,
-  `/api/verify`, `/api/about`, and `/api/faq`.
+  `/api/verify`.
+- The `/about` and `/faq` pages are **prerendered static SvelteKit
+  pages** (no runtime data fetch, no Worker call). The copy is
+  committed to the repo at `apps/web/src/routes/about/+page.svelte`
+  and `apps/web/src/routes/faq/+page.svelte` and rendered at build
+  time. A Playwright content-presence test (per
+  [`08-testing-strategy.md`](08-testing-strategy.md) §"What green CI
+  means") asserts that the required "honest limits" phrases are
+  present in the rendered DOM, so a copy regression fails CI.
 - Public responses are cache-friendly and may be stale within the API TTL; stale
   UI must be labeled instead of hidden.
 - `load` may run on the server or in the browser, but it must not require secrets.
@@ -144,18 +152,24 @@ docs are updated together.
 
 ### Operator pages
 
-- Operator writes go to `vault-api-write` and `tg-bot` endpoints through the
-  typed API client with `Authorization: Bearer <OPERATOR_TOKEN>`.
-- Operator request selection reads `GET /tg/internal/pending-requests` through
-  the same typed API client. The decoded row schema contains only `opaque_id`,
-  `conversation_id`, optional internal handle, request status, and timestamps;
-  it rejects Telegram IDs/chat IDs and gift-card code fields if they appear.
-- If write endpoints are called cross-origin from the browser, CORS must allow
-  only the configured frontend origin and must never use wildcard origins for
-  authenticated requests.
+- Operator writes go to the `vault-operator` Worker through the typed
+  API client with `Authorization: Bearer <OPERATOR_TOKEN>`. The
+  operator Worker is the sole holder of the token; downstream Workers
+  (`vault-api-write`, `vault-anchor-cron`, `tg-bot`) do not hold it
+  and are reached via service binding.
+- Operator request selection reads `GET /tg/internal/pending-requests`
+  (which is routed through `vault-operator`) through the same typed
+  API client. The decoded row schema contains only `opaque_id`,
+  `conversation_id`, optional internal handle, request status, and
+  timestamps; it rejects Telegram IDs/chat IDs and gift-card code
+  fields if they appear.
+- If write endpoints are called cross-origin from the browser, CORS
+  must allow only the configured frontend origin and must never use
+  wildcard origins for authenticated requests. The CORS policy
+  applies to `vault-operator`'s public path.
 - MVP token storage is memory-only in the browser. Do not store
-  `OPERATOR_TOKEN` in `localStorage`, `sessionStorage`, IndexedDB, cookies, URL
-  params, SvelteKit public env, or logs.
+  `OPERATOR_TOKEN` in `localStorage`, `sessionStorage`, IndexedDB,
+  cookies, URL params, SvelteKit public env, or logs.
 - Superforms + Valibot provide field-level validation and progressive UX, but
   the write API remains the security boundary and repeats validation.
 - If a future server-side `/admin` proxy is introduced, it must use an

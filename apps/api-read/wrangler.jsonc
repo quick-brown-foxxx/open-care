@@ -10,6 +10,9 @@
       "database_id": "c6a73f10-728d-49e2-8d71-28ea3344a47b"
     }
   ],
+  "vars": {
+    "SOLANA_CLUSTER": "devnet"
+  },
   "observability": {
     "enabled": true
   }

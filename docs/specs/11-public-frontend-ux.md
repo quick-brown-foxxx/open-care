@@ -31,8 +31,8 @@ hash chain, and report problems. Frontend architecture is in
 | `/ledger` | Full public ledger browser. | `/api/ledger-events`, `/api/donations`, `/api/disbursements`. |
 | `/ledger/[eventHash]` | Single event detail. | Ledger export/detail derived from public endpoint. |
 | `/verify` | Canonical proof/export page. | `/api/verify`, `/api/ledger-events`. |
-| `/about` | Project, operator, scope, and manual loop explanation. | Static copy or the `/api/about` response defined in [`04-api.md`](04-api.md). |
-| `/faq` | Honest limits and common questions. | Static copy or the `/api/faq` response defined in [`04-api.md`](04-api.md). |
+| `/about` | Project, operator, scope, and manual loop explanation. | Static SvelteKit page (prerendered; content is committed copy under `apps/web/src/routes/about/+page.svelte`). |
+| `/faq` | Honest limits and common questions. | Static SvelteKit page (prerendered; content is committed copy under `apps/web/src/routes/faq/+page.svelte`). |
 | `/contact` | Report mismatch/privacy issue/support path. | Static contact/report config. |
 
 `/verify` is the canonical proof route. Do not ship a separate `/proof` route in

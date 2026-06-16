@@ -78,9 +78,18 @@ Cloudflare account.
 An attacker gets `OPERATOR_TOKEN`.
 
 - **Mitigation:** strong random token, never logged, narrow write API,
-  append-only ledger makes fake writes visible.
-- **Blast radius:** attacker can append false disbursement events until token is
-  rotated; they cannot edit or delete history.
+  append-only ledger makes fake writes visible. The token is held
+  **only** by the `vault-operator` Worker; the downstream Workers
+  (`vault-api-write`, `vault-anchor-cron`, `tg-bot`) do not hold it
+  and are not publicly routable for the operator routes. A leak
+  surface in any other Worker (a debug log, a misconfigured CORS
+  rule, a worker-to-worker public proxy) cannot expose
+  `OPERATOR_TOKEN` because the secret is not present.
+- **Blast radius:** attacker can append false disbursement events
+  AND false `anchor_published` events AND send arbitrary gift-card
+  codes to beneficiaries until the token is rotated. They cannot
+  edit or delete history; the rotation is a single
+  `wrangler secret put` on the `vault-operator` Worker.
 
 ## Threats outside MVP scope
 
@@ -185,7 +194,9 @@ donor-ledger donation.
 
 ## Honest public limits
 
-The FAQ must state:
+The `/faq` page is a static, prerendered SvelteKit page (no runtime
+data fetch). The committed copy at
+`apps/web/src/routes/faq/+page.svelte` must state:
 
 - The anchor proves a ledger head was published, not that receipts are real.
 - The anchor memo commits to the pre-anchor head; the anchor event is covered by

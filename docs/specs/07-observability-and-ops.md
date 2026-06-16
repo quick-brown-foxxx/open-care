@@ -41,7 +41,7 @@ Any failed check returns `status: "degraded"`.
 | F-8 | RPC 429/5xx | Retry/error counters | Backoff; keep inbox row failed/pending for later retry. |
 | F-9 | `vault-db` unavailable | `/api/health` degraded or 503 | Wait for Cloudflare recovery; surface temporary unavailable message. |
 | F-10 | `bot-db` unavailable | Bot errors/timeouts | Bot replies with temporary unavailable message when possible. |
-| F-11 | `OPERATOR_TOKEN` leaked | Operator suspicion, unexpected writes | Rotate token in vault and bot Workers; inspect appended events. |
+| F-11 | `OPERATOR_TOKEN` leaked | Operator suspicion, unexpected writes | Rotate token on the `vault-operator` Worker only (`wrangler secret put OPERATOR_TOKEN`); inspect appended events; no other Worker is affected because no other Worker holds the token. |
 | F-12 | Bot token/account or Telegram identity secret compromised | Bot abuse, provider alert, or secret suspicion | Revoke token, redeploy bot, treat handles/identity refs as compromised, rotate chat-route keys, notify beneficiaries through safe channel. |
 | F-13 | Donor reports hash mismatch | Email/contact report | Re-run public verification, inspect ledger export and anchors, publish incident if real. |
 | F-14 | Deploy fails | GitHub Actions failure | Last good deploy stays live; fix and rerun. |

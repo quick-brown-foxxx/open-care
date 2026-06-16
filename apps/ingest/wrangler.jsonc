@@ -10,12 +10,13 @@
       "database_id": "c6a73f10-728d-49e2-8d71-28ea3344a47b"
     }
   ],
-  "secrets": {
-    "required": [
-      "HELIUS_WEBHOOK_AUTH_HEADER",
-      "HELIUS_RPC_URL"
-    ]
+  "vars": {
+    "SOLANA_CLUSTER": "devnet"
   },
+  // Secrets are managed via `wrangler secret put`, not declared here.
+  // The set of required secrets is documented in
+  // docs/ops/secrets-inventory.md. The MVP deploy script verifies
+  // presence; missing secrets fail the deploy.
   "routes": [
     {
       "pattern": "staging.open-care.org/webhook/helius",

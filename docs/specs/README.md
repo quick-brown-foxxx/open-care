@@ -36,11 +36,12 @@ directory are the current technical design.
 
 - **Donation rail:** Solana SPL USDC only. Donations are transfers to the vault USDC associated token account (ATA), not native SOL transfers.
 - **Ledger:** `ledger_events` is the canonical append-only donor ledger. Convenience typed tables/views may exist, but public verification is based on ledger event payloads.
-- **Hash chain:** each ledger event commits to `sequence_no`, `event_type`, `payload`, `prev_hash`, and `created_at_utc`. `event_hash` is never included in its own preimage.
-- **Anchoring:** the anchor wallet signs a Solana Memo instruction containing UTF-8 text `ccv-anchor:<64hex head_hash>`. The memo anchors the head before the anchor publication event.
+- **Hash chain:** each ledger event commits to `sequence_no`, `event_type`, `payload`, `prev_hash`, and `created_at_utc`. `event_hash` is never included in its own preimage. The canonicalization standard is **RFC 8785 (JCS)**; a normative test vector with expected bytes and expected `event_hash` is pinned in `03-data-model.md` §"Normative test vector" so any donor verifier in any language can be checked against it.
+- **Anchoring:** the anchor wallet signs a Solana Memo instruction containing UTF-8 text `ccv-anchor:<64hex head_hash>`. The memo anchors the head before the anchor publication event. Concurrent cron + manual anchor attempts are serialized via `anchor_runs.locked_until_utc`; a Worker crash after on-chain finalization is recovered by a backfill event whose `created_at_utc` equals the on-chain block time.
 - **Wallet split:** the treasury wallet/ATA receives USDC and has no private key in CI or Workers. The anchor wallet holds only SOL for transaction fees.
-- **Ingest:** Helius webhooks authenticate by the configured `authHeader` echoed in `Authorization`, ACK quickly, store a durable inbox entry, and process/reconcile asynchronously.
+- **Ingest:** Helius webhooks authenticate by the configured `authHeader` echoed in `Authorization` (constant-time comparison), ACK quickly, store a durable inbox row keyed by `(signature, source)`, and process/reconcile asynchronously.
 - **Privacy:** internal handles are sensitive pseudonymous data. Bot storage uses keyed HMAC Telegram user references and encrypted Telegram chat routes, not plaintext Telegram IDs. Public examples use server-generated `public_beneficiary_ref` values or omit beneficiary references. Donor memos are not exposed publicly by default.
+- **Public brand:** the project's public name is **Open Care** (matching the `open-care.org` domain and `open-care-web` Pages project). The technical prefix `ccv-` used in the on-chain Memo (`ccv-anchor:...`) and the AES-GCM AAD (`ccv:tg-chat-route:...`) is a project shorthand, not a public brand string.
 
 ## Cross-reference summary
 
@@ -53,4 +54,6 @@ directory are the current technical design.
 | Telegram bot beneficiary channel | `01-architecture.md`, `03-data-model.md`, `04-api.md`, `05-hosting-and-deploy.md`, `06-security-model.md`, `08-testing-strategy.md`, `09-decisions.md` |
 | Frontend stack and browser boundaries | `10-frontend-architecture.md`, `11-public-frontend-ux.md`, `12-operator-frontend-ux.md` |
 | Privacy and honest limits | `06-security-model.md`, `07-observability-and-ops.md`, `11-public-frontend-ux.md`, `12-operator-frontend-ux.md` |
+| Brand and project name | `09-decisions.md` §"Public project name", `04-api.md` (the FAQ/about pages are static, not API endpoints; the brand string lives in the SvelteKit source), `01-architecture.md`, `docs/concepts/2026-06-14-crypto-charity-vault.md` |
+| Hash chain canonicalization, correction policy, anchor lock+recovery | `02-invariants.md` §I-3, §I-4, §I-11, `03-data-model.md` §"Normative test vector" and §"anchor_runs", `04-api.md` §"POST /api/anchor/manual", `08-testing-strategy.md` §"Hash chain canonicalization (RFC 8785)", "Anchor recovery from a crash", "Correction policy (I-11)" |
 | Blockchain verification and test tiers | `08-testing-strategy.md`, `11-public-frontend-ux.md` |

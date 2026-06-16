@@ -163,6 +163,150 @@
   - One language, one package manager, and one test runner keep the backend
     consistent with the frontend and reduce operational overhead.
 
+### Single operator Worker holds `OPERATOR_TOKEN`; downstream Workers reached via service binding
+
+- **Where:** `01-architecture.md` §"Operator Worker trust model",
+  `04-api.md` (endpoint table, all operator endpoint sections),
+  `05-hosting-and-deploy.md` (vault resources, secrets matrix),
+  `12-operator-frontend-ux.md` §"Auth UX and token storage policy",
+  `06-security-model.md` §"T7 Operator token leak",
+  `07-observability-and-ops.md` §"F-11",
+  `AGENTS.md`.
+- **Decision:** introduce a new `vault-operator` Worker that is the
+  **sole holder of `OPERATOR_TOKEN`**. Every operator endpoint
+  (`POST /api/disbursements`, `POST /api/anchor/manual`,
+  `GET /tg/internal/pending-requests`, `POST /tg/internal/send-code`)
+  is served by `vault-operator`, which validates the token
+  (constant-time) and forwards the request to the right downstream
+  Worker via Cloudflare service binding:
+  - `/api/disbursements` → `vault-api-write`
+  - `/api/anchor/manual` → `vault-anchor-cron`
+  - `/tg/internal/*` → `tg-bot`
+  The downstream Workers do not hold `OPERATOR_TOKEN` and are not
+  publicly routable for these routes.
+- **Reasoning:** the rejected alternatives were (a) share
+  `OPERATOR_TOKEN` between `vault-api-write` and `tg-bot` (a leak
+  in one Worker compromises both) and (b) split into two tokens
+  (`VAULT_OPERATOR_TOKEN` + `BOT_OPERATOR_TOKEN`, two secrets, two
+  rotations, two-token UI for a single-operator MVP). The single
+  operator Worker gives one trust boundary, one secret, one
+  rotation, and the cleanest possible blast-radius narrowing. A
+  debug-log leak in `tg-bot` cannot capture the token because the
+  secret is not present. Service bindings are in-process and
+  not-publicly-routable, so the downstream Workers are not exposed
+  to the public internet for the operator routes; a binding
+  allowlist CI test enforces this.
+- **Migration trigger:** when the operator count grows to 2+, the
+  single `OPERATOR_TOKEN` is shared across humans, and a real leak
+  becomes a real cost. The split into two or more tokens is then
+  worth the operational overhead. Until then, the single Worker
+  is the right MVP choice.
+
+### Solana web3.js v1 (not v2)
+
+- **Where:** `01-architecture.md`, `package.json`, `pnpm-lock.yaml`.
+- **Decision:** use `@solana/web3.js` v1 (`^1.98.4`) and `@solana/spl-token` v1
+  (`^0.4.14`). Both packages are on the `latest` dist-tag on npm. v2 is on
+  the `next` dist-tag (a major API rewrite) and `@solana/spl-token` v2
+  does not exist on `latest` at all.
+- **Reasoning:** v1 is the stable, widely-deployed choice. Every
+  third-party Solana tool — Python `solana-py`, Rust `solana-sdk`,
+  Helius docs, donor-facing verifiers — targets v1. The MVP's
+  trust-critical claim "donors can write their own verifier in any
+  language" depends on the v1 wire format and SDK shape. Pinning
+  to v2 would mean pinning to a `next` channel, accepting pre-release
+  semantics, and committing to a verification ecosystem that does
+  not yet target the v2 API. v1 is "in maintenance mode" but
+  maintenance means security patches continue, not abandonment.
+  When v2 reaches `latest` and the ecosystem migrates, we will
+  evaluate a one-week migration window.
+- **Migration trigger:** v2 becomes `latest` AND has at least one
+  stable patch release AND the Helius + donor-verifier ecosystem
+  publishes v2-compatible libraries. Until all three hold, stay on
+  v1.
+
+### Public project name is "Open Care" (not "Crypto Charity Vault" or "Открытый фонд помощи")
+
+- **Where:** the `/about` and `/faq` SvelteKit pages (prerendered
+  static), `01-architecture.md`, `docs/concepts/2026-06-14-crypto-charity-vault.md`.
+  Note: there are no `/api/about` or `/api/faq` JSON endpoints; the
+  copy is committed to the SvelteKit source and rendered at build
+  time.
+- **Decision:** the public-facing brand string is **Open Care**,
+  matching the operational `open-care.org` domain and the
+  `open-care-web` Pages project. The on-chain Memo prefix `ccv-anchor:`
+  and the AES-GCM AAD `ccv:tg-chat-route:` are a technical project
+  shorthand, not a public brand.
+- **Reasoning:** the operational infrastructure (domain, Pages
+  project, Cloudflare account) is already "open-care"; the
+  alternative "Crypto Charity Vault" is in the concept doc and
+  prototype but is not in any operational config. Switching the
+  public-facing string to match ops is the cheapest path. The HTML
+  prototype uses "Открытый фонд помощи" as a placeholder and will be
+  updated to "Open Care" (Russian copy preserved at the section level
+  where it appears).
+
+### Hash chain canonicalization is RFC 8785 (JCS)
+
+- **Where:** `02-invariants.md` §I-3, `03-data-model.md` §"Event hash"
+  and §"Normative test vector", `04-api.md` §"Conventions".
+- **Decision:** the `canonical_json` function in the hash preimage is
+  RFC 8785 (JSON Canonicalization Scheme). A normative test vector
+  with pinned canonical bytes and pinned `event_hash` is checked
+  into the spec so any donor verifier in any language can be
+  validated against it.
+- **Reasoning:** the previous spec described canonicalization as a
+  list of rules (sorted keys, integer strings, etc.) without pinning
+  a standard. Two conformant implementations could produce different
+  bytes for the same input. RFC 8785 is the de facto standard for
+  cryptographic canonicalization and has libraries in TypeScript,
+  Python, Rust, and Go. The normative test vector catches
+  regressions.
+
+### Anchor lock protocol and crash recovery
+
+- **Where:** `02-invariants.md` §I-4, `03-data-model.md` §"anchor_runs",
+  `04-api.md` §"POST /api/anchor/manual".
+- **Decision:** the anchor worker uses `anchor_runs.locked_until_utc`
+  to serialize concurrent cron + manual anchor attempts. A run
+  sets `status='sending', locked_until_utc = now() + 10 minutes` on
+  start. Concurrent attempts find the active lock and return
+  `409 CONFLICT` with `error.code: "ANCHOR_RUN_IN_PROGRESS"`. A
+  cron tick that finds a stale lock (`updated_at_utc < now() - 10min`)
+  looks up the on-chain transaction; if finalized, it appends a
+  backfill `anchor_published` event with `created_at_utc = published_at_utc`
+  (the on-chain block time), so the event hash preimage is
+  independent of recovery time.
+- **Reasoning:** without the lock, two concurrent anchor attempts
+  would both send transactions with the same Memo text, wasting SOL
+  and producing two `anchor_published` events with conflicting
+  hashes. Without the recovery path, a Worker crash after tx
+  finalization but before ledger append would leave an orphaned
+  on-chain memo with no matching event.
+
+### Correction policy is restricted and the public API is bivalent
+
+- **Where:** `02-invariants.md` §I-11, `03-data-model.md` §"correction_recorded",
+  `04-api.md`.
+- **Decision:** `correction_recorded.replacement_fields` is a closed
+  whitelist (`receipt_ref`, `service_note` only). Amounts, counts,
+  chain fields, and timestamps are immutable; mistakes on those
+  fields are corrected by appending a new event (a reversal or a
+  re-recorded `disbursement_recorded`), not by a
+  `correction_recorded`. The public read API returns the original
+  event payload (matching the chain) verbatim; a future
+  `?include=corrections` query parameter may return the correction
+  chain in append order. The read API MUST NOT silently substitute
+  corrected values for original values, because that would make a
+  donor's offline verifier disagree with the JSON returned by the
+  site.
+- **Reasoning:** the previous spec allowed `replacement_fields` as
+  a free-form object, which a malicious or careless operator could
+  use to silently change `amount_usdc_minor` or `gift_card_count`.
+  The trust story requires that the public JSON and the on-chain
+  hash chain agree byte-for-byte; a bivalent API is the only way
+  to keep that promise.
+
 ## Explicit deferrals
 
 | Item | Why deferred | Trigger to revisit |
@@ -191,13 +335,15 @@ receipt evidence.
 
 ### How stable should `public_beneficiary_ref` be?
 
-Default: `vault-api-write` generates a fresh `^benpub_[A-Z0-9]{16}$`
-public reference per disbursement when `POST /api/disbursements` omits
-`public_beneficiary_ref`, or stores no public reference when the caller sends
-`null`. Do not accept caller strings or create a permanent per-person reference.
-If bot conversation state stores this value, it stores only the server-generated
-value returned by the disbursement write, never request or operator input.
-Revisit if donors need longitudinal aggregate counts without exposing handles.
+Default: `vault-operator` (forwarding to `vault-api-write`) generates a
+fresh `^benpub_[A-Z0-9]{16}$` public reference per disbursement when
+`POST /api/disbursements` omits `public_beneficiary_ref`, or stores
+no public reference when the caller sends `null`. Do not accept
+caller strings or create a permanent per-person reference. If bot
+conversation state stores this value, it stores only the
+server-generated value returned by the disbursement write, never
+request or operator input. Revisit if donors need longitudinal
+aggregate counts without exposing handles.
 
 ### How often should reconciliation run?
 

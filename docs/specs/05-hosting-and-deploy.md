@@ -33,12 +33,22 @@ databases, separate secrets, and binding allowlist checks in CI.
 
 Resources:
 
-- Pages project: `vault-web`.
+- Pages project: `open-care-web` (matches the deployed project name in `docs/ops/secrets-inventory.md` and the deploy command in `DEVELOPMENT.md`).
 - Workers:
-  - `vault-api-read` — `vault-db` read binding, no secrets.
-  - `vault-api-write` — `vault-db` write binding, `OPERATOR_TOKEN`.
+  - `vault-api-read` — `vault-db` read binding, no secrets. Public surface.
+  - `vault-operator` — no D1 binding. **Sole holder of `OPERATOR_TOKEN`.**
+    Service bindings to `vault-api-write`, `vault-anchor-cron`, and
+    `tg-bot`. Auths every operator request, then forwards to the
+    right downstream Worker via the binding. The public path is
+    reached via a public HTTPS route or via a Pages Function
+    proxy; the binding destinations are not publicly routable for
+    these routes.
+  - `vault-api-write` — `vault-db` write binding, no operator
+    secrets. Reached only via service binding from `vault-operator`.
   - `vault-ingest` — `vault-db` write binding, Helius auth/RPC config.
-  - `vault-anchor-cron` — `vault-db` write binding, anchor wallet secret.
+  - `vault-anchor-cron` — `vault-db` write binding, anchor wallet
+    secret. Reached via cron trigger or service binding from
+    `vault-operator` for manual triggers.
 - D1 database: `vault-db`.
 - Cron Trigger: daily anchor run, off the top of the hour.
 
@@ -46,19 +56,23 @@ Resources:
 
 Resources:
 
-- Worker: `tg-bot` with `bot-db` only.
+- Worker: `tg-bot` with `bot-db` only. Reached from the public
+  Telegram webhook and via service binding from `vault-operator`
+  for the internal endpoints.
 - D1 database: `bot-db`.
 
-Vault Workers do not receive the `bot-db` binding. The bot Worker does not
-receive the `vault-db` binding; it calls HTTP APIs when it needs vault actions.
-Cloudflare account admins can still access account resources, so this is not a
-state-adversary-grade isolation boundary.
+Vault Workers do not receive the `bot-db` binding. The bot Worker
+does not receive the `vault-db` binding; it returns a row from
+`bot-db` only, and `vault-operator` is the only Worker that calls it
+for the internal endpoints. Cloudflare account admins can still access
+account resources, so this is not a state-adversary-grade isolation
+boundary. The binding allowlist is checked in CI per invariant I-7.
 
 ## Secrets and environment variables
 
 | Name | Location | Required for PR CI? | Purpose |
 | --- | --- | --- | --- |
-| `OPERATOR_TOKEN` | `vault-api-write`, `tg-bot` Workers Secrets | no | Operator write auth and bot internal delivery calls. |
+| `OPERATOR_TOKEN` | `vault-operator` Worker Secret | no | Sole holder of the operator write auth. Validated by `vault-operator` and forwarded via service binding to `vault-api-write`, `vault-anchor-cron`, and `tg-bot`. The downstream Workers do not hold the token. |
 | `TG_BOT_TOKEN` | `tg-bot` Workers Secret | no | Telegram Bot API. |
 | `TG_WEBHOOK_SECRET` | `tg-bot` Workers Secret | no | Telegram webhook secret-token validation. |
 | `TG_ID_HMAC_KEY` | `tg-bot` Workers Secret | no | Keyed HMAC for non-reversible stable Telegram user references. |
@@ -70,7 +84,7 @@ state-adversary-grade isolation boundary.
 | `VAULT_USDC_ATA` | public config + ingest env | yes as non-secret test value | USDC token account watched for donations. |
 | `USDC_MINT` | public config | yes as non-secret test value | Cluster-specific USDC mint. |
 | `ANCHOR_WALLET_ADDRESS` | public config + anchor env | yes as non-secret test value | Public signer for Memo anchors. |
-| `ANCHOR_WALLET_SECRET` | anchor Worker / gated manual job only | no | Anchor wallet keypair; holds only SOL for fees. |
+| `ANCHOR_WALLET_SECRET` | `vault-anchor-cron` Worker Secret | no | Anchor wallet keypair; holds only SOL for fees. **Not in `vault-operator`** — manual triggers are routed through `vault-operator` to `vault-anchor-cron` via service binding. |
 | `SOLANA_CLUSTER` | all blockchain-aware environments | yes | `localnet`, `devnet`, or `mainnet-beta`. |
 
 The treasury private key is intentionally absent from CI, Workers, repository

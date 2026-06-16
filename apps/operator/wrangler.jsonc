@@ -1,0 +1,29 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "vault-operator",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-15",
+  "vars": {
+    "SOLANA_CLUSTER": "devnet"
+  },
+  // Secrets are managed via `wrangler secret put`, not declared here.
+  // The set of required secrets is documented in
+  // docs/ops/secrets-inventory.md. The MVP deploy script verifies
+  // presence; missing secrets fail the deploy.
+  //
+  // Service bindings: this Worker is the sole holder of
+  // OPERATOR_TOKEN. It validates the bearer, then forwards to the
+  // right downstream Worker via the binding. The downstream Workers
+  // are not publicly routable for the operator routes.
+  //
+  // The binding allowlist CI test enforces: vault-operator has no D1
+  // binding; the downstream Workers are reached only via these
+  // bindings, never via a public route.
+  //
+  // The Worker may be reached via a public HTTPS path or via a Pages
+  // Function proxy. The MVP uses a public route on
+  // `staging.open-care.org` (configurable) for the operator paths.
+  "observability": {
+    "enabled": true
+  }
+}

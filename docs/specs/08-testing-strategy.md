@@ -291,6 +291,80 @@ Then the API returns `422 VALIDATION_ERROR`
 And the rejected string is not logged
 ```
 
+### Feature: Hash chain canonicalization (RFC 8785)
+
+Scenario: writer and verifier produce the same `event_hash` for a fixed event
+
+```gherkin
+Given the normative test vector in 03-data-model.md §"Normative test vector"
+When a verifier recomputes SHA-256 over the RFC 8785 canonical bytes
+Then the produced `event_hash` equals "fda2610fb171efe75bf16a821f8b87764801bab1e2f4e69bdd98ccb53bf1df41"
+And the canonical bytes match the pinned string exactly
+```
+
+Scenario: a Python verifier produces the same hash
+
+```gherkin
+Given the normative test vector inputs
+When a third-party Python verifier using rfc8785 canonicalizes and hashes
+Then the produced hash matches the pinned value
+```
+
+### Feature: Anchor recovery from a crash
+
+Scenario: anchor transaction finalized but `anchor_published` event not appended
+
+```gherkin
+Given an anchor run with status='sending' and locked_until_utc < now() - 10 minutes
+And a finalized Solana transaction with the recorded tx_signature and memo_text
+When the next cron tick runs the recovery code
+Then a backfill `anchor_published` event is appended
+And the new event's `created_at_utc` equals the on-chain `published_at_utc` (block time)
+And the new event's `event_hash` is computed over the original-time preimage
+And `anchor_runs.status` is updated to 'published'
+And `locked_until_utc` is NULL
+```
+
+Scenario: concurrent cron and manual anchor
+
+```gherkin
+Given a cron anchor run is in flight with status='sending' and locked_until_utc > now()
+When the operator triggers a manual anchor
+Then the API returns 409 CONFLICT with error.code "ANCHOR_RUN_IN_PROGRESS"
+And the in-flight anchor_runs_id is returned for polling
+```
+
+### Feature: Correction policy (I-11)
+
+Scenario: correction targets a whitelisted field
+
+```gherkin
+Given an existing `disbursement_recorded` event with sequence_no N
+When the operator posts a correction with `replacement_fields: {receipt_ref: "NEW-REF"}`
+Then a `correction_recorded` event is appended
+And the corrected event N's payload in the ledger is unchanged
+And `/api/ledger-events` returns the original event N's payload byte-for-byte
+```
+
+Scenario: correction targets a non-whitelisted field
+
+```gherkin
+Given an existing `disbursement_recorded` event
+When the operator posts a correction with `replacement_fields: {amount_usdc_minor: "99999999"}`
+Then the API returns 422 VALIDATION_ERROR
+And no `correction_recorded` event is appended
+And the rejected keys are not logged
+```
+
+Scenario: correction re-uses a whitelisted field outside the whitelist
+
+```gherkin
+Given an existing `donation_confirmed` event
+When the operator posts a correction with `replacement_fields: {block_time_utc: "..."}`
+Then the API returns 422 VALIDATION_ERROR
+And no `correction_recorded` event is appended
+```
+
 ### Feature: Public frontend trust UX
 
 Scenario: landing renders a public-safe recent history preview
@@ -322,6 +396,31 @@ And it explains that the Memo commits to the pre-anchor head
 And it explains that the anchor event is covered by a later anchor
 ```
 
+### Feature: Static FAQ and About content
+
+Scenario: FAQ page contains required "honest limits" phrases
+
+```gherkin
+Given a built SvelteKit preview
+When a donor navigates to `/faq`
+Then the page contains the phrase "anchor proves a ledger head was published, not that receipts are real" (or a close paraphrase that the test vector allows)
+And the page contains a section on what hashes prove
+And the page contains a section on what receipts do NOT prove
+And the page mentions the pre-anchor-head semantics
+And no plaintext Telegram IDs, internal handles, donor memos, or gift-card codes appear
+```
+
+Scenario: About page contains the project name and trust promises
+
+```gherkin
+Given a built SvelteKit preview
+When a donor navigates to `/about`
+Then the page title is "Open Care" (or matches the configured `SITE_NAME` if the brand is renamed later)
+And the page describes the manual conversion loop
+And the page describes the wallet split (treasury vs anchor)
+And the page does not include HTML from user or provider input
+```
+
 ### Feature: Operator frontend safety
 
 Scenario: admin token is memory-only
@@ -350,14 +449,15 @@ And the plaintext code is cleared after successful delivery
 | --- | --- |
 | I-1 Append-only ledger | migration/static SQL check for no `UPDATE`/`DELETE` on `ledger_events`; correction event test |
 | I-2 Single chain | mixed-event round trip, monotonic sequence checks |
-| I-3 Payload-committing hash | payload mutation breaks chain; canonical JSON round-trip parity across packages and scripts |
-| I-4 Anchor state outside ledger | failed anchor updates `anchor_runs` only; success appends immutable event |
+| I-3 Payload-committing hash (RFC 8785) | normative test vector (writer and Python verifier produce the same hash); payload mutation breaks chain; cross-implementation parity; second-precision timestamp check; closed-schema check (no optional fields, only nullable) |
+| I-4 Anchor state outside ledger; lock protocol; recovery | failed anchor updates `anchor_runs` only; success appends immutable event; concurrent cron + manual returns 409; crash-recovery backfills event with `created_at_utc` = on-chain block time |
 | I-5 UTF-8 pre-head anchor | Memo text regex/UTF-8 tests; pre-anchor-head scenario |
 | I-6 Wallet split | secret scans; anchor code loads only anchor key; treasury private key absent |
-| I-7 No plaintext Telegram identity at rest | schema denylist for `telegram_user_id`/`telegram_chat_id`/standalone `chat_id`; binding allowlist; HMAC stability and different-key tests; chat-route encryption round-trip/failure tests; public/log redaction tests; pending-request response redaction tests |
+| I-7 No plaintext Telegram identity at rest; handle char class | schema denylist for `telegram_user_id`/`telegram_chat_id`/standalone `chat_id`; binding allowlist; HMAC stability and different-key tests; chat-route encryption round-trip/failure tests; public/log redaction tests; pending-request response redaction tests; handle `[A-Za-z0-9_]{3,32}` character class; handle `benpub_` prefix ban |
 | I-8 No sensitive public fields by default | public API contract tests for no donor memos or internal handles; `public_beneficiary_ref` generation/null/reject-string contract tests; send-code log/storage redaction tests for gift-card codes |
-| I-9 Public verification | `/api/ledger-events` export recomputes exact head; Solana Memo comparison |
-| I-10 Ingest reliability | auth header, ACK-fast, duplicate replay, reconciliation, finality/retry tests |
+| I-9 Public verification | `/api/ledger-events` export recomputes exact head using the normative test vector; Solana Memo comparison |
+| I-10 Ingest reliability (two-source PK) | auth header (constant-time), ACK-fast, duplicate replay, reconciliation, finality/retry tests, "same signature via webhook + reconciliation" scenario |
+| I-11 Correction policy | whitelist acceptance (`receipt_ref`, `service_note`); whitelist rejection (other keys); public API byte-for-byte round-trip (no silent value substitution) |
 
 ## Environment variables by test type
 
@@ -407,7 +507,8 @@ Green PR CI means:
 - unit, integration, invariant, and parity tests pass;
 - public API contract tests prove sensitive fields are absent;
 - SvelteKit check/lint/build and browser tests prove core public and operator
-  routes render correct states without sensitive fields;
+  routes render correct states without sensitive fields; the FAQ and About
+  pages contain the required "honest limits" phrases;
 - bot identity storage tests prove HMAC refs, encrypted chat routes, schema
   denylist, and log/API redaction behavior;
 - local-validator blockchain tests pass or are explicitly skipped because the

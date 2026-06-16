@@ -10,15 +10,13 @@
       "database_id": "8a87d3ff-8689-4e77-a9c5-85b5ca19afd9"
     }
   ],
-  "secrets": {
-    "required": [
-      "OPERATOR_TOKEN",
-      "TG_BOT_TOKEN",
-      "TG_WEBHOOK_SECRET",
-      "TG_ID_HMAC_KEY",
-      "TG_CHAT_ENC_KEY"
-    ]
+  "vars": {
+    "SOLANA_CLUSTER": "devnet"
   },
+  // Secrets are managed via `wrangler secret put`, not declared here.
+  // The set of required secrets is documented in
+  // docs/ops/secrets-inventory.md. The MVP deploy script verifies
+  // presence; missing secrets fail the deploy.
   "routes": [
     {
       "pattern": "staging.open-care.org/tg/webhook",

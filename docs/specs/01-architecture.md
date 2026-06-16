@@ -20,42 +20,52 @@ in [`02-invariants.md`](02-invariants.md).
 ┌────────────────────────────────────┐      ┌───────────────────────────────┐
 │ SvelteKit Cloudflare Pages         │      │ /admin operator UI             │
 │ - landing, donate, ledger, verify  │      │ - record disbursement          │
-│ - about, FAQ, contact              │      │ - trigger manual anchor         │
+│ - /faq, /about (prerendered static) │      │ - trigger manual anchor        │
+│ - contact                          │      │ - record delivery (bot handoff)│
 └──────────────────┬─────────────────┘      └──────────────┬────────────────┘
-                   │ reads                                  │ writes
+                   │ reads                                  │ writes (operator token)
                    ▼                                        ▼
 ┌────────────────────────────────────┐      ┌───────────────────────────────┐
-│ vault-api-read Worker              │      │ vault-api-write Worker          │
-│ - public JSON                      │      │ - operator-authenticated writes │
-│ - ledger export + verify           │      │ - ledger append helper          │
-│ - no secrets                       │      │ - OPERATOR_TOKEN                │
+│ vault-api-read Worker              │      │ vault-operator Worker          │
+│ - public JSON                      │      │ - sole holder of OPERATOR_    │
+│ - ledger export + verify           │      │   TOKEN                        │
+│ - /api/totals, /api/donations,     │      │ - /api/disbursements →         │
+│   /api/disbursements,              │      │   vault-api-write              │
+│   /api/ledger-events, /api/verify, │      │ - /api/anchor/manual →         │
+│   /api/health                      │      │   vault-anchor-cron            │
+│ - no secrets                       │      │ - /tg/internal/pending-       │
+│ - reads anchor_runs.last_anchor_   │      │   requests → tg-bot            │
+│   wallet_sol_lamports for health   │      │ - /tg/internal/send-code →     │
+│   check (no RPC binding)            │      │   tg-bot                       │
 └──────────────────┬─────────────────┘      └──────────────┬────────────────┘
-                   │ reads                                  │ appends
+                   │ reads                                  │ service binding
                    ▼                                        ▼
-┌───────────────────────────────────────────────────────────────────────────┐
-│ vault-db (Cloudflare D1)                                                   │
-│ - ledger_events: canonical append-only donor ledger                        │
-│ - wallets: public treasury/anchor wallet metadata                          │
-│ - anchor_runs: mutable anchor runner state                                 │
-│ - helius_inbox: durable webhook/reconciliation inbox                       │
-│ - optional read models/views derived from ledger_events                    │
-└───────────────────────────────────────────────────────────────────────────┘
-        ▲ appends/updates ops state                         ▲ appends after tx
-        │                                                     │
-┌───────┴──────────────────────┐                ┌─────────────┴──────────────┐
-│ vault-ingest Worker           │                │ vault-anchor-cron Worker    │
-│ - /webhook/helius             │                │ - computes pre-anchor head  │
-│ - Authorization authHeader    │                │ - sends Memo transaction    │
-│ - ACKs fast + ctx.waitUntil   │                │ - updates anchor_runs       │
-│ - finalized SPL USDC parsing  │                │ - appends anchor event      │
-└───────────────┬──────────────┘                └─────────────┬──────────────┘
-                ▲                                             │
-                │ HTTPS                                       │ Solana RPC
-┌───────────────┴──────────────┐                ┌─────────────▼──────────────┐
-│ Helius webhooks + RPC         │                │ Solana                     │
-│ - vault USDC ATA watch        │                │ - USDC SPL transfers       │
-│ - reconciliation history      │                │ - Memo anchors             │
-└───────────────────────────────┘                └────────────────────────────┘
+┌────────────────────────────────────┐      ┌───────────────────────────────┐
+│ vault-db (Cloudflare D1)           │      │ vault-api-write Worker         │
+│ - ledger_events                    │      │ - no OPERATOR_TOKEN; trusts   │
+│ - wallets, anchor_runs,            │      │   the operator Worker         │
+│   helius_inbox, read models        │      │ - ledger append helper         │
+└────────────────────────────────────┘      └──────────────┬────────────────┘
+         ▲ appends/updates ops state                         │ appends
+         │                                                     ▼
+┌───────┴──────────────────────┐                ┌───────────────────────────────┐
+│ vault-ingest Worker           │                │ vault-anchor-cron Worker       │
+│ - /webhook/helius             │                │ - sole holder of ANCHOR_      │
+│ - Authorization authHeader    │                │   WALLET_SECRET                │
+│ - ACKs fast + ctx.waitUntil   │                │ - scheduled cron (0 1 * * *)   │
+│ - finalized SPL USDC parsing  │                │ - writes last_anchor_wallet_  │
+└───────────────┬──────────────┘                │   sol_lamports for health      │
+                ▲                                │ - sends Memo transaction       │
+                │ HTTPS                           │ - calls runAnchor() in         │
+┌───────────────┴──────────────┐                │   packages/vault-core          │
+│ Helius webhooks + RPC         │                └─────────────┬─────────────────┘
+│ - vault USDC ATA watch        │                              │ Solana RPC
+│ - reconciliation history      │                              ▼
+└───────────────────────────────┘                ┌───────────────────────────────┐
+                                                 │ Solana                         │
+                                                 │ - USDC SPL transfers           │
+                                                 │ - Memo anchors                 │
+                                                 └───────────────────────────────┘
 
               Beneficiary surface: separate app/db boundary
 ┌───────────────────────────────────────────────────────────────────────────┐
@@ -63,6 +73,7 @@ in [`02-invariants.md`](02-invariants.md).
 │ - same Cloudflare account, separate Worker + D1 binding                    │
 │ - bot-db binding only                                                      │
 │ - receives Telegram webhook                                                │
+│ - called by the operator Worker via service binding for /tg/internal/*    │
 │ - sends gift-card codes; does not retain full code after delivery          │
 └──────────────────┬────────────────────────────────────────────────────────┘
                    ▼
@@ -80,22 +91,33 @@ in [`02-invariants.md`](02-invariants.md).
 ## Components
 
 - **`apps/web`** — SvelteKit 2.x + Svelte 5 app deployed to Cloudflare Pages via
-  `adapter-cloudflare`. Renders public API data, verification instructions, and
-  the `/admin` operator UI. Public bundles contain no secrets; the MVP operator
-  token is memory-only in the browser and sent only to authenticated write
-  endpoints.
+  `adapter-cloudflare`. Renders public API data, the `/faq` and `/about` pages
+  (prerendered, static, with content-presence Playwright tests), the verify
+  page, and the `/admin` operator UI. Public bundles contain no secrets; the
+  MVP operator token is memory-only in the browser and sent only to the
+  `vault-operator` Worker.
 - **`apps/api-read`** — read-only Worker serving public JSON and ledger export.
-- **`apps/api-write`** — operator-authenticated Worker for disbursements and
-  manual anchor trigger. All donor-visible writes go through the ledger append
-  helper.
+  No secrets.
+- **`apps/operator`** — **the sole holder of `OPERATOR_TOKEN`**. Auths every
+  operator request, then routes to the right Worker via Cloudflare
+  service bindings: `/api/disbursements` to `vault-api-write`,
+  `/api/anchor/manual` to `vault-anchor-cron`,
+  `/tg/internal/pending-requests` and `/tg/internal/send-code` to `tg-bot`.
+  One trust boundary, one secret, one Worker.
+- **`apps/api-write`** — Worker that trusts the operator Worker (no
+  `OPERATOR_TOKEN` of its own) and appends to `ledger_events`. Reached only
+  via service binding from `vault-operator`.
 - **`apps/ingest`** — Helius webhook receiver. Authenticates `Authorization`,
   writes `helius_inbox`, ACKs quickly, and processes finalized USDC transfers
   asynchronously.
-- **`apps/anchor-cron`** — scheduled anchor Worker. Uses the anchor wallet key,
-  not the treasury key.
+- **`apps/anchor-cron`** — scheduled anchor Worker. The sole holder of
+  `ANCHOR_WALLET_SECRET`. Reached from the cron trigger or via service
+  binding from `vault-operator` for the manual trigger.
 - **`apps/tg-bot`** — Telegram webhook Worker with `bot-db` only. It handles
   registration, requests, delivery, keyed HMAC Telegram user lookup, and
-  encrypted chat-route storage.
+  encrypted chat-route storage. Reached from the public Telegram webhook
+  and via service binding from `vault-operator` for the internal
+  endpoints.
 - **`packages/vault-core`** — TypeScript event schemas, canonical JSON,
   hash-chain verification, Solana Memo builder, and public verification logic.
 - **`packages/vault-db`** — shared Drizzle ORM schema definitions and D1 query
@@ -106,6 +128,38 @@ in [`02-invariants.md`](02-invariants.md).
   `packages/vault-core` and the same `@solana/web3.js` packages as
   `apps/anchor-cron`.
 
+## Operator Worker trust model
+
+The `vault-operator` Worker is a thin auth-and-route layer:
+
+- Receives a request with `Authorization: Bearer <OPERATOR_TOKEN>`.
+- Verifies the token (constant-time comparison; the only Worker that
+  holds the secret).
+- Looks up the destination Worker for the route:
+  - `/api/disbursements` → `vault-api-write`
+  - `/api/anchor/manual` → `vault-anchor-cron`
+  - `/tg/internal/pending-requests`, `/tg/internal/send-code` → `tg-bot`
+- Forwards the request body to the destination Worker via a Cloudflare
+  service binding (in-process call, not a public HTTP hop). The destination
+  Worker is **not exposed to the public internet** for these routes; the
+  binding is the only entry point.
+- Returns the destination's response to the operator UI.
+
+This means:
+
+- A leak of `OPERATOR_TOKEN` in one Worker (a debug log in the bot, for
+  example) is no longer possible — only the operator Worker has the
+  token. The bot and the vault write paths are reached via service
+  binding, which is internal and does not require or accept a bearer
+  token.
+- Rotation is global but simple: rotate `OPERATOR_TOKEN` on the
+  `vault-operator` Worker only.
+- Each downstream Worker is protected by the binding allowlist, not
+  by an auth check. A binding allowlist CI test (per
+  [`08-testing-strategy.md`](08-testing-strategy.md) §"Per-invariant
+  mapping" I-7) prevents accidental exposure of the operator routes
+  to the public internet.
+
 ## Backend stack
 
 | Concern | Choice | Rationale |
@@ -115,7 +169,7 @@ in [`02-invariants.md`](02-invariants.md).
 | HTTP routing | **Hono** with `@hono/zod-validator` | Edge-native, TypeScript-first, tiny bundle, Cloudflare-recommended. NestJS/Express/Fastify are avoided because they target long-running Node.js servers and require heavy `nodejs_compat` shims. |
 | Validation / schemas | **Zod** | Schema-first boundary validation; schemas live in `packages/vault-core` and can be shared with the frontend. |
 | Database access | **Drizzle ORM** with D1 driver | Native D1 support, SQL-first type-safe queries, tiny runtime, migration discipline via `drizzle-kit`. Prisma is avoided because its D1 adapter is newer/heavier and a classic Prisma client does not run on Workers. |
-| Solana SDK | `@solana/web3.js` v2 + `@solana/spl-token` | TypeScript-native packages reused across Workers, scripts, and tests. |
+| Solana SDK | `@solana/web3.js` v1 (`^1.98.4`) + `@solana/spl-token` (`^0.4.14`) | The `latest` dist-tag on npm. v1 is in maintenance mode (security patches continue) and is what every third-party Solana tool targets (Python `solana-py`, Rust `solana-sdk`, Helius docs, all donor-facing verifiers). `@solana/web3.js` v2 is published on the `next` dist-tag (a major API rewrite: `createSolanaRpc(...)` + `.send()` instead of `new Connection(...)`), and `@solana/spl-token` v2 does not exist on `latest` at all. The MVP uses v1. **Migration trigger:** when `@solana/web3.js` v2 reaches the `latest` dist-tag AND has at least one stable patch release AND the Helius + donor-verifier ecosystem publishes v2-compatible libraries, plan a one-week evaluation window and migrate. |
 | Errors / expected failures | Explicit `Result<T, E>` or discriminated unions (e.g. `neverthrow`) | Engineering-principles aligned; transport layer converts, business logic returns. |
 | Logging | Structured JSON | Compatible with Cloudflare Workers observability; no plaintext secrets. |
 
@@ -165,14 +219,18 @@ signals, not the source of truth for Solana history.
 
 1. A beneficiary requests a card through the Telegram bot.
 2. The bot stores the request in `bot-db` and exposes only an operator-safe view
-   to `/admin`.
+   to `/admin` via `vault-operator` (the operator Worker).
 3. The operator buys the gift card manually.
 4. The operator records amount, count, service, receipt reference, purchase
    time, and a server-generated `public_beneficiary_ref` or no public reference.
-5. `apps/api-write` appends a `disbursement_recorded` event.
-6. The bot sends the code to the beneficiary. After delivery, bot storage keeps
+5. `apps/web` POSTs to `vault-operator` with `OPERATOR_TOKEN`. `vault-operator`
+   validates the token, then forwards the request to `vault-api-write` via
+   service binding.
+6. `vault-api-write` appends a `disbursement_recorded` event.
+7. The bot sends the code to the beneficiary. After delivery, bot storage keeps
    only delivery status plus code hash/last4, or a short-TTL encrypted value if
-   retry requires it.
+   retry requires it. The `vault-operator` Worker calls
+   `POST /tg/internal/send-code` on the `tg-bot` Worker via service binding.
 
 ### Daily anchor
 
@@ -236,3 +294,13 @@ does not promise cryptographic proof of receipt truth or full anonymity.
   foreseeable-future topology keeps one Cloudflare account for operational
   simplicity, while preserving the important boundary with separate Workers,
   separate D1 databases, separate secrets, and CI-enforced binding allowlists.
+- **One operator Worker holds `OPERATOR_TOKEN`.** The rejected alternative was
+  sharing the token between `vault-api-write` and `tg-bot` (a leak in one
+  Worker compromises both), or splitting into two tokens (`VAULT_OPERATOR_TOKEN`
+  + `BOT_OPERATOR_TOKEN`, two secrets, two rotations, two-token UI for a
+  single-operator MVP). The accepted topology is a single thin Worker
+  (`vault-operator`) that auths every operator request once, then forwards
+  via service binding to the right downstream Worker. One trust boundary,
+  one secret, one rotation. Service bindings are in-process and
+  not-publicly-routable, so a downstream Worker that holds no
+  `OPERATOR_TOKEN` of its own is unreachable from the public internet.

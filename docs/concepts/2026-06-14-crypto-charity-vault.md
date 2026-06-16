@@ -1,7 +1,15 @@
-# Crypto Charity Vault — MVP Concept
+# Open Care — MVP Concept
+
+> **Brand note (2026-06-16):** the public project name is **Open Care**
+> (matching the `open-care.org` domain and `open-care-web` Pages
+> project). The technical prefix `ccv-` (used in the on-chain Memo
+> `ccv-anchor:...` and the AES-GCM AAD `ccv:tg-chat-route:...`) is a
+> project shorthand, not a public brand string. The
+> "Crypto Charity Vault" wording is preserved in the document title
+> for historical continuity with the original concept note.
 
 **Status:** Current concept aligned with the MVP specs
-**Date:** 2026-06-14
+**Date:** 2026-06-14 (concept note); brand clarified 2026-06-16
 **Scope:** MVP. Later roadmap items are explicit deferrals.
 
 ---

@@ -32,6 +32,9 @@ real-world identity.
 - Donor-visible event payloads for donations, disbursements, and anchor publications.
 - Daily Solana Memo anchor using a separate anchor wallet that holds only SOL for fees.
 - Public read-only site: landing, ledger, verify, donate, about, FAQ, contact.
+  The about and FAQ pages are static, prerendered SvelteKit pages (no runtime
+  data fetch); the public API is `/api/totals`, `/api/donations`, and
+  friends.
 - Operator-authenticated write API for recording gift-card disbursements.
 - Helius webhook ingest with durable inbox, duplicate-safe processing, and minimal reconciliation/backfill.
 - Telegram bot for pseudonymous handle registration, gift-card requests, and private delivery without plaintext Telegram IDs or chat IDs at rest.

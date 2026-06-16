@@ -45,32 +45,71 @@ Every donor-visible event is exactly one row in `ledger_events`, ordered by
 Each event hash is computed as:
 
 ```text
-SHA-256(canonical_json({
+event_hash = SHA-256(UTF-8(canonical_json({
   sequence_no,
   event_type,
-  payload,
+  payload,            // the parsed JSON object stored in payload_json
   prev_hash,
   created_at_utc
-}))
+})))
 ```
 
-`payload` is the parsed value stored in `payload_json`. `event_hash` is not
-included in its own preimage. The payload must contain all immutable
-donor-visible facts needed to verify the event:
+The `canonical_json` function is **RFC 8785 (JSON Canonicalization
+Scheme, JCS)**. Any verifier — the writer, the public verify script,
+a donor's offline tool, or a third-party implementation in another
+language — must produce the same byte sequence for the same input
+object. The normative test vector in
+[`03-data-model.md`](03-data-model.md) §"Normative test vector"
+pins the expected output. Specifically:
 
-- donation amount, token mint, vault ATA, transaction signature, finalized slot,
-  and block time;
+- Object keys are sorted lexicographically (JCS requirement).
+- Strings are UTF-8 with NFC normalization; no BOM, no trailing
+  whitespace, no extra escape sequences.
+- Numbers that represent money are encoded as **integer
+  minor-unit strings** in the parsed object (e.g., `"amount_usdc_minor": "100000000"`),
+  not as JSON numbers. The string bytes are canonicalized as any
+  other string.
+- Nullable fields are represented as JSON `null`, not omitted, when
+  they are part of an event schema. The schema is "closed":
+  no optional fields, only nullable ones. Adding a new field to a
+  payload type is a breaking hash change.
+- `event_hash` is **not** included in its own preimage.
+- `created_at_utc`, `block_time_utc`, `published_at_utc`,
+  `recorded_at_utc`, and similar timestamps use second precision
+  (no fractional seconds) and match the regex
+  `^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$`.
+
+`payload` is the parsed value stored in `payload_json`. The
+`payload_json` column stores the **canonical JSON text** of the
+payload (re-canonicalized at insert time if the parser produced a
+non-canonical form). The hash preimage is the canonical bytes of
+the parsed-and-re-serialized object, not the original raw bytes
+from the upstream provider. This means a donor reading
+`payload_json` from the database and a donor who has only the
+parsed object produce identical hashes.
+
+The payload must contain all immutable donor-visible facts needed
+to verify the event:
+
+- donation amount, token mint, vault ATA, transaction signature,
+  `instruction_index`, `inner_index`, `transaction_version`,
+  finalized slot, and block time;
 - disbursement amount, service, card count, receipt reference, public
   beneficiary reference when used, purchase time, and record time;
-- anchor date, anchored pre-anchor head hash, transaction signature, anchor
-  wallet address, memo text, and publication time.
+- anchor date, anchored pre-anchor head hash, transaction signature,
+  anchor wallet address, memo text, and publication time;
+- correction: the corrected event's `sequence_no`, the replacement
+  field set, the reason, and the recording time.
 
 Typed tables or views may exist only as convenience read models. They are not
 the hash-chain source of truth.
 
-- **Enforced by:** shared event schemas and canonical JSON parity tests.
-- **Test:** mutating any payload field changes verification output; public
-  export can recompute the exact chain.
+- **Enforced by:** shared event schemas and canonical JSON parity
+  tests against the normative test vector (RFC 8785 JCS).
+- **Test:** mutating any payload field changes verification output;
+  public export can recompute the exact chain; cross-implementation
+  test (a Python or Rust verifier with the same test vector produces
+  the same `event_hash`).
 
 ### I-4: Anchor runner state is outside the donor ledger
 
@@ -78,10 +117,57 @@ Anchor attempts, locks, retry counters, status, and errors live in
 `anchor_runs`. The donor ledger receives an `anchor_published` event only after
 the on-chain transaction is known.
 
-- **Enforced by:** separate `anchor_runs` table and no mutable anchor status in
-  `ledger_events`.
-- **Test:** failed/retried anchor attempts update `anchor_runs` only; successful
-  finalized publication appends one immutable ledger event.
+`anchor_runs.locked_until_utc` is the serialization mechanism for
+concurrent anchor attempts (cron + manual):
+
+- When a run starts, the anchor Worker sets
+  `status='sending'`, `locked_until_utc = now() + 10 minutes`,
+  `updated_at_utc = now()`.
+- A second run that finds a row with `status='sending'` AND
+  `locked_until_utc > now()` returns `409 CONFLICT` with
+  `error.code: "ANCHOR_RUN_IN_PROGRESS"` and the existing
+  `anchor_runs_id`. The cron and the manual trigger share the same
+  function in `packages/vault-core`; the second caller does not
+  retry automatically.
+- After the transaction is finalized and the `anchor_published` event
+  is appended, the run sets `status='published'`,
+  `locked_until_utc = NULL`.
+- After a hard failure, the run sets `status='failed'`,
+  `locked_until_utc = NULL`. The next cron tick or manual trigger
+  can attempt again with the same head hash (the
+  `UNIQUE(anchor_date, anchored_head_hash)` index prevents two
+  successful runs for the same pair; the `failed` row is left in
+  place for forensics).
+
+This protocol is also the recovery path for a Worker crash between
+on-chain finalization and ledger append: the cron tick (or a manual
+trigger) that finds a `status='sending'` row with
+`updated_at_utc < now() - 10 minutes` (an expired lock) treats it as
+a stale run. It looks up the on-chain transaction by `tx_signature`:
+
+- If the tx exists and is finalized, the run appends a backfill
+  `anchor_published` event with `created_at_utc = published_at_utc =
+  on-chain block time` (NOT the recovery time). This makes the event
+  hash preimage the same as it would have been at the time of the
+  on-chain transaction. The recovery updates
+  `status='published'`, `locked_until_utc = NULL`. The
+  `/contact` page and the static `/faq` page must document this
+  recovery so a donor who sees an event whose `created_at_utc` is
+  far in the past understands it is a backfill, not a forged event.
+- If the tx exists but is not finalized, leave the row as
+  `status='sending'` with a refreshed `locked_until_utc`. The next
+  tick retries.
+- If the tx does not exist (dropped from the network), the run sets
+  `status='failed'`, `locked_until_utc = NULL`. The next attempt
+  builds a new `anchor_runs` row and re-sends.
+
+- **Enforced by:** the `runAnchor` function in
+  `packages/vault-core` (or its equivalent) implements the lock and
+  recovery; the test suite covers the three recovery states.
+- **Test:** failed/retried anchor attempts update `anchor_runs` only;
+  successful finalized publication appends one immutable ledger
+  event; crash-and-recover scenario produces a backfill event with
+  `created_at_utc` equal to the on-chain block time.
 
 ### I-5: Anchor memo commits to the pre-anchor head
 
@@ -180,14 +266,58 @@ write. Processing is asynchronous, duplicate-safe by transaction signature, and
 limited to finalized SPL USDC transfers whose destination is the configured
 vault USDC ATA.
 
+The `helius_inbox` PRIMARY KEY is `(signature, source)` so that the
+same signature arriving via `webhook` and via `reconciliation`
+produces two rows (one per source) rather than overwriting the
+source. The first source observed wins; the second is recorded
+but does not re-trigger processing.
+
 Missed webhooks are not deferred to a later product phase: the MVP includes a
 minimal reconciliation/backfill path using transaction signature/address/token
 account history.
 
-- **Enforced by:** `helius_inbox.signature` uniqueness, finalized RPC fetches,
-  ATA/mint filters, and retry/backfill jobs.
-- **Test:** duplicate replay, ACK-fast, null-before-finality, 429/5xx retry,
-  and `maxSupportedTransactionVersion: 0` scenarios.
+- **Enforced by:** `helius_inbox.(signature, source)` uniqueness,
+  finalized RPC fetches, ATA/mint filters, and retry/backfill jobs.
+- **Test:** duplicate replay, ACK-fast, null-before-finality, 429/5xx
+  retry, `maxSupportedTransactionVersion: 0`, and "same signature
+  via two sources" scenarios.
+
+### I-11: Correction policy is restricted and the public API is bivalent
+
+`correction_recorded` events respect I-1 (append-only). The set of
+fields that can appear in `replacement_fields` is restricted to a
+fixed whitelist: `receipt_ref` and `service_note` only.
+`amount_usdc_minor`, `gift_card_count`, `service`, `purchase time`,
+`purchased_at_utc`, `recorded_at_utc`, `recorded_by`, and any chain
+field (`tx_signature`, `slot`, `vault_usdc_ata`, `treasury_wallet_address`,
+`anchor_wallet_address`, etc.) are **immutable** — an operator mistake
+on those fields is corrected by appending a new event (a reversal
+`disbursement_recorded` with a negative `amount_usdc_minor`, a new
+`disbursement_recorded` with corrected values, or a note in `/contact`),
+not by a `correction_recorded`. The MVP's `POST /api/corrections`
+endpoint, if added, MUST reject any non-whitelisted key in
+`replacement_fields` with `422 VALIDATION_ERROR`.
+
+The public read API is **bivalent**: `/api/ledger-events` and
+`/api/disbursements` return the original event payload as it was
+hashed, and a separate `?include=corrections` query parameter (if
+implemented) returns the correction chain in append order. The
+read API MUST NOT silently substitute corrected values for
+original values, because that would make a donor's offline verifier
+disagree with the JSON returned by the site. A donor who
+recomputes the chain must see the same values the chain committed.
+
+- **Enforced by:** Zod refinement on `POST /api/corrections`
+  restricting `replacement_fields` keys to the whitelist; a
+  round-trip test that the public ledger-events response matches
+  the on-chain `payload_json` byte-for-byte.
+- **Test:** a correction that targets a non-whitelisted key is
+  rejected; the public response of a corrected event equals the
+  on-chain event byte-for-byte (i.e., `payload_json` from
+  `ledger_events` round-trips to the same canonical bytes after
+  `JSON.parse` + `canonical_json`); a verifier that reads the
+  public response and recomputes the chain agrees with the chain
+  head.
 
 ## What is not an invariant
 
@@ -214,4 +344,5 @@ account history.
 | I-7 | D1 separation, binding allowlist, bot schema denylist, HMAC/encryption helpers | schema/binding tests, HMAC stability tests, chat-route encryption tests, log/API redaction tests |
 | I-8 | public schemas | public response contract tests |
 | I-9 | public export and scripts | TypeScript verify script tests |
-| I-10 | durable inbox, finality filters | webhook/reconciliation contract tests |
+| I-10 | `helius_inbox.(signature, source)` uniqueness, durable inbox, finality filters | webhook/reconciliation contract tests, two-source scenario |
+| I-11 | Zod refinement on `replacement_fields` whitelist; bivalent public API | rejection test, byte-for-byte round-trip test |

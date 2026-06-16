@@ -34,14 +34,18 @@ the bot without expanding public or database exposure. Public UX is in
 
 ## Auth UX and token storage policy
 
-MVP auth uses the existing `OPERATOR_TOKEN` bearer token required by
-`vault-api-write` and `tg-bot` internal endpoints.
+MVP auth uses a single `OPERATOR_TOKEN` bearer token. The token is
+held **only** by the `vault-operator` Worker (the sole holder);
+downstream Workers (`vault-api-write`, `vault-anchor-cron`, `tg-bot`)
+do not hold it. The operator UI calls `vault-operator` over HTTPS;
+`vault-operator` validates the token (constant-time) and forwards the
+request via Cloudflare service binding.
 
 | Rule | Requirement |
 | --- | --- |
 | Token entry | Operator pastes token into `/admin` password field after each page load/session. |
 | Storage | Keep token only in browser memory. Never use `localStorage`, `sessionStorage`, IndexedDB, cookies, URL params, SvelteKit public env, or logs. |
-| Transport | Send as `Authorization: Bearer <OPERATOR_TOKEN>` over HTTPS only. |
+| Transport | Send as `Authorization: Bearer <OPERATOR_TOKEN>` over HTTPS to the `vault-operator` Worker only. |
 | Lifetime | Clear on reload, tab close, explicit logout, auth failure, and idle timeout. Default idle timeout: 30 minutes. |
 | Visibility | Never show token after entry; no copy-to-clipboard for token. |
 | Errors | `401` clears token and returns to auth gate; `403` shows unauthorized without retry loops. |
