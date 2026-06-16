@@ -134,7 +134,8 @@ These are not environment blockers — they are implementation tasks:
 | `HELIUS_API_KEY`             | Secret | GitHub Actions secret (deploy/live envs)                | Human (Helius dashboard)            | No                           | Helius management/RPC access.                                                |
 | `HELIUS_RPC_URL`             | Secret | `vault-ingest`, `vault-anchor-cron` env                 | Human (Helius dashboard)            | No (optional for live smoke) | Solana RPC endpoint URL.                                                     |
 | `HELIUS_WEBHOOK_AUTH_HEADER` | Secret | `vault-ingest` Worker Secret                            | Human (Helius dashboard → Wrangler) | No                           | Exact `Authorization` header value Helius sends.                             |
-| `ANCHOR_WALLET_SECRET`       | Secret | `vault-anchor-cron` Worker Secret, gated manual job     | Human → Wrangler                    | No                           | Anchor wallet keypair. Holds only SOL for Memo fees. Never the treasury key. |
+| `ANCHOR_WALLET_SECRET`           | Secret | `vault-anchor-cron` Worker Secret, gated manual job     | Human → Wrangler                    | No                           | Anchor wallet keypair. Holds only SOL for Memo fees. Never the treasury key. Base58-encoded keypair string from `solana-keygen`. |
+| `DONOR_WALLET_SECRET`            | Secret | `.dev.vars` (local), GitHub Actions secret (nightly E2E)  | Human → file/CI                      | No                           | Donor wallet keypair. Devnet throwaway for staging/localnet generated key for local dev. Used by E2E smoke tests to send test USDC. **Never mainnet.** Not a Worker secret; test scripts read it directly. |
 
 ### Bot-side secrets
 
@@ -157,6 +158,75 @@ These are not environment blockers — they are implementation tasks:
 | Name                  | Kind   | Location                | Owner | PR CI? | Purpose                                                                          |
 | --------------------- | ------ | ----------------------- | ----- | ------ | -------------------------------------------------------------------------------- |
 | `ALLOW_MAINNET_SMOKE` | Config | GitHub Actions variable | Human | No     | Must be `"true"` to enable optional mainnet smoke. Default: absent or `"false"`. |
+
+### E2E test account secrets
+
+These secrets support automated end-to-end testing against real Telegram and
+real Solana devnet. They are **never used in production** and never set as
+Cloudflare Worker secrets. Test scripts read them from environment variables
+or `.dev.vars`.
+
+| Name                      | Kind   | Location                                 | Owner               | PR CI? | Purpose                                                                                          |
+| ------------------------- | ------ | ---------------------------------------- | ------------------- | ------ | ------------------------------------------------------------------------------------------------ |
+| `TELETHON_API_ID`         | Public | `.dev.vars` (local), GitHub Actions var  | Human (my.telegram.org) | No  | Telegram API app ID for the Telethon test client. Not a secret but stored alongside the hash for convenience. |
+| `TELETHON_API_HASH`       | Secret | `.dev.vars` (local), GitHub Actions secret | Human (my.telegram.org) | No | Telegram API app hash for the Telethon test client.                                                |
+| `TELETHON_SESSION_STRING` | Secret | `.dev.vars` (local), GitHub Actions secret | Generated (one-time auth) | No | Pre-authenticated Telethon `StringSession` for the test user account. Refresh manually if invalidated. |
+| `DONOR_WALLET_SECRET` | Secret | (see vault-side table above)          | Human → file/CI      | No     | Donor keypair for Solana E2E smoke. Set to devnet throwaway in staging, locally generated for localnet. |
+
+**Setup instructions for Telethon E2E test account:**
+
+1. Create a dedicated Telegram test account with a real phone number (not your
+   personal account). Use a secondary SIM or a VoIP number.
+2. Go to <https://my.telegram.org/apps>, log in with the test account, and
+   create an API application. Note the `api_id` (integer) and `api_hash`
+   (string).
+3. Run the one-time session generator (see `tools/e2e-tg/get_session_string.py`
+   or the script below). It will prompt for the phone number and the login code
+   that Telegram sends. On success it prints a `StringSession` value.
+4. Store the three values:
+   - `TELETHON_API_ID` → `.dev.vars` or GitHub Actions variable
+   - `TELETHON_API_HASH` → `.dev.vars` or GitHub Actions secret
+   - `TELETHON_SESSION_STRING` → `.dev.vars` or GitHub Actions secret
+5. If the session is invalidated (rare: Telegram logout, password change),
+   repeat step 3 and update the stored value.
+
+**One-time session generator script:**
+
+```python
+# tools/e2e-tg/get_session_string.py
+# Usage: pip install telethon && python get_session_string.py
+import os
+from telethon.sync import TelegramClient
+from telethon.sessions import StringSession
+
+api_id = int(input("Enter API ID: "))
+api_hash = input("Enter API Hash: ")
+
+with TelegramClient(StringSession(), api_id, api_hash) as client:
+    print("Session string (save this as TELETHON_SESSION_STRING):")
+    print(client.session.save())
+```
+
+**`DONOR_WALLET_SECRET` setup:**
+
+The donor wallet keypair is used by E2E smoke tests to send test USDC. It is
+**never a Cloudflare Worker secret** — test scripts read it directly from
+environment variables or `.dev.vars`.
+
+- **Local dev:** Add `DONOR_WALLET_SECRET=<local_keypair>` to `.dev.vars`.
+  Use a locally generated keypair (e.g. `solana-keygen new --no-bip39-passphrase
+  --outfile /dev/null`). Fund it with local-validator SOL.
+- **Staging (devnet E2E):** Set to the devnet throwaway donor keypair from
+  your password manager (`Crypto Charity / Devnet Wallets`, address
+  `6dUAJZso3HThXQjReZKHWXNpMFYgZ8wbXu7GxXJ93hyL`). Store as a GitHub
+  Actions secret: Settings → Secrets and variables → Actions → New repository
+  secret → Name: `DONOR_WALLET_SECRET`.
+- **Format:** Base58-encoded keypair string as produced by
+  `solana-keygen new --no-bip39-passphrase` (the full ~88-char base58 string,
+  not the pubkey). Same format as `ANCHOR_WALLET_SECRET`.
+- **Pre-fund (devnet):** Before running E2E smoke, ensure the donor wallet has
+  SOL (faucet) and devnet USDC. See "Devnet funding" below.
+- **Never mainnet.** This secret is devnet/localnet throwaway only.
 
 ## Local development
 
@@ -214,6 +284,7 @@ These are created by you and stored in your password manager, not in Cloudflare 
 | `Crypto Charity / Devnet Wallets`          | Devnet throwaway keypairs (generated 2026-06-15, regenerated same day): treasury `8ufYGMkmAWeaYaM4CnANrxLxpQoaESKTGFN1BcgU71tG`, anchor `BhKtkM1oHADwo8ap5P6Lymj7b3iaspiAm37RA9KMn8YG`, donor `6dUAJZso3HThXQjReZKHWXNpMFYgZ8wbXu7GxXJ93hyL`. Secrets stored in password manager only. |
 | `Crypto Charity / Helius`                  | Helius API key and RPC URL (created 2026-06-15).                                                                                                                                                                                                                                       |
 | `Crypto Charity / Staging / TG_BOT_TOKEN`  | Telegram staging bot token (created 2026-06-15 via BotFather).                                                                                                                                                                                                                         |
+| `Crypto Charity / E2E Test Account`       | Telegram test account phone number, `api_id`, `api_hash`, and `StringSession` for Telethon E2E tests. Separate from personal account.                                                                                                                                                |
 | `Cloudflare / crypto-charity-ci API token` | The CI token created 2026-06-15.                                                                                                                                                                                                                                                       |
 
 ## Devnet funding

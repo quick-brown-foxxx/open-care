@@ -632,6 +632,16 @@ characters.
 
 ## Migrations
 
-Migrations are plain SQL files. Ledger migrations must not update or delete
-`ledger_events`. Operational tables may have normal mutable state, but their
-mutation rules must be explicit and tested.
+Migrations are plain SQL files consumed by `wrangler d1 migrations apply`.
+They are generated from Drizzle schema definitions in
+`packages/vault-db/src/schema/` (and `packages/bot-crypto/` for `bot-db`)
+using `drizzle-kit generate`. Hand-written SQL migrations are also acceptable
+for one-time operational changes (e.g. adding an index), but every schema
+change must have a corresponding Drizzle schema definition so TypeScript types
+stay in sync. The SQL DDL in this document is the human-readable contract for
+reviewers; the Drizzle schemas are the authoring source of truth; the
+generated SQL files are what D1 executes.
+
+Ledger migrations must not update or delete `ledger_events`. Operational
+tables may have normal mutable state, but their mutation rules must be
+explicit and tested.

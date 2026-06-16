@@ -25,6 +25,7 @@
 | Local-validator blockchain | Solana local validator | PR CI if tooling permits | Real Memo and SPL token flows without secrets or funds. |
 | Devnet live smoke | Solana devnet | manual/nightly, env-gated | Real devnet send/fetch/finality behavior. |
 | Helius webhook contract | Helius + public HTTPS staging | manual/nightly, env-gated | Provider auth header, payload shape, retry/duplicate behavior. |
+| Telegram E2E | Telethon + pytest, staging bot + test user account | manual/nightly, env-gated | Real user→bot→user flow: `/start`, `/card`, delivery, no sensitive data in responses. |
 | Tiny mainnet smoke | Solana mainnet | optional manual release gate only | Real mainnet compatibility with tiny paid transactions. |
 
 ## Blockchain test tiers
@@ -77,7 +78,41 @@
   behavior, duplicate replay, payload shape validation, and provider retry
   behavior.
 
-### 4. Optional tiny mainnet smoke
+### 4. Telegram E2E tests (Telethon)
+
+- **Cost/secrets:** free; requires a dedicated test Telegram account (separate
+  phone number), Telegram API credentials (`api_id`/`api_hash`), and a
+  pre-authenticated `StringSession`. See `docs/ops/secrets-inventory.md`
+  §"E2E test account secrets" for setup.
+- **Where:** manual or nightly environment-gated job, not PR CI. Telegram
+  interaction is nondeterministic (rate limits, message ordering, API
+  downtime); adding it to PR CI would make CI flaky.
+- **Tooling:** [Telethon](https://codeberg.org/Lonami/Telethon) (Python
+  MTProto client library) + pytest + pytest-asyncio. The test harness is a
+  Python process outside our Workers; it connects to Telegram as a real user
+  and interacts with our staging bot. Telethon's `Conversation` API provides
+  `conv.send_message()`, `conv.get_response()`, and `conv.wait_event()` for
+  deterministic send→await→assert loops. `sequential_updates=True` ensures
+  message ordering is deterministic.
+- **Required env:** `TELETHON_API_ID`, `TELETHON_API_HASH`,
+  `TELETHON_SESSION_STRING`, `TG_BOT_TOKEN` (staging bot), plus any
+  Solana devnet env vars if the test triggers donation flows.
+- **Must cover:**
+  - `/start <handle>` → registration succeeds, bot replies with welcome;
+  - `/card` → pending request created, visible to operator via
+    `/tg/internal/pending-requests`;
+  - Delivery via `/tg/internal/send-code` → test user receives the message;
+  - No plaintext Telegram user IDs or chat IDs in bot responses;
+  - No full gift-card codes retained after delivery (only hash/last4 remain);
+  - Bot handles duplicate `/start` and invalid commands gracefully.
+- **Session management:** The `StringSession` is generated once via
+  `tools/e2e-tg/get_session_string.py` and stored as a CI secret. If the
+  session is invalidated (Telegram logout, password change), a team member
+  re-runs the generator and updates the secret.
+- **Rate limiting:** Add `asyncio.sleep(1)` between test cases. Keep tests
+  under ~50 messages per run to avoid Telegram rate limits.
+
+### 5. Optional tiny mainnet smoke
 
 - **Cost/secrets:** paid; tiny amount; manual release gate only.
 - **Where:** never normal PR CI.
@@ -461,19 +496,24 @@ And the plaintext code is cleared after successful delivery
 
 ## Environment variables by test type
 
-| Variable | PR CI | Local validator | Devnet smoke | Helius contract | Mainnet smoke |
-| --- | --- | --- | --- | --- | --- |
-| `SOLANA_CLUSTER` | test/local value | `localnet` | `devnet` | `devnet` | `mainnet-beta` |
-| `USDC_MINT` | test/local value | local mint | devnet USDC mint | devnet USDC mint | mainnet USDC mint |
-| `TREASURY_WALLET_ADDRESS` | fake/local | local keypair pubkey | throwaway devnet | throwaway devnet | throwaway mainnet |
-| `VAULT_USDC_ATA` | fake/local | local ATA | devnet ATA | devnet ATA | throwaway mainnet ATA |
-| `ANCHOR_WALLET_ADDRESS` | fake/local | local keypair pubkey | devnet pubkey | optional | throwaway mainnet pubkey |
-| `ANCHOR_WALLET_SECRET` | no | local generated only | required | optional | required, throwaway only |
-| `HELIUS_API_KEY` | no | no | optional | required | required |
-| `HELIUS_RPC_URL` | no | no | required | required | required |
-| `HELIUS_WEBHOOK_AUTH_HEADER` | no | no | optional | required | optional |
-| `WEBHOOK_URL` | no | no | no | required public HTTPS staging URL | optional |
-| `ALLOW_MAINNET_SMOKE` | no | no | no | no | must be `true` |
+| Variable | PR CI | Local validator | Devnet smoke | Helius contract | Mainnet smoke | TG E2E |
+| --- | --- | --- | --- | --- | --- | --- |
+| `SOLANA_CLUSTER` | test/local value | `localnet` | `devnet` | `devnet` | `mainnet-beta` | `devnet` |
+| `USDC_MINT` | test/local value | local mint | devnet USDC mint | devnet USDC mint | mainnet USDC mint | devnet USDC mint |
+| `TREASURY_WALLET_ADDRESS` | fake/local | local keypair pubkey | throwaway devnet | throwaway devnet | throwaway mainnet | devnet pubkey |
+| `VAULT_USDC_ATA` | fake/local | local ATA | devnet ATA | devnet ATA | throwaway mainnet ATA | devnet ATA |
+| `ANCHOR_WALLET_ADDRESS` | fake/local | local keypair pubkey | devnet pubkey | optional | throwaway mainnet pubkey | devnet pubkey |
+| `ANCHOR_WALLET_SECRET` | no | local generated only | required | optional | required, throwaway only | no |
+| `DONOR_WALLET_SECRET` | no | no | required | no | no | required |
+| `HELIUS_API_KEY` | no | no | optional | required | required | no |
+| `HELIUS_RPC_URL` | no | no | required | required | required | no |
+| `HELIUS_WEBHOOK_AUTH_HEADER` | no | no | optional | required | optional | no |
+| `WEBHOOK_URL` | no | no | no | required public HTTPS staging URL | optional | no |
+| `TELETHON_API_ID` | no | no | no | no | no | required |
+| `TELETHON_API_HASH` | no | no | no | no | no | required |
+| `TELETHON_SESSION_STRING` | no | no | no | no | no | required |
+| `TG_BOT_TOKEN` | no | no | no | no | no | required (staging bot) |
+| `ALLOW_MAINNET_SMOKE` | no | no | no | no | must be `true` | no |
 
 ## Local and CI commands
 
@@ -515,5 +555,5 @@ Green PR CI means:
   toolchain is unavailable;
 - no paid funds, real mainnet secrets, or production treasury key are required.
 
-Live devnet, Helius contract, and optional mainnet smoke results are release
-evidence, not mandatory PR evidence.
+Live devnet, Helius contract, Telegram E2E, and optional mainnet smoke results
+are release evidence, not mandatory PR evidence.
