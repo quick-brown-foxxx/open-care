@@ -20,10 +20,20 @@
   // The binding allowlist CI test enforces: vault-operator has no D1
   // binding; the downstream Workers are reached only via these
   // bindings, never via a public route.
-  //
-  // The Worker may be reached via a public HTTPS path or via a Pages
-  // Function proxy. The MVP uses a public route on
-  // `staging.open-care.org` (configurable) for the operator paths.
+  "routes": [
+    {
+      "pattern": "staging.open-care.org/api/disbursements",
+      "zone_id": "d3ce85436c3b589b4f83814991bf2c78"
+    },
+    {
+      "pattern": "staging.open-care.org/api/anchor/manual",
+      "zone_id": "d3ce85436c3b589b4f83814991bf2c78"
+    },
+    {
+      "pattern": "staging.open-care.org/tg/internal/*",
+      "zone_id": "d3ce85436c3b589b4f83814991bf2c78"
+    }
+  ],
   "services": [
     { "binding": "VAULT_API_WRITE", "service": "vault-api-write" },
     { "binding": "VAULT_ANCHOR_CRON", "service": "vault-anchor-cron" },

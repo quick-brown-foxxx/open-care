@@ -1,6 +1,6 @@
 # Development Guide
 
-**Status:** Bootstrap — extend during implementation.  
+**Status:** Preparation complete; implementation phase begins.  
 **Date:** 2026-06-16  
 
 Quick-start patterns for working on this project. Read `docs/ops/secrets-inventory.md`
@@ -115,23 +115,27 @@ orchestration, no SSH.
 
 See `docs/ops/secrets-inventory.md` for the full readiness status. Summary:
 
-- All 10 Worker secrets pushed to Cloudflare.
+- All Worker secrets pushed to Cloudflare (OPERATOR_TOKEN on vault-operator pending; see secrets inventory).
 - `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` in GitHub Actions.
-- Helius and Telegram webhooks configured → mock Workers responding at staging.
+- Helius and Telegram webhooks configured → draft Workers responding at staging.
 - Devnet wallets funded (treasury + anchor; donor pending rate limit).
 - `staging.open-care.org` DNS live.
 - Solana CLI (`solana`, `solana-test-validator`) installed.
 
-## What the AI creates
+## What the AI creates (implementation phase)
 
-- `package.json` / `tsconfig.json` for all apps and packages.
+All Worker `src/` code and the frontend are draft/mock and will be **overwritten**
+(not extended) with real implementations. Preserve infra-level configs
+(`wrangler.jsonc`, `package.json` names/dependencies, `tsconfig.json` options)
+only when they match the specs; overwrite everything else.
+
 - `.github/workflows/` (PR CI + deploy).
-- D1 migration SQL files.
-- `packages/vault-core/`, `packages/vault-db/`, `packages/bot-crypto/`.
-- Full SvelteKit frontend in `apps/web/`.
-- Real Worker implementations (replacing mock webhook Workers).
+- D1 seed data scripts; Drizzle ORM schemas and migration tooling.
+- `packages/vault-core/`, `packages/vault-db/`, `packages/bot-crypto/` source code (currently empty scaffolds).
+- Full SvelteKit frontend in `apps/web/` (rebuilt from scratch; current draft is disposable).
+- Real Worker implementations for ingest, tg-bot, api-read, api-write, anchor-cron, operator (overwriting drafts).
 - ESLint, Prettier, Vitest, Playwright configs.
-- `.dev.vars` template.
+- Route configuration for `vault-api-read` and `vault-operator` on staging domain.
 
 ## Future local infra extension
 

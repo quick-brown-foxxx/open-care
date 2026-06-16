@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 
 type Bindings = {
+  bot_db: D1Database;
   TG_WEBHOOK_SECRET: string;
   // Real implementation will also need TG_BOT_TOKEN, TG_ID_HMAC_KEY,
   // and TG_CHAT_ENC_KEY. The mock only validates the webhook secret

@@ -7,9 +7,9 @@ allowBuilds:
   bigint-buffer: true
   bufferutil: true
   esbuild: true
-  sharp: set this to true or false
+  sharp: true
   utf-8-validate: true
-  workerd: set this to true or false
+  workerd: true
 
 onlyBuiltDependencies:
   - esbuild

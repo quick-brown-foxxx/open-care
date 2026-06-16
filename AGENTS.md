@@ -1,6 +1,6 @@
 # OpenCode Agent Notes
 
-**Status:** Bootstrap / pre-implementation. This file is intentionally thin; rules, architecture detail, and workflows will move in later. For day-to-day commands and environment workflows, see @DEVELOPMENT.md and `docs/ops/secrets-inventory.md` first.
+**Status:** Preparation complete; implementation phase begins. All infrastructure (D1, secrets, domains, webhooks, CI vars) is provisioned. All Worker and frontend code is draft/mock and will be overwritten with real implementations. See `docs/ops/secrets-inventory.md` for environment readiness and `DEVELOPMENT.md` for day-to-day commands.
 
 ## Project shape
 
@@ -12,13 +12,13 @@
 
 | App | Worker name | Binding | `wrangler.jsonc` | Code status |
 | --- | --- | --- | --- | --- |
-| `apps/ingest` | `vault-ingest` | `vault_db` (D1: `vault-db`) | has route `staging.open-care.org/webhook/helius` | mock: validates `Authorization` header |
-| `apps/tg-bot` | `tg-bot` | `bot_db` (D1: `bot-db`) | has route `staging.open-care.org/tg/webhook` | mock: validates `X-Telegram-Bot-Api-Secret-Token` |
-| `apps/api-read` | `vault-api-read` | `vault_db` | no route, public surface (see below) | config only, no `src/` yet |
-| `apps/api-write` | `vault-api-write` | `vault_db` | no public route; reached only via service binding from `vault-operator` | config only, no `src/` yet |
-| `apps/anchor-cron` | `vault-anchor-cron` | `vault_db` | no public route, cron `0 1 * * *`; reached via service binding from `vault-operator` for manual triggers | config only, no `src/` yet |
-| `apps/operator` | `vault-operator` | none (no D1 binding); uses service bindings to `vault-api-write`, `vault-anchor-cron`, `tg-bot`; holds `OPERATOR_TOKEN` | no route (operates as an internal auth-and-route layer; the operator UI calls it via a public HTTPS path or via a Pages Function proxy) | config only, no `src/` yet |
-| `apps/web` | (Pages) | — | — | not created yet |
+| `apps/ingest` | `vault-ingest` | `vault_db` (D1: `vault-db`) | has route `staging.open-care.org/webhook/helius` | draft: validates `Authorization`, returns hardcoded response |
+| `apps/tg-bot` | `tg-bot` | `bot_db` (D1: `bot-db`) | has route `staging.open-care.org/tg/webhook` | draft: validates webhook secret, returns hardcoded response |
+| `apps/api-read` | `vault-api-read` | `vault_db` | has route `staging.open-care.org/api/*` | draft: stub endpoints returning zeroes/empty arrays |
+| `apps/api-write` | `vault-api-write` | `vault_db` | no public route; reached only via service binding from `vault-operator` | draft: stub write endpoint (no auth middleware — operator handles auth) |
+| `apps/anchor-cron` | `vault-anchor-cron` | `vault_db` | no public route, cron `0 1 * * *`; reached via service binding from `vault-operator` for manual triggers | draft: scheduled handler logs, manual trigger stub |
+| `apps/operator` | `vault-operator` | none (no D1 binding); uses service bindings to `vault-api-write`, `vault-anchor-cron`, `tg-bot`; holds `OPERATOR_TOKEN` | has routes `staging.open-care.org/api/disbursements`, `staging.open-care.org/api/anchor/manual`, `staging.open-care.org/tg/internal/*` | draft: auth gateway + service binding forwarding |
+| `apps/web` | (Pages) | — | — | draft: SvelteKit scaffold with hardcoded data, to be rebuilt from scratch |
 
 **`vault-operator` is the sole holder of `OPERATOR_TOKEN`.** All operator-authenticated
 endpoints (`/api/disbursements`, `/api/anchor/manual`, `/tg/internal/pending-requests`,
@@ -75,11 +75,16 @@ All Workers use Hono. Main export is the Hono app from `src/index.ts`.
 - Staging is the default environment. No `--env production` setup exists yet.
 - Live logs: `pnpm exec wrangler tail <worker-name>`.
 
-## What does not exist yet (agent must create)
+## What must be created (implementation phase)
 
-- `packages/vault-core/`, `packages/vault-db/`, `packages/bot-crypto/`.
-- `apps/web/` (SvelteKit frontend).
-- Real Worker implementations for ingest, tg-bot, api-read, api-write, anchor-cron.
-- D1 migration SQL files.
+All `src/` code in Worker apps and the frontend is draft/mock from the preparation
+phase. It must be **overwritten** (not extended) with real implementations.
+Preserve infra-level configs (`wrangler.jsonc`, `package.json` names/dependencies,
+`tsconfig.json` options) only when they match the specs; overwrite everything else.
+
+- `packages/vault-core/`, `packages/vault-db/`, `packages/bot-crypto/` — source code (currently empty scaffolds).
+- `apps/web/` — full SvelteKit frontend, rebuilt from scratch (current draft is disposable).
+- Real Worker implementations for ingest, tg-bot, api-read, api-write, anchor-cron, operator.
+- D1 migration SQL files (vault-db and bot-db schema migrations exist; seed data and Drizzle ORM schemas do not).
 - Shared tooling configs: ESLint, Prettier, Vitest, Playwright, GitHub workflows, root lint/typecheck/test scripts.
 - Keep additions incremental and consistent with `DEVELOPMENT.md`.

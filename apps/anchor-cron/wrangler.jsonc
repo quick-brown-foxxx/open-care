@@ -7,8 +7,7 @@
     {
       "binding": "vault_db",
       "database_name": "vault-db",
-      "database_id": "c6a73f10-728d-49e2-8d71-28ea3344a47b",
-      "migrations_dir": "migrations"
+      "database_id": "c6a73f10-728d-49e2-8d71-28ea3344a47b"
     }
   ],
   "vars": {

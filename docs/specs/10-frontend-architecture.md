@@ -107,6 +107,42 @@ apps/web/
 
 ESLint must enforce at least the API/client and admin/public import boundaries.
 
+## Layer disposability and the MVP-to-design transition
+
+The MVP is built without a real visual design system. A dedicated design phase
+will follow, replacing the view layer entirely. The frontend must be structured
+so that the design phase replaces only presentational code while the
+backend-interaction layers survive unchanged.
+
+### Surviving layers (carry forward to design phase)
+
+| Layer | Directory | What it owns | Why it survives |
+| --- | --- | --- | --- |
+| API client | `src/lib/api/` | Typed HTTP clients, base URLs, auth headers, response decoding, error mapping | Contract with backend Workers; independent of visual design |
+| Schemas | `src/lib/schemas/` | Valibot schemas for API responses, route params, form payloads | Validation contracts; independent of rendering |
+| State | `src/lib/state/` | Client-only stores (operator token, idle timeout) | Business state; independent of layout |
+| Utils | `src/lib/utils/` | Pure formatting and helper functions | Logic-only; no visual dependencies |
+| UI primitives | `src/lib/components/ui/` | shadcn-svelte copied primitives | Replaced or restyled by design phase, but the component API boundary stays stable |
+
+### Disposable layers (replaced during design phase)
+
+| Layer | Directory | What it owns | Why it is disposable |
+| --- | --- | --- | --- |
+| Public components | `src/lib/components/public/` | Donor-facing presentational layout and styling | Pure visual design; no business logic |
+| Admin components | `src/lib/components/admin/` | Operator-only presentational layout and styling | Pure visual design; no business logic |
+| Route templates | `src/routes/**/+page.svelte` | Page-level composition and markup | Visual layout and markup; must be re-composed against new design |
+| Global styles | `src/app.css`, `src/app.html` | Design tokens, utility classes, HTML shell | Replaced by design system |
+
+### Rules that make the split work
+
+| Rule | Reason |
+| --- | --- |
+| Route files (`+page.svelte`) must not inline business logic, API calls, or complex state management. Data loading goes in `+page.ts`; logic goes in `src/lib/api/` or `src/lib/state/`. | Routes are thin adapters. When markup changes, there is nothing to port. |
+| Route files must not inline CSS design tokens or layout styles that belong in `src/app.css` or `src/lib/components/`. | Keeps styling concerns in the disposable layer. |
+| Components in `src/lib/components/public/` and `src/lib/components/admin/` receive all data via typed props and emit events upward; they do not import from `src/lib/api/` or call `fetch`. | Components are pure presentation. Replacing them does not break data flow. |
+| `src/lib/api/`, `src/lib/schemas/`, `src/lib/state/`, and `src/lib/utils/` must not import from `src/lib/components/`. | Surviving layers have no upward dependency on the disposable layer. |
+| `+page.ts` load functions may import from `src/lib/api/` and `src/lib/schemas/` but must not import from `src/lib/components/`. | Load functions are data adapters that survive the design phase. |
+
 ## Route map and shells
 
 | Route | Shell | Purpose |

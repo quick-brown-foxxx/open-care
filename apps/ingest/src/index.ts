@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 
 type Bindings = {
+  vault_db: D1Database;
   HELIUS_WEBHOOK_AUTH_HEADER: string;
   HELIUS_RPC_URL?: string; // Used by the real implementation when fetching finalized txs.
 };
