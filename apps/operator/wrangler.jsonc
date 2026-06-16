@@ -4,7 +4,8 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-06-15",
   "vars": {
-    "SOLANA_CLUSTER": "devnet"
+    "SOLANA_CLUSTER": "devnet",
+    "SITE_URL": "https://staging.open-care.org"
   },
   // Secrets are managed via `wrangler secret put`, not declared here.
   // The set of required secrets is documented in
@@ -23,6 +24,11 @@
   // The Worker may be reached via a public HTTPS path or via a Pages
   // Function proxy. The MVP uses a public route on
   // `staging.open-care.org` (configurable) for the operator paths.
+  "services": [
+    { "binding": "VAULT_API_WRITE", "service": "vault-api-write" },
+    { "binding": "VAULT_ANCHOR_CRON", "service": "vault-anchor-cron" },
+    { "binding": "TG_BOT", "service": "tg-bot" }
+  ],
   "observability": {
     "enabled": true
   }

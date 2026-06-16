@@ -1,19 +1,16 @@
 import { Hono } from "hono";
 
 type Bindings = {
+  vault_db: D1Database;
   OPERATOR_TOKEN: string;
-  VAULT_API_WRITE: Fetcher;
-  VAULT_ANCHOR_CRON: Fetcher;
-  TG_BOT: Fetcher;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
 
-// Auth middleware — vault-operator is the sole holder of OPERATOR_TOKEN.
-// All operator-authenticated endpoints flow through this check before
-// being forwarded to the appropriate downstream Worker via service
-// binding. The downstream Workers are not publicly routable for these
-// routes.
+// Auth middleware — every route on this Worker is operator-authenticated.
+// The Worker is not publicly routable; it is reached only via service
+// binding from vault-operator, which already validates OPERATOR_TOKEN.
+// The redundant check here is a defence-in-depth measure.
 app.use("*", async (c, next) => {
   const provided = c.req
     .header("Authorization")
@@ -40,24 +37,18 @@ app.use("*", async (c, next) => {
   await next();
 });
 
-// Forward to vault-api-write for disbursement creation.
+// The real handler must validate the disbursement request body, persist
+// the disbursement row in vault_db, and enqueue the on-chain transfer
+// for operator approval. The mock returns `{ ok: true }`.
 app.post("/api/disbursements", (c) => {
-  return c.env.VAULT_API_WRITE.fetch(c.req.raw);
+  return c.json({ ok: true }, 200);
 });
 
-// Forward to vault-anchor-cron for manual anchor trigger.
+// The real handler must trigger an anchor run: compute merkle root,
+// persist anchor_runs row, and submit the on-chain anchor transaction.
+// The mock returns `{ ok: true }`.
 app.post("/api/anchor/manual", (c) => {
-  return c.env.VAULT_ANCHOR_CRON.fetch(c.req.raw);
-});
-
-// Forward to tg-bot for pending request inspection.
-app.get("/tg/internal/pending-requests", (c) => {
-  return c.env.TG_BOT.fetch(c.req.raw);
-});
-
-// Forward to tg-bot for sending verification codes.
-app.post("/tg/internal/send-code", (c) => {
-  return c.env.TG_BOT.fetch(c.req.raw);
+  return c.json({ ok: true }, 200);
 });
 
 app.all("*", (c) => {

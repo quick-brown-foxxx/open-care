@@ -6,7 +6,7 @@ packages:
 allowBuilds:
   bigint-buffer: true
   bufferutil: true
-  esbuild: set this to true or false
+  esbuild: true
   sharp: set this to true or false
   utf-8-validate: true
   workerd: set this to true or false

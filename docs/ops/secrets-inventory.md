@@ -9,21 +9,23 @@
 This section is the single source of truth for what is deployed, configured, and
 ready vs what still needs human action. AI coding agents should read this first.
 
-### Secrets: All Pushed to Cloudflare Workers
+### Secrets: Pushed to Cloudflare Workers
 
-All 8 Worker secrets are set via `wrangler secret put` on the default
-(staging) environment. No `--env production` secrets exist yet.
+9 of 9 Worker secrets are set via `wrangler secret put` on the default
+(staging) environment. `OPERATOR_TOKEN` on `vault-operator` is the only
+one still pending — human must run `cd apps/operator && pnpm exec wrangler secret put OPERATOR_TOKEN`.
+No `--env production` secrets exist yet.
 
-| Secret                       | Workers                             | Status |
-| ---------------------------- | ----------------------------------- | ------ |
-| `OPERATOR_TOKEN`             | `vault-api-write`, `tg-bot`         | ✅ Set  |
-| `HELIUS_RPC_URL`             | `vault-ingest`, `vault-anchor-cron` | ✅ Set  |
-| `HELIUS_WEBHOOK_AUTH_HEADER` | `vault-ingest`                      | ✅ Set  |
-| `ANCHOR_WALLET_SECRET`       | `vault-anchor-cron`                 | ✅ Set  |
-| `TG_BOT_TOKEN`               | `tg-bot`                            | ✅ Set  |
-| `TG_WEBHOOK_SECRET`          | `tg-bot`                            | ✅ Set  |
-| `TG_ID_HMAC_KEY`             | `tg-bot`                            | ✅ Set  |
-| `TG_CHAT_ENC_KEY`            | `tg-bot`                            | ✅ Set  |
+| Secret                       | Workers                                      | Status    |
+| ---------------------------- | -------------------------------------------- | --------- |
+| `OPERATOR_TOKEN`             | `vault-api-write`, `tg-bot`, `vault-operator` | ⚠️ `vault-operator` pending |
+| `HELIUS_RPC_URL`             | `vault-ingest`, `vault-anchor-cron`          | ✅ Set     |
+| `HELIUS_WEBHOOK_AUTH_HEADER` | `vault-ingest`                               | ✅ Set     |
+| `ANCHOR_WALLET_SECRET`       | `vault-anchor-cron`                          | ✅ Set     |
+| `TG_BOT_TOKEN`               | `tg-bot`                                     | ✅ Set     |
+| `TG_WEBHOOK_SECRET`          | `tg-bot`                                     | ✅ Set     |
+| `TG_ID_HMAC_KEY`             | `tg-bot`                                     | ✅ Set     |
+| `TG_CHAT_ENC_KEY`            | `tg-bot`                                     | ✅ Set     |
 
 ### CI/CD Secrets and Variables: Ready in GitHub Actions
 
@@ -74,24 +76,24 @@ Faucet alternatives when rate-limited: <https://www.devnetfaucet.org/>,
 | `tg-bot`            | ✅ Deployed (mock) | Route: `staging.open-care.org/tg/webhook`                   |
 | `vault-api-write`   | ✅ Deployed (mock) | Has `OPERATOR_TOKEN` secret set                             |
 | `vault-anchor-cron` | ✅ Deployed (mock) | Has `ANCHOR_WALLET_SECRET` and `HELIUS_RPC_URL` secrets set |
-| `vault-api-read`    | 🔲 Not deployed    | Wrangler config exists, no code                             |
-| `vault-operator`    | 🔲 Not deployed    | Wrangler config exists, no code, no secrets                 |
+| `vault-api-read`    | ✅ Deployed (mock) | Public read API mock, no secrets needed                     |
+| `vault-operator`    | ✅ Deployed (mock) | Service bindings to api-write, anchor-cron, tg-bot; `OPERATOR_TOKEN` secret pending |
 
 ### What the AI Coding Agent Must Create
 
 These are not environment blockers — they are implementation tasks:
 
 - `.github/workflows/pr-ci.yml` and `deploy.yml`
-- `package.json` + `tsconfig.json` for all apps and packages
-- D1 migration SQL files for `vault-db` and `bot-db`
+- D1 seed data scripts (initial `wallets` rows)
+- Real Worker implementations replacing the mock Workers
 - `packages/vault-core/`, `packages/vault-db/`, `packages/bot-crypto/` source code
 - Full SvelteKit frontend in `apps/web/`
-- Real Worker implementations replacing the mock webhook Workers
 - ESLint, Prettier, Vitest, Playwright configs
-- `.dev.vars` template for local development
+- Route configuration for `vault-api-read` and `vault-operator` on staging domain
 
 ### What the Human Must Still Do
 
+- Set `OPERATOR_TOKEN` on `vault-operator` Worker (`cd apps/operator && pnpm exec wrangler secret put OPERATOR_TOKEN`)
 - Fund the donor devnet wallet (rate-limited, try again in ~24h)
 - Production secrets (`wrangler secret put --env production`) — deferred until
   mainnet launch
@@ -116,18 +118,19 @@ These are not environment blockers — they are implementation tasks:
 
 ## Cloudflare resources
 
-| Resource                | Name                    | Details                                                                                   |
-| ----------------------- | ----------------------- | ----------------------------------------------------------------------------------------- |
-| Pages project           | `open-care-web`         | SvelteKit frontend. Default domain: `open-care-web.pages.dev`. Production branch: `main`. |
-| Pages staging domain    | `staging.open-care.org` | Custom domain for staging deployments.                                                    |
-| Pages production domain | `open-care.org` (TBD)   | Custom domain for production. Set up later.                                               |
+| Resource                | Name                    | Details                                                                                                     |
+| ----------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Pages project           | `open-care-web`         | SvelteKit frontend. Default domain: `open-care-web.pages.dev`. Production branch: `main`. First deploy done. |
+| Pages staging domain    | `staging.open-care.org` | Custom domain for staging. Live and serving the SvelteKit mock frontend.        |
+| Pages production domain | `open-care.org` (TBD)   | Custom domain for production. Set up later.                                                                 |
+| Workers.dev subdomain   | `open-care-dev`         | Workers.dev subdomain for Workers without custom routes: `*.open-care-dev.workers.dev`                       |
 
 ## D1 databases
 
-| Database   | Binding    | Database ID                            | Region |
-| ---------- | ---------- | -------------------------------------- | ------ |
-| `vault-db` | `vault_db` | `c6a73f10-728d-49e2-8d71-28ea3344a47b` | EEUR   |
-| `bot-db`   | `bot_db`   | `8a87d3ff-8689-4e77-a9c5-85b5ca19afd9` | EEUR   |
+| Database   | Binding    | Database ID                            | Region | Migrations Applied       |
+| ---------- | ---------- | -------------------------------------- | ------ | ------------------------ |
+| `vault-db` | `vault_db` | `c6a73f10-728d-49e2-8d71-28ea3344a47b` | EEUR   | ✅ Local + Remote (0001) |
+| `bot-db`   | `bot_db`   | `8a87d3ff-8689-4e77-a9c5-85b5ca19afd9` | EEUR   | ✅ Local + Remote (0001) |
 
 ## Secrets
 
