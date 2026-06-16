@@ -74,9 +74,9 @@
 - **Where:** manual or nightly environment-gated job, not PR CI.
 - **Required env:** `HELIUS_API_KEY`, `HELIUS_WEBHOOK_AUTH_HEADER`,
   `HELIUS_RPC_URL`, staging `WEBHOOK_URL`, devnet wallet/ATA config.
-- **Must cover:** `Authorization` auth using configured `authHeader`, ACK-fast
-  behavior, duplicate replay, payload shape validation, and provider retry
-  behavior.
+- **Must cover:** Bearer token extraction from `Authorization` header and
+  comparison against configured secret, ACK-fast behavior, duplicate replay,
+  payload shape validation, and provider retry behavior.
 
 ### 4. Telegram E2E tests (Telethon)
 
@@ -201,7 +201,7 @@ And no second ledger event is appended
 Scenario: configured authHeader is required
 
 ```gherkin
-Given Helius sends the configured authHeader value in Authorization
+Given Helius sends `Authorization: Bearer <token>` where `<token>` matches the configured secret
 When the webhook receives the request
 Then it accepts the payload
 And writes an inbox row before returning 200

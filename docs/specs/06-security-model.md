@@ -38,9 +38,10 @@ The treasury wallet key would allow spending donations.
 
 An attacker posts fake webhook payloads or replays real ones.
 
-- **Mitigation:** exact `Authorization` comparison against the configured
-  Helius `authHeader`; durable inbox; duplicate-safe transaction signatures;
-  finalized RPC fetch before ledger append; USDC mint and ATA filters.
+- **Mitigation:** Bearer token extraction from the `Authorization` header and
+  constant-time comparison against the configured secret; durable inbox;
+  duplicate-safe transaction signatures; finalized RPC fetch before ledger
+  append; USDC mint and ATA filters.
 - **Limit:** Helius delivery is not the source of truth. Reconciliation checks
   Solana history for missed signatures.
 

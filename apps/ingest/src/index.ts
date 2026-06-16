@@ -8,13 +8,20 @@ type Bindings = {
 const app = new Hono<{ Bindings: Bindings }>();
 
 app.post("/webhook/helius", async (c) => {
-  const expected = c.env.HELIUS_WEBHOOK_AUTH_HEADER;
+  const expected = c.env.HELIUS_WEBHOOK_AUTH_HEADER; // token only, no "Bearer " prefix
   const provided = c.req.header("Authorization");
 
-  if (!provided || provided !== expected) {
+  // Extract bearer token from "Bearer <token>" header value.
+  // The secret stores just the token — the "Bearer " prefix belongs
+  // to the HTTP Authorization scheme, not to the stored secret.
+  const providedToken = provided?.startsWith("Bearer ")
+    ? provided.slice(7)
+    : provided;
+
+  if (!providedToken || providedToken !== expected) {
     // Real implementation MUST use a constant-time comparison here
-    // (e.g., a custom XOR-and-OR loop over the byte arrays). The MVP
-    // mock uses `!==` for brevity; this is documented in
+    // (e.g., crypto.subtle.timingSafeEqual over the byte arrays).
+    // The MVP mock uses `!==` for brevity; this is documented in
     // docs/specs/04-api.md §"Helius auth". The mock returns the
     // standard error envelope from §"Standard error response".
     return c.json(

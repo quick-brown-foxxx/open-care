@@ -73,9 +73,13 @@
 ### Helius auth uses configured `authHeader`
 
 - **Where:** `04-api.md`, `05-hosting-and-deploy.md`.
-- **Decision:** configure a Helius webhook `authHeader` value and validate the
-  incoming `Authorization` header exactly.
-- **Reasoning:** this matches the documented Helius webhook configuration.
+- **Decision:** configure a Helius webhook `authHeader` value (token only, no
+  `Bearer ` prefix) and extract the Bearer token from the incoming
+  `Authorization` header before comparing.
+- **Reasoning:** storing just the token is clearer and avoids conflating the
+  HTTP scheme prefix with the secret value. The Worker strips `Bearer ` from
+  the incoming header and compares only the token portion against the stored
+  secret using constant-time comparison.
 
 ### Webhook processing uses a durable inbox
 

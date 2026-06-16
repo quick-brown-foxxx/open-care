@@ -107,7 +107,7 @@ Rules:
 | GET | `/api/health` | none | `vault-api-read` | Health probe |
 | POST | `/api/disbursements` | `OPERATOR_TOKEN` | `vault-operator` (forwards to `vault-api-write` via service binding) | Record gift-card purchase |
 | POST | `/api/anchor/manual` | `OPERATOR_TOKEN` | `vault-operator` (forwards to `vault-anchor-cron` via service binding) | Trigger anchor run |
-| POST | `/webhook/helius` | configured `Authorization` | `vault-ingest` | Receive Helius events |
+| POST | `/webhook/helius` | `Authorization: Bearer <token>` | `vault-ingest` | Receive Helius events |
 | POST | `/tg/webhook` | Telegram secret token | `tg-bot` | Receive Telegram updates |
 | GET | `/tg/internal/pending-requests` | `OPERATOR_TOKEN` | `vault-operator` (forwards to `tg-bot` via service binding) | List redacted pending bot requests |
 | POST | `/tg/internal/send-code` | `OPERATOR_TOKEN` | `vault-operator` (forwards to `tg-bot` via service binding) | Send gift-card code by `opaque_id` |
@@ -484,11 +484,13 @@ anchor flow").
 
 Helius webhook receiver for Solana activity.
 
-Authentication: compare the request `Authorization` header to the
-configured Helius `authHeader` value. The comparison MUST be
-constant-time (e.g., a custom XOR-and-OR loop or
+Authentication: extract the Bearer token from the request
+`Authorization` header (strip the `Bearer ` prefix) and compare it to
+the configured `HELIUS_WEBHOOK_AUTH_HEADER` secret. The comparison MUST
+be constant-time (e.g., a custom XOR-and-OR loop or
 `crypto.subtle.timingSafeEqual`); do not rely on `!==` for the real
-implementation.
+implementation. The secret stores only the token — the `Bearer ` prefix
+belongs to the HTTP Authorization scheme, not the stored value.
 
 Handler requirements:
 

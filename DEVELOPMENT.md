@@ -88,7 +88,7 @@ pnpm exec wrangler tail <worker-name>
 ```bash
 curl https://staging.open-care.org/api/health
 curl -X POST https://staging.open-care.org/webhook/helius \
-  -H "Authorization: <HELIUS_WEBHOOK_AUTH_HEADER>" -d '{}'
+  -H "Authorization: Bearer <HELIUS_WEBHOOK_AUTH_HEADER>" -d '{}'
 ```
 
 ## The dev loop

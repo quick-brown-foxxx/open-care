@@ -18,7 +18,7 @@ All 10 Worker secrets are set via `wrangler secret put` on the default
 | ---------------------------- | ----------------------------------- | ------ |
 | `OPERATOR_TOKEN`             | `vault-api-write`, `tg-bot`         | ✅ Set  |
 | `HELIUS_RPC_URL`             | `vault-ingest`, `vault-anchor-cron` | ✅ Set  |
-| `HELIUS_WEBHOOK_AUTH_HEADER` | `vault-ingest`                      | ✅ Set  |
+| `HELIUS_WEBHOOK_AUTH_HEADER` | `vault-ingest` | ✅ Set  |
 | `ANCHOR_WALLET_SECRET`       | `vault-anchor-cron`                 | ✅ Set  |
 | `TG_BOT_TOKEN`               | `tg-bot`                            | ✅ Set  |
 | `TG_WEBHOOK_SECRET`          | `tg-bot`                            | ✅ Set  |
@@ -38,7 +38,7 @@ All 10 Worker secrets are set via `wrangler secret put` on the default
 
 | Webhook  | URL                                                 | Auth mechanism                    | Status        |
 | -------- | --------------------------------------------------- | --------------------------------- | ------------- |
-| Helius   | `POST https://staging.open-care.org/webhook/helius` | `Authorization` header            | ✅ Live (mock) |
+| Helius   | `POST https://staging.open-care.org/webhook/helius` | `Authorization: Bearer <token>` header | ✅ Live (mock) |
 | Telegram | `POST https://staging.open-care.org/tg/webhook`     | `X-Telegram-Bot-Api-Secret-Token` | ✅ Live (mock) |
 
 Both endpoints are served by minimal mock Workers that validate auth and return
@@ -133,7 +133,7 @@ These are not environment blockers — they are implementation tasks:
 | `OPERATOR_TOKEN`             | Secret | `vault-api-write` Worker Secret, `tg-bot` Worker Secret | Human → Wrangler                    | No                           | Operator write auth and bot internal delivery calls. Strong random token.    |
 | `HELIUS_API_KEY`             | Secret | GitHub Actions secret (deploy/live envs)                | Human (Helius dashboard)            | No                           | Helius management/RPC access.                                                |
 | `HELIUS_RPC_URL`             | Secret | `vault-ingest`, `vault-anchor-cron` env                 | Human (Helius dashboard)            | No (optional for live smoke) | Solana RPC endpoint URL.                                                     |
-| `HELIUS_WEBHOOK_AUTH_HEADER` | Secret | `vault-ingest` Worker Secret                            | Human (Helius dashboard → Wrangler) | No                           | Exact `Authorization` header value Helius sends.                             |
+| `HELIUS_WEBHOOK_AUTH_HEADER` | Secret | `vault-ingest` Worker Secret                            | Human (Helius dashboard → Wrangler) | No                           | Bearer token (without `Bearer ` prefix) for Helius webhook auth. The Worker extracts the token from the incoming `Authorization: Bearer <token>` header and compares just the token. |
 | `ANCHOR_WALLET_SECRET`           | Secret | `vault-anchor-cron` Worker Secret, gated manual job     | Human → Wrangler                    | No                           | Anchor wallet keypair. Holds only SOL for Memo fees. Never the treasury key. Base58-encoded keypair string from `solana-keygen`. |
 | `DONOR_WALLET_SECRET`            | Secret | `.dev.vars` (local), GitHub Actions secret (nightly E2E)  | Human → file/CI                      | No                           | Donor wallet keypair. Devnet throwaway for staging/localnet generated key for local dev. Used by E2E smoke tests to send test USDC. **Never mainnet.** Not a Worker secret; test scripts read it directly. |
 

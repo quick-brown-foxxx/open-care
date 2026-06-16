@@ -79,7 +79,7 @@ boundary. The binding allowlist is checked in CI per invariant I-7.
 | `TG_CHAT_ENC_KEY` | `tg-bot` Workers Secret | no | Authenticated encryption key for Telegram chat delivery routes. |
 | `HELIUS_API_KEY` | deploy/live environments | no | Helius management/RPC access. |
 | `HELIUS_RPC_URL` | ingest/anchor environments | no for PR; optional for live smoke | Solana RPC endpoint. |
-| `HELIUS_WEBHOOK_AUTH_HEADER` | `vault-ingest` Workers Secret | no | Exact expected `Authorization` header value Helius sends from `authHeader`. |
+| `HELIUS_WEBHOOK_AUTH_HEADER` | `vault-ingest` Workers Secret | no | Bearer token (without `Bearer ` prefix) for Helius webhook auth. The Worker strips the `Bearer ` prefix from the incoming `Authorization` header before comparing. Set in the Helius dashboard `authHeader` field as just the token value. |
 | `TREASURY_WALLET_ADDRESS` | public config + ingest env | yes as non-secret test value | Owner of the vault USDC ATA. |
 | `VAULT_USDC_ATA` | public config + ingest env | yes as non-secret test value | USDC token account watched for donations. |
 | `USDC_MINT` | public config | yes as non-secret test value | Cluster-specific USDC mint. |
@@ -184,8 +184,9 @@ events until a transaction is known.
 ## Donation ingest job
 
 Helius webhook setup watches the vault USDC ATA and, where useful, the treasury
-owner address. The webhook config sets `authHeader` to a bearer value. Helius
-then sends that value in the request `Authorization` header.
+owner address. The webhook config sets `authHeader` to the token value (without
+the `Bearer ` prefix). Helius sends it as `Authorization: Bearer <token>`. The
+Worker extracts the Bearer token before comparing.
 
 The ingest Worker:
 
