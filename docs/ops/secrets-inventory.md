@@ -18,7 +18,7 @@ All 8 Worker secrets are set via `wrangler secret put` on the default
 | ---------------------------- | ----------------------------------- | ------ |
 | `OPERATOR_TOKEN`             | `vault-api-write`, `tg-bot`         | ✅ Set  |
 | `HELIUS_RPC_URL`             | `vault-ingest`, `vault-anchor-cron` | ✅ Set  |
-| `HELIUS_WEBHOOK_AUTH_HEADER` | `vault-ingest` | ✅ Set  |
+| `HELIUS_WEBHOOK_AUTH_HEADER` | `vault-ingest`                      | ✅ Set  |
 | `ANCHOR_WALLET_SECRET`       | `vault-anchor-cron`                 | ✅ Set  |
 | `TG_BOT_TOKEN`               | `tg-bot`                            | ✅ Set  |
 | `TG_WEBHOOK_SECRET`          | `tg-bot`                            | ✅ Set  |
@@ -40,10 +40,10 @@ All 8 Worker secrets are set via `wrangler secret put` on the default
 
 ### Webhooks: Configured and Responding
 
-| Webhook  | URL                                                 | Auth mechanism                    | Status        |
-| -------- | --------------------------------------------------- | --------------------------------- | ------------- |
+| Webhook  | URL                                                 | Auth mechanism                         | Status        |
+| -------- | --------------------------------------------------- | -------------------------------------- | ------------- |
 | Helius   | `POST https://staging.open-care.org/webhook/helius` | `Authorization: Bearer <token>` header | ✅ Live (mock) |
-| Telegram | `POST https://staging.open-care.org/tg/webhook`     | `X-Telegram-Bot-Api-Secret-Token` | ✅ Live (mock) |
+| Telegram | `POST https://staging.open-care.org/tg/webhook`     | `X-Telegram-Bot-Api-Secret-Token`      | ✅ Live (mock) |
 
 Both endpoints are served by minimal mock Workers that validate auth and return
 200. These will be replaced with full implementations by the coding agent.
@@ -68,14 +68,14 @@ Faucet alternatives when rate-limited: <https://www.devnetfaucet.org/>,
 
 ### Deployed Workers
 
-| Worker              | Status            | Notes                                         |
-| ------------------- | ----------------- | --------------------------------------------- |
-| `vault-ingest`      | ✅ Deployed (mock) | Route: `staging.open-care.org/webhook/helius` |
-| `tg-bot`            | ✅ Deployed (mock) | Route: `staging.open-care.org/tg/webhook`     |
-| `vault-api-write`   | ✅ Deployed (mock) | Has `OPERATOR_TOKEN` secret set               |
+| Worker              | Status            | Notes                                                       |
+| ------------------- | ----------------- | ----------------------------------------------------------- |
+| `vault-ingest`      | ✅ Deployed (mock) | Route: `staging.open-care.org/webhook/helius`               |
+| `tg-bot`            | ✅ Deployed (mock) | Route: `staging.open-care.org/tg/webhook`                   |
+| `vault-api-write`   | ✅ Deployed (mock) | Has `OPERATOR_TOKEN` secret set                             |
 | `vault-anchor-cron` | ✅ Deployed (mock) | Has `ANCHOR_WALLET_SECRET` and `HELIUS_RPC_URL` secrets set |
-| `vault-api-read`    | 🔲 Not deployed    | Wrangler config exists, no code               |
-| `vault-operator`    | 🔲 Not deployed    | Wrangler config exists, no code, no secrets   |
+| `vault-api-read`    | 🔲 Not deployed    | Wrangler config exists, no code                             |
+| `vault-operator`    | 🔲 Not deployed    | Wrangler config exists, no code, no secrets                 |
 
 ### What the AI Coding Agent Must Create
 
@@ -133,14 +133,14 @@ These are not environment blockers — they are implementation tasks:
 
 ### Vault-side secrets
 
-| Name                         | Kind   | Location                                                | Owner                               | PR CI?                       | Purpose                                                                      |
-| ---------------------------- | ------ | ------------------------------------------------------- | ----------------------------------- | ---------------------------- | ---------------------------------------------------------------------------- |
-| `OPERATOR_TOKEN`             | Secret | `vault-api-write` Worker Secret, `tg-bot` Worker Secret | Human → Wrangler                    | No                           | Operator write auth and bot internal delivery calls. Strong random token.    |
-| `HELIUS_API_KEY`             | Secret | GitHub Actions secret (deploy/live envs)                | Human (Helius dashboard)            | No                           | Helius management/RPC access.                                                |
-| `HELIUS_RPC_URL`             | Secret | `vault-ingest`, `vault-anchor-cron` env                 | Human (Helius dashboard)            | No (optional for live smoke) | Solana RPC endpoint URL.                                                     |
-| `HELIUS_WEBHOOK_AUTH_HEADER` | Secret | `vault-ingest` Worker Secret                            | Human (Helius dashboard → Wrangler) | No                           | Bearer token (without `Bearer ` prefix) for Helius webhook auth. The Worker extracts the token from the incoming `Authorization: Bearer <token>` header and compares just the token. |
-| `ANCHOR_WALLET_SECRET`           | Secret | `vault-anchor-cron` Worker Secret, gated manual job     | Human → Wrangler                    | No                           | Anchor wallet keypair. Holds only SOL for Memo fees. Never the treasury key. Base58-encoded keypair string from `solana-keygen`. |
-| `DONOR_WALLET_SECRET`            | Secret | `.dev.vars` (local), GitHub Actions secret (nightly E2E)  | Human → file/CI                      | No                           | Donor wallet keypair. Devnet throwaway for staging/localnet generated key for local dev. Used by E2E smoke tests to send test USDC. **Never mainnet.** Not a Worker secret; test scripts read it directly. |
+| Name                         | Kind   | Location                                                 | Owner                               | PR CI?                       | Purpose                                                                                                                                                                                                    |
+| ---------------------------- | ------ | -------------------------------------------------------- | ----------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPERATOR_TOKEN`             | Secret | `vault-api-write` Worker Secret, `tg-bot` Worker Secret  | Human → Wrangler                    | No                           | Operator write auth and bot internal delivery calls. Strong random token.                                                                                                                                  |
+| `HELIUS_API_KEY`             | Secret | GitHub Actions secret (deploy/live envs)                 | Human (Helius dashboard)            | No                           | Helius management/RPC access.                                                                                                                                                                              |
+| `HELIUS_RPC_URL`             | Secret | `vault-ingest`, `vault-anchor-cron` env                  | Human (Helius dashboard)            | No (optional for live smoke) | Solana RPC endpoint URL.                                                                                                                                                                                   |
+| `HELIUS_WEBHOOK_AUTH_HEADER` | Secret | `vault-ingest` Worker Secret                             | Human (Helius dashboard → Wrangler) | No                           | Bearer token (without `Bearer ` prefix) for Helius webhook auth. The Worker extracts the token from the incoming `Authorization: Bearer <token>` header and compares just the token.                       |
+| `ANCHOR_WALLET_SECRET`       | Secret | `vault-anchor-cron` Worker Secret, gated manual job      | Human → Wrangler                    | No                           | Anchor wallet keypair. Holds only SOL for Memo fees. Never the treasury key. Base58-encoded keypair string from `solana-keygen`.                                                                           |
+| `DONOR_WALLET_SECRET`        | Secret | `.dev.vars` (local), GitHub Actions secret (nightly E2E) | Human → file/CI                     | No                           | Donor wallet keypair. Devnet throwaway for staging/localnet generated key for local dev. Used by E2E smoke tests to send test USDC. **Never mainnet.** Not a Worker secret; test scripts read it directly. |
 
 ### Bot-side secrets
 
@@ -171,12 +171,12 @@ real Solana devnet. They are **never used in production** and never set as
 Cloudflare Worker secrets. Test scripts read them from environment variables
 or `.dev.vars`.
 
-| Name                      | Kind   | Location                                 | Owner               | PR CI? | Purpose                                                                                          |
-| ------------------------- | ------ | ---------------------------------------- | ------------------- | ------ | ------------------------------------------------------------------------------------------------ |
-| `TELETHON_API_ID`         | Public | `.dev.vars` (local), GitHub Actions var  | Human (my.telegram.org) | No  | Telegram API app ID for the Telethon test client. Not a secret but stored alongside the hash for convenience. |
-| `TELETHON_API_HASH`       | Secret | `.dev.vars` (local), GitHub Actions secret | Human (my.telegram.org) | No | Telegram API app hash for the Telethon test client.                                                |
-| `TELETHON_SESSION_STRING` | Secret | `.dev.vars` (local), GitHub Actions secret | Generated (one-time auth) | No | Pre-authenticated Telethon `StringSession` for the test user account. Refresh manually if invalidated. |
-| `DONOR_WALLET_SECRET` | Secret | (see vault-side table above)          | Human → file/CI      | No     | Donor keypair for Solana E2E smoke. Set to devnet throwaway in staging, locally generated for localnet. |
+| Name                      | Kind   | Location                                   | Owner                     | PR CI? | Purpose                                                                                                       |
+| ------------------------- | ------ | ------------------------------------------ | ------------------------- | ------ | ------------------------------------------------------------------------------------------------------------- |
+| `TELETHON_API_ID`         | Public | `.dev.vars` (local), GitHub Actions var    | Human (my.telegram.org)   | No     | Telegram API app ID for the Telethon test client. Not a secret but stored alongside the hash for convenience. |
+| `TELETHON_API_HASH`       | Secret | `.dev.vars` (local), GitHub Actions secret | Human (my.telegram.org)   | No     | Telegram API app hash for the Telethon test client.                                                           |
+| `TELETHON_SESSION_STRING` | Secret | `.dev.vars` (local), GitHub Actions secret | Generated (one-time auth) | No     | Pre-authenticated Telethon `StringSession` for the test user account. Refresh manually if invalidated.        |
+| `DONOR_WALLET_SECRET`     | Secret | (see vault-side table above)               | Human → file/CI           | No     | Donor keypair for Solana E2E smoke. Set to devnet throwaway in staging, locally generated for localnet.       |
 
 **Setup instructions for Telethon E2E test account:**
 
@@ -366,7 +366,7 @@ These are created by you and stored in your password manager, not in Cloudflare 
 | `Crypto Charity / Devnet Wallets`          | Devnet throwaway keypairs (generated 2026-06-15, regenerated same day): treasury `8ufYGMkmAWeaYaM4CnANrxLxpQoaESKTGFN1BcgU71tG`, anchor `BhKtkM1oHADwo8ap5P6Lymj7b3iaspiAm37RA9KMn8YG`, donor `6dUAJZso3HThXQjReZKHWXNpMFYgZ8wbXu7GxXJ93hyL`. Secrets stored in password manager only. |
 | `Crypto Charity / Helius`                  | Helius API key and RPC URL (created 2026-06-15).                                                                                                                                                                                                                                       |
 | `Crypto Charity / Staging / TG_BOT_TOKEN`  | Telegram staging bot token (created 2026-06-15 via BotFather).                                                                                                                                                                                                                         |
-| `Crypto Charity / E2E Test Account`       | Telegram test account phone number, `api_id`, `api_hash`, and `StringSession` for Telethon E2E tests. Separate from personal account.                                                                                                                                                |
+| `Crypto Charity / E2E Test Account`        | Telegram test account phone number, `api_id`, `api_hash`, and `StringSession` for Telethon E2E tests. Separate from personal account.                                                                                                                                                  |
 | `Cloudflare / crypto-charity-ci API token` | The CI token created 2026-06-15.                                                                                                                                                                                                                                                       |
 
 ## Devnet funding
