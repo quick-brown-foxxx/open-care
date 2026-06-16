@@ -179,33 +179,23 @@ or `.dev.vars`.
    personal account). Use a secondary SIM or a VoIP number.
 2. Go to <https://my.telegram.org/apps>, log in with the test account, and
    create an API application. Note the `api_id` (integer) and `api_hash`
-   (string).
-3. Run the one-time session generator (see `tools/e2e-tg/get_session_string.py`
-   or the script below). It will prompt for the phone number and the login code
-   that Telegram sends. On success it prints a `StringSession` value.
+   (string). **Known issue:** the "ERROR" / `[object Object]` message is a
+   long-standing Telegram bug. Workaround: use a phone browser on cellular data
+   (no VPN, no Wi-Fi), ensure your IP country matches your phone number's
+   country code, and use strict field rules: App title (UpperCamelCase, letters
+   only, no "telegram"), Short name (lowercase + digits only, 5-32 chars, no
+   underscores/hyphens), Description (40+ chars). If still failing, try
+   incognito mode with all extensions disabled, or try again after 24 hours.
+3. Run the one-time session generator:
+   `uv run --script tools/e2e-tg/get_session_string_draft.py`
+   It will prompt for API ID, API Hash, phone number, and the login code that
+   Telegram sends. On success it prints a `StringSession` value.
 4. Store the three values:
    - `TELETHON_API_ID` → `.dev.vars` or GitHub Actions variable
    - `TELETHON_API_HASH` → `.dev.vars` or GitHub Actions secret
    - `TELETHON_SESSION_STRING` → `.dev.vars` or GitHub Actions secret
 5. If the session is invalidated (rare: Telegram logout, password change),
    repeat step 3 and update the stored value.
-
-**One-time session generator script:**
-
-```python
-# tools/e2e-tg/get_session_string.py
-# Usage: pip install telethon && python get_session_string.py
-import os
-from telethon.sync import TelegramClient
-from telethon.sessions import StringSession
-
-api_id = int(input("Enter API ID: "))
-api_hash = input("Enter API Hash: ")
-
-with TelegramClient(StringSession(), api_id, api_hash) as client:
-    print("Session string (save this as TELETHON_SESSION_STRING):")
-    print(client.session.save())
-```
 
 **`DONOR_WALLET_SECRET` setup:**
 
