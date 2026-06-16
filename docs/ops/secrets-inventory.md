@@ -246,6 +246,10 @@ No `.env.staging` or `.env.prod` files exist — secrets for deployed environmen
 
 Set a secret (prompts for the value — paste it, no echo):
 
+> NOTE! ONLY HUMANS ARE ALLOWED TO SET/DELETE SECRETS!!!
+> AI AGENTS CAN ONLY LIST SECRETS! IF SECRET IS INCORRECT/MISSING IN CI/STAGING,
+> REPORT TO HUMAN, DO NOT EDIT YOURSELF!
+
 ```bash
 # Staging (default environment — no --env flag needed)
 (cd apps/ingest && pnpm exec wrangler secret put HELIUS_WEBHOOK_AUTH_HEADER)
