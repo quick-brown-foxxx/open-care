@@ -19,6 +19,12 @@
       "TG_CHAT_ENC_KEY"
     ]
   },
+  "routes": [
+    {
+      "pattern": "staging.open-care.org/tg/webhook",
+      "zone_id": "d3ce85436c3b589b4f83814991bf2c78"
+    }
+  ],
   "observability": {
     "enabled": true
   }
