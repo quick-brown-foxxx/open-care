@@ -209,6 +209,8 @@ For each of the 6 Workers, **delete everything in `src/`** and write clean stubs
 
 **Goal:** Working frontend that reads from APIs.
 
+See [[./ui-prototypes/]] for UI plans, docs and prototypes.
+
 ### Slice 5.1: Public Shell & Landing
 
 - Layout, navigation, footer
