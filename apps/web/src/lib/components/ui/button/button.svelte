@@ -6,10 +6,10 @@
     variant = 'primary',
     size = 'md',
     disabled = false,
-    href,
-    type = 'button',
+    href = undefined,
+    type = 'button' as const,
     class: className = '',
-    onclick,
+    onclick = undefined,
     children,
   } = $props();
 
