@@ -96,9 +96,11 @@ For each of the 6 Workers, **delete everything in `src/`** and write clean stubs
 
 ---
 
-## Epic 1: Ledger Core — Hash Chain & Read/Write API
+## Epic 1: Ledger Core — Hash Chain & Read/Write API ✅
 
-**Goal:** Append events, compute hash chain, read via public API.
+**Status:** Complete (2026-06-17)  
+**Goal:** Append events, compute hash chain, read via public API.  
+**Evidence:** `tsc -b` clean (12 projects), 452 tests pass (25 files), SvelteKit build succeeds. Write path (POST /api/disbursements) with Zod validation + hash-chained append, read API (6 endpoints with 60s cache), operator auth gateway (constant-time token + CORS + service binding forwarding), seed data + fixtures + `pnpm seed` script.
 
 ### Slice 1.1: `vault-api-write` — Ledger Append
 
@@ -263,24 +265,18 @@ See [[./ui-prototypes/]] for UI plans, docs and prototypes.
 ## Execution Order
 
 **Epic 0: ✅ Complete (2026-06-17)**
+**Epic 1: ✅ Complete (2026-06-17)**
 
-**Next — Epic 1 (Ledger Core):**
+**Next — Epics 2, 3, 4 can run in parallel:**
 
-1. **Slice 1.1** — `vault-api-write` ledger append (real impl in existing stub)
-2. **Slice 1.2** — `vault-api-read` public endpoints (real impl in existing stub)
-3. **Slice 1.3** — `vault-operator` auth gateway (real impl in existing stub)
-4. **Slice 1.4** — Seed data & test harness
+- Epic 2 (ingest) — Helius webhook → donation events
+- Epic 3 (anchor) — Daily Solana Memo anchor
+- Epic 4 (tg-bot) — Telegram bot registration + card delivery
 
-**Then parallelize:**
+**Then:**
 
-- Epic 2 (ingest) and Epic 3 (anchor) can proceed in parallel after Epic 1
-- Epic 4 (tg-bot) can start after Epic 1 + bot-crypto (already done)
-- Epic 5 (frontend) can start after Epic 1.2 (needs read API)
-
-**Final polish:**
-
-- Epic 6 (CI/CD) — CI workflow already in place (Slice 0.1); deploy + monitoring remain
-- Invariant tests (from `08-testing-strategy.md`) are woven into each slice, not a separate epic
+- Epic 5 (frontend) — needs read API (done in 1.2)
+- Epic 6 (CI/CD) — CI workflow already in place; deploy + monitoring remain
 
 ---
 
