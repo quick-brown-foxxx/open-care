@@ -134,9 +134,11 @@ For each of the 6 Workers, **delete everything in `src/`** and write clean stubs
 
 ---
 
-## Epic 2: Donation Ingest — Helius Webhook to Ledger
+## Epic 2: Donation Ingest — Helius Webhook to Ledger ✅
 
-**Goal:** Real USDC transfer → `donation_confirmed` ledger event.
+**Status:** Complete (2026-06-17)  
+**Goal:** Real USDC transfer → `donation_confirmed` ledger event.  
+**Evidence:** 32 integration tests pass. Webhook handler with constant-time auth, durable inbox, async SPL USDC transfer parsing, duplicate-safe ledger append, RPC retry, reconciliation endpoint.
 
 ### Slice 2.1: `vault-ingest` — Webhook Handler
 
@@ -161,9 +163,11 @@ For each of the 6 Workers, **delete everything in `src/`** and write clean stubs
 
 ---
 
-## Epic 3: Anchor Cron — Daily Solana Memo Anchor
+## Epic 3: Anchor Cron — Daily Solana Memo Anchor ✅
 
-**Goal:** Daily cron sends Memo transaction committing the ledger head hash.
+**Status:** Complete (2026-06-17)  
+**Goal:** Daily cron sends Memo transaction committing the ledger head hash.  
+**Evidence:** 22 integration tests pass. 9-step anchor pipeline, lock protocol, stale lock recovery, manual trigger via operator service binding, scheduled handler.
 
 ### Slice 3.1: Anchor Pipeline
 
@@ -184,9 +188,11 @@ For each of the 6 Workers, **delete everything in `src/`** and write clean stubs
 
 ---
 
-## Epic 4: Telegram Bot — Beneficiary Interaction
+## Epic 4: Telegram Bot — Beneficiary Interaction ✅
 
-**Goal:** `/start`, `/card`, delivery flow works end-to-end.
+**Status:** Complete (2026-06-17)  
+**Goal:** `/start`, `/card`, delivery flow works end-to-end.  
+**Evidence:** 77 integration tests pass. Webhook handler, 4 commands, HMAC user refs + AES-GCM encrypted chat routes, redacted operator view, send-code delivery with hash/last4 retention.
 
 ### Slice 4.1: `tg-bot` — Registration & Commands
 
@@ -266,16 +272,13 @@ See [[./ui-prototypes/]] for UI plans, docs and prototypes.
 
 **Epic 0: ✅ Complete (2026-06-17)**
 **Epic 1: ✅ Complete (2026-06-17)**
+**Epic 2: ✅ Complete (2026-06-17)**
+**Epic 3: ✅ Complete (2026-06-17)**
+**Epic 4: ✅ Complete (2026-06-17)**
 
-**Next — Epics 2, 3, 4 can run in parallel:**
+**Next:**
 
-- Epic 2 (ingest) — Helius webhook → donation events
-- Epic 3 (anchor) — Daily Solana Memo anchor
-- Epic 4 (tg-bot) — Telegram bot registration + card delivery
-
-**Then:**
-
-- Epic 5 (frontend) — needs read API (done in 1.2)
+- Epic 5 (frontend) — needs read API (done in 1.2), all backend Workers ready
 - Epic 6 (CI/CD) — CI workflow already in place; deploy + monitoring remain
 
 ---
