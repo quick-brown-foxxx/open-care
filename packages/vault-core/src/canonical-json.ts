@@ -48,9 +48,7 @@ function escapeString(s: string): string {
 function serializeObject(obj: Record<string, unknown>): string {
   const entries = Object.entries(obj);
   entries.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-  const pairs = entries.map(
-    ([k, v]) => escapeString(k) + ':' + serialize(v),
-  );
+  const pairs = entries.map(([k, v]) => escapeString(k) + ':' + serialize(v));
   return '{' + pairs.join(',') + '}';
 }
 

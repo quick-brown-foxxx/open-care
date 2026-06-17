@@ -15,7 +15,9 @@ import type { Env } from '../src/lib/env.js';
  * Create a mock `fetch` that returns a `getSignaturesForAddress` JSON-RPC
  * response containing the given list of successful (err=null) signatures.
  */
-function createMockFetch(signatures: string[]): (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> {
+function createMockFetch(
+  signatures: string[],
+): (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> {
   return (input, init) => {
     void input;
     void init;
@@ -26,10 +28,12 @@ function createMockFetch(signatures: string[]): (input: RequestInfo | URL, init?
       blockTime: 1718400000,
       confirmationStatus: 'finalized',
     }));
-    return Promise.resolve(new Response(
-      JSON.stringify({ jsonrpc: '2.0', result, id: 1 }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    ));
+    return Promise.resolve(
+      new Response(JSON.stringify({ jsonrpc: '2.0', result, id: 1 }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
   };
 }
 
@@ -44,10 +48,12 @@ function createRpcMockFetch(
   return (input, init) => {
     void input;
     void init;
-    return Promise.resolve(new Response(JSON.stringify(response), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    }));
+    return Promise.resolve(
+      new Response(JSON.stringify(response), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
   };
 }
 
@@ -126,11 +132,7 @@ describe('reconciliation', () => {
       'rec-sig-ccc11111111111111111111111111111111',
     ];
     const mockFetch = createMockFetch(sigs);
-    const result = await reconcileMissedSignatures(
-      db,
-      env as Env,
-      mockFetch,
-    );
+    const result = await reconcileMissedSignatures(db, env as Env, mockFetch);
 
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -169,11 +171,7 @@ describe('reconciliation', () => {
     ]);
 
     const mockFetch = createMockFetch([existingSig, newSig]);
-    const result = await reconcileMissedSignatures(
-      db,
-      env as Env,
-      mockFetch,
-    );
+    const result = await reconcileMissedSignatures(db, env as Env, mockFetch);
 
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -214,16 +212,10 @@ describe('reconciliation', () => {
     // Remove the inbox row so reconciliation tests the ledger-only path.
     // (reconcileMissedSignatures checks inbox first; if the row remained
     // it would be skipped by the inbox check, not the ledger check.)
-    await db.run(
-      sql`DELETE FROM helius_inbox WHERE signature = ${ledgerSig}`,
-    );
+    await db.run(sql`DELETE FROM helius_inbox WHERE signature = ${ledgerSig}`);
 
     const mockFetch = createMockFetch([ledgerSig, newSig]);
-    const result = await reconcileMissedSignatures(
-      db,
-      env as Env,
-      mockFetch,
-    );
+    const result = await reconcileMissedSignatures(db, env as Env, mockFetch);
 
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -263,16 +255,10 @@ describe('reconciliation', () => {
     const rpcMock = createRpcMockFetch(validTransferResponse(ledgerSig));
     await processInbox(db, env as Env, rpcMock);
     // Remove inbox row so ledgerSig is only in the ledger
-    await db.run(
-      sql`DELETE FROM helius_inbox WHERE signature = ${ledgerSig}`,
-    );
+    await db.run(sql`DELETE FROM helius_inbox WHERE signature = ${ledgerSig}`);
 
     const mockFetch = createMockFetch([inboxSig, ledgerSig, newSig]);
-    const result = await reconcileMissedSignatures(
-      db,
-      env as Env,
-      mockFetch,
-    );
+    const result = await reconcileMissedSignatures(db, env as Env, mockFetch);
 
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -287,11 +273,7 @@ describe('reconciliation', () => {
 
   it('handles empty signature list', async () => {
     const mockFetch = createMockFetch([]);
-    const result = await reconcileMissedSignatures(
-      db,
-      env as Env,
-      mockFetch,
-    );
+    const result = await reconcileMissedSignatures(db, env as Env, mockFetch);
 
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -305,15 +287,8 @@ describe('reconciliation', () => {
   // -----------------------------------------------------------------------
 
   it('returns error on RPC failure', async () => {
-    const mockFetch = createRpcMockFetch(
-      { error: 'internal error' },
-      500,
-    );
-    const result = await reconcileMissedSignatures(
-      db,
-      env as Env,
-      mockFetch,
-    );
+    const mockFetch = createRpcMockFetch({ error: 'internal error' }, 500);
+    const result = await reconcileMissedSignatures(db, env as Env, mockFetch);
 
     expect(result.ok).toBe(false);
   });

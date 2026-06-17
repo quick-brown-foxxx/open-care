@@ -56,32 +56,56 @@ export async function sendCodeHandler(
   const obj = body as Record<string, unknown>;
 
   // Validate opaque_id
-  const opaqueId = obj['opaque_id'];
+  const opaqueId = obj.opaque_id;
   if (typeof opaqueId !== 'string' || opaqueId.length === 0) {
-    return errorResponse(c, 400, 'BAD_REQUEST', 'opaque_id is required and must be a non-empty string');
+    return errorResponse(
+      c,
+      400,
+      'BAD_REQUEST',
+      'opaque_id is required and must be a non-empty string',
+    );
   }
 
   // Validate code
-  const code = obj['code'];
+  const code = obj.code;
   if (typeof code !== 'string' || code.length === 0) {
     return errorResponse(c, 400, 'BAD_REQUEST', 'code is required and must be a non-empty string');
   }
 
   // Validate conversation_id
-  const conversationId = obj['conversation_id'];
-  if (typeof conversationId !== 'number' || !Number.isInteger(conversationId) || conversationId < 1) {
-    return errorResponse(c, 400, 'BAD_REQUEST', 'conversation_id is required and must be a positive integer');
+  const conversationId = obj.conversation_id;
+  if (
+    typeof conversationId !== 'number' ||
+    !Number.isInteger(conversationId) ||
+    conversationId < 1
+  ) {
+    return errorResponse(
+      c,
+      400,
+      'BAD_REQUEST',
+      'conversation_id is required and must be a positive integer',
+    );
   }
 
   // Validate public_beneficiary_ref (optional)
-  const publicBeneficiaryRef = obj['public_beneficiary_ref'];
+  const publicBeneficiaryRef = obj.public_beneficiary_ref;
   let beneficiaryRef: string | null = null;
   if (publicBeneficiaryRef !== undefined && publicBeneficiaryRef !== null) {
     if (typeof publicBeneficiaryRef !== 'string') {
-      return errorResponse(c, 400, 'BAD_REQUEST', 'public_beneficiary_ref must be a string or null');
+      return errorResponse(
+        c,
+        400,
+        'BAD_REQUEST',
+        'public_beneficiary_ref must be a string or null',
+      );
     }
     if (!isValidBeneficiaryRef(publicBeneficiaryRef)) {
-      return errorResponse(c, 400, 'BAD_REQUEST', 'public_beneficiary_ref is not a valid beneficiary reference');
+      return errorResponse(
+        c,
+        400,
+        'BAD_REQUEST',
+        'public_beneficiary_ref is not a valid beneficiary reference',
+      );
     }
     beneficiaryRef = publicBeneficiaryRef;
   }

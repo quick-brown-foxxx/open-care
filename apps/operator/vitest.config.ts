@@ -13,7 +13,10 @@ export default defineConfig({
         },
         serviceBindings: {
           VAULT_API_WRITE: async (request: Request) => {
-            const body = await request.clone().json().catch(() => ({}));
+            const body = await request
+              .clone()
+              .json()
+              .catch(() => ({}));
             return new Response(
               JSON.stringify({
                 sequence_no: 1,
@@ -27,30 +30,30 @@ export default defineConfig({
             );
           },
           VAULT_ANCHOR_CRON: () => {
-            return new Response(
-              JSON.stringify({ status: 'ok', signature: 'mock_sig' }),
-              { status: 200, headers: { 'Content-Type': 'application/json' } },
-            );
+            return new Response(JSON.stringify({ status: 'ok', signature: 'mock_sig' }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            });
           },
           TG_BOT: (request: Request) => {
             const url = new URL(request.url);
             const path = url.pathname;
             if (path.includes('pending-requests')) {
-              return new Response(
-                JSON.stringify({ requests: [], count: 0 }),
-                { status: 200, headers: { 'Content-Type': 'application/json' } },
-              );
+              return new Response(JSON.stringify({ requests: [], count: 0 }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+              });
             }
             if (path.includes('send-code')) {
-              return new Response(
-                JSON.stringify({ ok: true, sent: true }),
-                { status: 200, headers: { 'Content-Type': 'application/json' } },
-              );
+              return new Response(JSON.stringify({ ok: true, sent: true }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+              });
             }
-            return new Response(
-              JSON.stringify({ ok: true }),
-              { status: 200, headers: { 'Content-Type': 'application/json' } },
-            );
+            return new Response(JSON.stringify({ ok: true }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            });
           },
         },
       },

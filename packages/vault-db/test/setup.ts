@@ -1,6 +1,6 @@
-import DatabaseConstructor from "better-sqlite3";
-import type { Database } from "better-sqlite3";
-import { createVaultDbTest, type VaultDbTest } from "../src/client/vault.js";
+import DatabaseConstructor from 'better-sqlite3';
+import type { Database } from 'better-sqlite3';
+import { createVaultDbTest, type VaultDbTest } from '../src/client/vault.js';
 
 // ---------------------------------------------------------------------------
 // DDL from apps/ingest/migrations/0001_initial_schema.sql (vault-db schema)
@@ -94,8 +94,8 @@ export interface TestVaultDb {
 
 /** Create an in-memory SQLite database with the vault-db DDL applied. */
 export function createTestVaultDb(): TestVaultDb {
-  const sqliteDb = new DatabaseConstructor(":memory:");
-  sqliteDb.pragma("journal_mode = WAL");
+  const sqliteDb = new DatabaseConstructor(':memory:');
+  sqliteDb.pragma('journal_mode = WAL');
   sqliteDb.exec(VAULT_DB_DDL);
 
   const db = createVaultDbTest(sqliteDb);

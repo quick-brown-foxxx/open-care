@@ -18,10 +18,13 @@ reconcileRoute.post('/', async (c) => {
   // After reconciliation, process any new inbox rows
   c.executionCtx.waitUntil(processInbox(db, c.env));
 
-  return c.json({
-    inserted: result.value.inserted,
-    skipped: result.value.skipped,
-  }, 200);
+  return c.json(
+    {
+      inserted: result.value.inserted,
+      skipped: result.value.skipped,
+    },
+    200,
+  );
 });
 
 export default reconcileRoute;

@@ -49,9 +49,7 @@ export async function reconcileMissedSignatures(
     );
 
     if (!sigsResult.ok) {
-      return err(
-        new Error(`Reconciliation RPC error: ${sigsResult.error.message}`),
-      );
+      return err(new Error(`Reconciliation RPC error: ${sigsResult.error.message}`));
     }
 
     const signatures = sigsResult.value;
@@ -101,8 +99,6 @@ export async function reconcileMissedSignatures(
 
     return ok({ inserted, skipped });
   } catch (error) {
-    return err(
-      error instanceof Error ? error : new Error(String(error)),
-    );
+    return err(error instanceof Error ? error : new Error(String(error)));
   }
 }

@@ -212,8 +212,7 @@ describe('complex and nested structures', () => {
       a: [1, null],
       o: { k: 'v' },
     };
-    const expected =
-      '{"a":[1,null],"b":true,"n":42,"o":{"k":"v"},"s":"hi"}';
+    const expected = '{"a":[1,null],"b":true,"n":42,"o":{"k":"v"},"s":"hi"}';
     expect(canonicalJson(input)).toBe(expected);
   });
 });

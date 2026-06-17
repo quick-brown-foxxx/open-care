@@ -29,11 +29,10 @@ const hmacKey = await importHmacKey(hexToBytes(HMAC_KEY_HEX));
 const originalFetch = globalThis.fetch;
 
 beforeEach(() => {
-  globalThis.fetch = vi.fn().mockImplementation(
-    async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === 'string' ? input
-        : input instanceof URL ? input.href
-        : input.url;
+  globalThis.fetch = vi
+    .fn()
+    .mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       if (url.includes('api.telegram.org')) {
         return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), {
           status: 200,
@@ -41,8 +40,7 @@ beforeEach(() => {
         });
       }
       return originalFetch(input, init);
-    },
-  ) as typeof globalThis.fetch;
+    }) as typeof globalThis.fetch;
 });
 
 afterEach(() => {
@@ -141,14 +139,14 @@ describe('GET /tg/internal/pending-requests', () => {
     const response = await SELF.fetch('https://example.com/tg/internal/pending-requests');
     expect(response.status).toBe(200);
     const json = await response.json<{
-      items: Array<{
+      items: {
         opaque_id: string;
         conversation_id: number;
         internal_handle: string;
         request_status: string;
         created_at_utc: string;
         updated_at_utc: string;
-      }>;
+      }[];
       next_cursor: string | null;
     }>();
 
@@ -199,20 +197,18 @@ describe('GET /tg/internal/pending-requests', () => {
     const user2 = 300004;
     const user3 = 300005;
 
-    const oid1 = await registerUser(user1, 'page_user_1');
-    const oid2 = await registerUser(user2, 'page_user_2');
-    const oid3 = await registerUser(user3, 'page_user_3');
+    await registerUser(user1, 'page_user_1');
+    await registerUser(user2, 'page_user_2');
+    await registerUser(user3, 'page_user_3');
     await createConversation(user1);
     await createConversation(user2);
     await createConversation(user3);
 
     // Query with limit=2
-    const response = await SELF.fetch(
-      'https://example.com/tg/internal/pending-requests?limit=2',
-    );
+    const response = await SELF.fetch('https://example.com/tg/internal/pending-requests?limit=2');
     expect(response.status).toBe(200);
     const json = await response.json<{
-      items: Array<{ opaque_id: string; internal_handle: string }>;
+      items: { opaque_id: string; internal_handle: string }[];
       next_cursor: string | null;
     }>();
 
@@ -226,19 +222,17 @@ describe('GET /tg/internal/pending-requests', () => {
     const user2 = 300007;
     const user3 = 300008;
 
-    const oid1 = await registerUser(user1, 'cursor_user_1');
-    const oid2 = await registerUser(user2, 'cursor_user_2');
-    const oid3 = await registerUser(user3, 'cursor_user_3');
+    await registerUser(user1, 'cursor_user_1');
+    await registerUser(user2, 'cursor_user_2');
+    await registerUser(user3, 'cursor_user_3');
     await createConversation(user1);
     await createConversation(user2);
     await createConversation(user3);
 
     // First page
-    const page1 = await SELF.fetch(
-      'https://example.com/tg/internal/pending-requests?limit=2',
-    );
+    const page1 = await SELF.fetch('https://example.com/tg/internal/pending-requests?limit=2');
     const p1 = await page1.json<{
-      items: Array<{ opaque_id: string }>;
+      items: { opaque_id: string }[];
       next_cursor: string | null;
     }>();
     expect(p1.items.length).toBe(2);
@@ -249,7 +243,7 @@ describe('GET /tg/internal/pending-requests', () => {
       `https://example.com/tg/internal/pending-requests?limit=2&cursor=${encodeURIComponent(p1.next_cursor!)}`,
     );
     const p2 = await page2.json<{
-      items: Array<{ opaque_id: string }>;
+      items: { opaque_id: string }[];
       next_cursor: string | null;
     }>();
     // Second page should have at least 1 item (our 3rd user)
@@ -270,13 +264,10 @@ describe('GET /tg/internal/pending-requests', () => {
 
     // Manually update conversation to 'delivered' (should not appear)
     const db = createBotDb(env.bot_db);
-    await db
-      .update(conversations)
-      .set({ status: 'delivered' })
-      .where(eq(conversations.id, convId));
+    await db.update(conversations).set({ status: 'delivered' }).where(eq(conversations.id, convId));
 
     const response = await SELF.fetch('https://example.com/tg/internal/pending-requests');
-    const json = await response.json<{ items: Array<{ opaque_id: string }> }>();
+    const json = await response.json<{ items: { opaque_id: string }[] }>();
 
     // Our delivered conversation should NOT appear
     const ourItem = json.items.find((i) => i.opaque_id === opaqueId);
@@ -284,9 +275,7 @@ describe('GET /tg/internal/pending-requests', () => {
   });
 
   it('defaults limit to 50 when limit=0', async () => {
-    const response = await SELF.fetch(
-      'https://example.com/tg/internal/pending-requests?limit=0',
-    );
+    const response = await SELF.fetch('https://example.com/tg/internal/pending-requests?limit=0');
     expect(response.status).toBe(200);
     const json = await response.json<{ items: unknown[]; next_cursor: string | null }>();
     // limit=0 is treated as invalid, defaults to 50
@@ -294,9 +283,7 @@ describe('GET /tg/internal/pending-requests', () => {
   });
 
   it('caps limit at 100 when limit exceeds max', async () => {
-    const response = await SELF.fetch(
-      'https://example.com/tg/internal/pending-requests?limit=200',
-    );
+    const response = await SELF.fetch('https://example.com/tg/internal/pending-requests?limit=200');
     expect(response.status).toBe(200);
     const json = await response.json<{ items: unknown[]; next_cursor: string | null }>();
     // limit=200 is capped at 100
@@ -304,9 +291,7 @@ describe('GET /tg/internal/pending-requests', () => {
   });
 
   it('ignores non-numeric limit values', async () => {
-    const response = await SELF.fetch(
-      'https://example.com/tg/internal/pending-requests?limit=abc',
-    );
+    const response = await SELF.fetch('https://example.com/tg/internal/pending-requests?limit=abc');
     expect(response.status).toBe(200);
     const json = await response.json<{ items: unknown[]; next_cursor: string | null }>();
     // Non-numeric limit defaults to 50
@@ -320,7 +305,7 @@ describe('GET /tg/internal/pending-requests', () => {
 
     const response = await SELF.fetch('https://example.com/tg/internal/pending-requests');
     const json = await response.json<{
-      items: Array<{ opaque_id: string; internal_handle: string }>;
+      items: { opaque_id: string; internal_handle: string }[];
     }>();
 
     const item = json.items.find((i) => i.opaque_id === opaqueId);
@@ -328,7 +313,7 @@ describe('GET /tg/internal/pending-requests', () => {
     expect(item!.internal_handle).toBe('handle_lookup_test');
   });
 
-  it('returns unknown for conversations with missing handle', async () => {
+  it('returns unknown for conversations with missing handle', () => {
     // FK constraint prevents deleting handles that have conversations,
     // so this scenario can't occur in practice. Skip this test.
     // The code path exists in the handler but is unreachable via normal
@@ -343,14 +328,11 @@ describe('GET /tg/internal/pending-requests', () => {
 
     // Update to in_flight
     const db = createBotDb(env.bot_db);
-    await db
-      .update(conversations)
-      .set({ status: 'in_flight' })
-      .where(eq(conversations.id, convId));
+    await db.update(conversations).set({ status: 'in_flight' }).where(eq(conversations.id, convId));
 
     const response = await SELF.fetch('https://example.com/tg/internal/pending-requests');
     const json = await response.json<{
-      items: Array<{ opaque_id: string; request_status: string }>;
+      items: { opaque_id: string; request_status: string }[];
     }>();
 
     const item = json.items.find((i) => i.opaque_id === opaqueId);
@@ -365,14 +347,11 @@ describe('GET /tg/internal/pending-requests', () => {
 
     // Update to failed
     const db = createBotDb(env.bot_db);
-    await db
-      .update(conversations)
-      .set({ status: 'failed' })
-      .where(eq(conversations.id, convId));
+    await db.update(conversations).set({ status: 'failed' }).where(eq(conversations.id, convId));
 
     const response = await SELF.fetch('https://example.com/tg/internal/pending-requests');
     const json = await response.json<{
-      items: Array<{ opaque_id: string; request_status: string }>;
+      items: { opaque_id: string; request_status: string }[];
     }>();
 
     const item = json.items.find((i) => i.opaque_id === opaqueId);

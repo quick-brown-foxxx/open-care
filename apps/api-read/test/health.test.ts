@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { env, SELF } from 'cloudflare:test';
+import { SELF } from 'cloudflare:test';
 import { seedTestData } from './seed.js';
 
 describe('GET /api/health', () => {

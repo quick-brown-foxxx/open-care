@@ -5,40 +5,22 @@ import * as v from 'valibot';
 // ---------------------------------------------------------------------------
 
 /** ISO-8601 UTC timestamp with second precision and Z suffix. */
-const timestamp = v.pipe(
-  v.string(),
-  v.regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/),
-);
+const timestamp = v.pipe(v.string(), v.regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/));
 
 /** 64-character lowercase hex string. */
-const hex64 = v.pipe(
-  v.string(),
-  v.regex(/^[0-9a-f]{64}$/),
-);
+const hex64 = v.pipe(v.string(), v.regex(/^[0-9a-f]{64}$/));
 
 /** Base58-encoded Solana address or signature. */
-const base58 = v.pipe(
-  v.string(),
-  v.regex(/^[1-9A-HJ-NP-Za-km-z]+$/),
-);
+const base58 = v.pipe(v.string(), v.regex(/^[1-9A-HJ-NP-Za-km-z]+$/));
 
 /** Solscan transaction URL. */
-const solscanUrl = v.pipe(
-  v.string(),
-  v.regex(/^https:\/\/solscan\.io\/tx\//),
-);
+const solscanUrl = v.pipe(v.string(), v.regex(/^https:\/\/solscan\.io\/tx\//));
 
 /** Anchor date: YYYY-MM-DD. */
-const anchorDate = v.pipe(
-  v.string(),
-  v.regex(/^\d{4}-\d{2}-\d{2}$/),
-);
+const anchorDate = v.pipe(v.string(), v.regex(/^\d{4}-\d{2}-\d{2}$/));
 
 /** Anchor memo text: `ccv-anchor:` prefix + 64 hex chars. */
-const memoText = v.pipe(
-  v.string(),
-  v.regex(/^ccv-anchor:[0-9a-f]{64}$/),
-);
+const memoText = v.pipe(v.string(), v.regex(/^ccv-anchor:[0-9a-f]{64}$/));
 
 // ---------------------------------------------------------------------------
 // LatestAnchor

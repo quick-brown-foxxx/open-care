@@ -5,28 +5,16 @@ import * as v from 'valibot';
 // ---------------------------------------------------------------------------
 
 /** ISO-8601 UTC timestamp with second precision and Z suffix. */
-const timestamp = v.pipe(
-  v.string(),
-  v.regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/),
-);
+const timestamp = v.pipe(v.string(), v.regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/));
 
 /** USDC minor-unit amount: 1–16 digit integer string. */
-const usdcMinor = v.pipe(
-  v.string(),
-  v.regex(/^[0-9]{1,16}$/),
-);
+const usdcMinor = v.pipe(v.string(), v.regex(/^[0-9]{1,16}$/));
 
 /** Public beneficiary reference: `benpub_` prefix + 16 uppercase base32 chars. */
-const publicBeneficiaryRef = v.pipe(
-  v.string(),
-  v.regex(/^benpub_[A-Z0-9]{16}$/),
-);
+const publicBeneficiaryRef = v.pipe(v.string(), v.regex(/^benpub_[A-Z0-9]{16}$/));
 
 /** Receipt reference: 4–64 alphanumeric or hyphen characters. */
-const receiptRef = v.pipe(
-  v.string(),
-  v.regex(/^[A-Za-z0-9-]{4,64}$/),
-);
+const receiptRef = v.pipe(v.string(), v.regex(/^[A-Za-z0-9-]{4,64}$/));
 
 // ---------------------------------------------------------------------------
 // DisbursementItem

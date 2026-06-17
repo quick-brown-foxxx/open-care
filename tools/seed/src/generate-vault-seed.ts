@@ -7,11 +7,7 @@
  * Usage: tsx src/generate-vault-seed.ts > ../../apps/ingest/migrations/0002_seed.sql
  */
 
-import {
-  computeEventHash,
-  canonicalJson,
-  ZERO_HASH,
-} from '@open-care/vault-core';
+import { computeEventHash, canonicalJson, ZERO_HASH } from '@open-care/vault-core';
 import type {
   LedgerEventBase,
   DonationPayload,

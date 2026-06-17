@@ -2,12 +2,7 @@ import { env } from 'cloudflare:test';
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { createVaultDb, vaultSchema } from '@open-care/vault-db';
 import { eq } from 'drizzle-orm';
-import {
-  insertIntoInbox,
-  processInbox,
-  checkDuplicateDonation,
-  nowIso,
-} from '../src/lib/inbox.js';
+import { insertIntoInbox, processInbox, checkDuplicateDonation, nowIso } from '../src/lib/inbox.js';
 import type { Env } from '../src/lib/env.js';
 
 // ---------------------------------------------------------------------------
@@ -22,10 +17,12 @@ function createMockFetch(
   return (input, init) => {
     void input;
     void init;
-    return Promise.resolve(new Response(JSON.stringify(responseBody), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    }));
+    return Promise.resolve(
+      new Response(JSON.stringify(responseBody), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
   };
 }
 
@@ -65,10 +62,8 @@ function validTransferResponse(
                 type: 'transferChecked',
                 info: {
                   source: 'SourceATAbase58address11111111111111111111111',
-                  destination:
-                    overrides?.destination ?? env.VAULT_USDC_ATA,
-                  authority:
-                    'DonorWalletBase58address111111111111111111111',
+                  destination: overrides?.destination ?? env.VAULT_USDC_ATA,
+                  authority: 'DonorWalletBase58address111111111111111111111',
                   amount: overrides?.amount ?? '100000000',
                   mint: overrides?.mint ?? env.USDC_MINT,
                   decimals: 6,
@@ -250,15 +245,10 @@ describe('inbox operations', () => {
       const ledgerRows = await db
         .select()
         .from(vaultSchema.ledgerEvents)
-        .where(
-          eq(vaultSchema.ledgerEvents.event_type, 'donation_confirmed'),
-        );
+        .where(eq(vaultSchema.ledgerEvents.event_type, 'donation_confirmed'));
       expect(ledgerRows.length).toBe(1);
 
-      const payload = JSON.parse(ledgerRows[0]!.payload_json) as Record<
-        string,
-        unknown
-      >;
+      const payload = JSON.parse(ledgerRows[0]!.payload_json) as Record<string, unknown>;
       expect(payload.tx_signature).toBe(SIG_VALID);
       expect(payload.amount_usdc_minor).toBe('100000000');
       expect(payload.slot).toBe(123456789);
@@ -342,9 +332,7 @@ describe('inbox operations', () => {
           receivedAtUtc: nowIso(),
         },
       ]);
-      const mockFetch2 = createMockFetch(
-        validTransferResponse(SIG_DUP, { slot: 999 }),
-      );
+      const mockFetch2 = createMockFetch(validTransferResponse(SIG_DUP, { slot: 999 }));
       await processInbox(db, env as Env, mockFetch2);
 
       // Find the duplicate row
@@ -359,9 +347,7 @@ describe('inbox operations', () => {
       const ledgerRows = await db
         .select()
         .from(vaultSchema.ledgerEvents)
-        .where(
-          eq(vaultSchema.ledgerEvents.event_type, 'donation_confirmed'),
-        );
+        .where(eq(vaultSchema.ledgerEvents.event_type, 'donation_confirmed'));
       expect(ledgerRows.length).toBe(1);
     });
 
@@ -376,10 +362,7 @@ describe('inbox operations', () => {
       ]);
 
       // Mock fetch returns HTTP 429 (rate limited, retryable)
-      const mockFetch = createMockFetch(
-        { error: 'rate limited' },
-        429,
-      );
+      const mockFetch = createMockFetch({ error: 'rate limited' }, 429);
       const result = await processInbox(db, env as Env, mockFetch);
 
       // Not failed yet — still retryable
@@ -411,11 +394,8 @@ describe('inbox operations', () => {
         .where(eq(vaultSchema.heliusInbox.signature, SIG_MAX_RETRY));
 
       // Mock fetch returns HTTP 500 (server error, retryable but attempts exhausted)
-      const mockFetch = createMockFetch(
-        { error: 'server error' },
-        500,
-      );
-      const result = await processInbox(db, env as Env, mockFetch);
+      const mockFetch = createMockFetch({ error: 'server error' }, 500);
+      await processInbox(db, env as Env, mockFetch);
 
       const rows = await db
         .select()
@@ -445,9 +425,7 @@ describe('inbox operations', () => {
           receivedAtUtc: nowIso(),
         },
       ]);
-      const mockFetch = createMockFetch(
-        validTransferResponse(SIG_CHECK_DUP),
-      );
+      const mockFetch = createMockFetch(validTransferResponse(SIG_CHECK_DUP));
       await processInbox(db, env as Env, mockFetch);
 
       const result = await checkDuplicateDonation(db, SIG_CHECK_DUP);

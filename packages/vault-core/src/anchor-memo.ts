@@ -14,7 +14,7 @@
 // ---------------------------------------------------------------------------
 
 /** Prefix that identifies an anchor memo. */
-const MEMO_PREFIX = "ccv-anchor:";
+const MEMO_PREFIX = 'ccv-anchor:';
 
 /** Expected length of the hex-encoded hash (SHA-256 = 32 bytes = 64 hex). */
 const HASH_HEX_LENGTH = 64;

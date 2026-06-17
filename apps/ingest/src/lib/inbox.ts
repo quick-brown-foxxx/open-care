@@ -28,13 +28,7 @@ export interface InboxEntry {
 }
 
 export interface InboxStatusUpdate {
-  status:
-    | 'received'
-    | 'processing'
-    | 'processed'
-    | 'ignored'
-    | 'failed'
-    | 'duplicate';
+  status: 'received' | 'processing' | 'processed' | 'ignored' | 'failed' | 'duplicate';
   reason?: string;
   attemptCount?: number;
   lastError?: string;
@@ -70,9 +64,7 @@ export async function insertIntoInbox(
     .from(heliusInbox)
     .where(inArray(heliusInbox.signature, uniqueSignatures));
 
-  const existingSet = new Set(
-    existingRows.map((r) => `${r.signature}|${r.source}`),
-  );
+  const existingSet = new Set(existingRows.map((r) => `${r.signature}|${r.source}`));
 
   // Step 2: Insert all entries with ON CONFLICT DO NOTHING.
   for (const entry of entries) {
@@ -133,12 +125,7 @@ export async function processInbox(
   const rows = await db
     .select()
     .from(heliusInbox)
-    .where(
-      and(
-        eq(heliusInbox.status, 'received'),
-        lt(heliusInbox.attempt_count, 10),
-      ),
-    )
+    .where(and(eq(heliusInbox.status, 'received'), lt(heliusInbox.attempt_count, 10)))
     .orderBy(heliusInbox.received_at_utc)
     .limit(10);
 
@@ -153,11 +140,7 @@ export async function processInbox(
     });
 
     // Step 2: Fetch transaction from RPC
-    const txResult = await fetchTransaction(
-      env.HELIUS_RPC_URL,
-      row.signature,
-      fetchFn,
-    );
+    const txResult = await fetchTransaction(env.HELIUS_RPC_URL, row.signature, fetchFn);
 
     if (!txResult.ok) {
       const rpcError = txResult.error;
@@ -186,11 +169,7 @@ export async function processInbox(
     const tx = txResult.value;
 
     // Step 3: Parse SPL transfer
-    const parseResult = parseSplTransfer(
-      tx,
-      env.USDC_MINT,
-      env.VAULT_USDC_ATA,
-    );
+    const parseResult = parseSplTransfer(tx, env.USDC_MINT, env.VAULT_USDC_ATA);
 
     if (!parseResult.ok) {
       await updateInboxStatus(db, row.signature, row.source, {
@@ -226,9 +205,7 @@ export async function processInbox(
       inner_index: match.innerIndex,
       slot: tx.slot,
       block_time_utc: tx.blockTime
-        ? new Date(tx.blockTime * 1000)
-            .toISOString()
-            .replace(/\.\d{3}Z$/, 'Z')
+        ? new Date(tx.blockTime * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z')
         : nowIso(),
       amount_usdc_minor: match.amount,
     };
@@ -276,19 +253,10 @@ export async function updateInboxStatus(
       status: update.status,
       updated_at_utc: nowIso(),
       ...(update.reason !== undefined ? { reason: update.reason } : {}),
-      ...(update.attemptCount !== undefined
-        ? { attempt_count: update.attemptCount }
-        : {}),
-      ...(update.lastError !== undefined
-        ? { last_error: update.lastError }
-        : {}),
+      ...(update.attemptCount !== undefined ? { attempt_count: update.attemptCount } : {}),
+      ...(update.lastError !== undefined ? { last_error: update.lastError } : {}),
     })
-    .where(
-      and(
-        eq(heliusInbox.signature, signature),
-        eq(heliusInbox.source, source),
-      ),
-    );
+    .where(and(eq(heliusInbox.signature, signature), eq(heliusInbox.source, source)));
 }
 
 /**
@@ -300,10 +268,7 @@ export async function updateInboxStatus(
  *
  * @returns `true` if a matching ledger event exists, `false` otherwise.
  */
-export async function checkDuplicateDonation(
-  db: VaultDb,
-  txSignature: string,
-): Promise<boolean> {
+export async function checkDuplicateDonation(db: VaultDb, txSignature: string): Promise<boolean> {
   const rows = await db.all(
     sql`SELECT 1 FROM ledger_events
         WHERE event_type = 'donation_confirmed'

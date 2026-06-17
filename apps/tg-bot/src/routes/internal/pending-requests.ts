@@ -43,10 +43,7 @@ interface PendingRequestItem {
  * This endpoint is reached via service binding from `vault-operator`
  * and is NOT publicly routable.
  */
-export async function pendingRequestsHandler(
-  c: Context,
-  db: BotDb,
-): Promise<Response> {
+export async function pendingRequestsHandler(c: Context, db: BotDb): Promise<Response> {
   // Parse query parameters
   const rawLimit = c.req.query('limit');
   const cursor = c.req.query('cursor') ?? undefined;
@@ -61,9 +58,7 @@ export async function pendingRequestsHandler(
 
   // Build conditions for the conversations query
   const activeStatuses = ['pending', 'in_flight', 'failed'] as const;
-  const conditions: SQL[] = [
-    inArray(conversations.status, activeStatuses),
-  ];
+  const conditions: SQL[] = [inArray(conversations.status, activeStatuses)];
 
   if (cursor) {
     conditions.push(gt(conversations.opaque_id, cursor));
@@ -90,9 +85,7 @@ export async function pendingRequestsHandler(
     .all();
 
   const hasMore = conversationRows.length > limit;
-  const pageItems = hasMore
-    ? conversationRows.slice(0, limit)
-    : conversationRows;
+  const pageItems = hasMore ? conversationRows.slice(0, limit) : conversationRows;
 
   // Collect unique opaque_ids to batch-fetch handles
   const opaqueIds = [...new Set(pageItems.map((r) => r.opaque_id))];
@@ -129,8 +122,7 @@ export async function pendingRequestsHandler(
   }
 
   const lastItem = pageItems[pageItems.length - 1];
-  const nextCursor: string | null =
-    hasMore && lastItem ? lastItem.opaque_id : null;
+  const nextCursor: string | null = hasMore && lastItem ? lastItem.opaque_id : null;
 
   return c.json({ items, next_cursor: nextCursor });
 }

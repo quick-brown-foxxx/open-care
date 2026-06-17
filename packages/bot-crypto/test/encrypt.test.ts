@@ -1,18 +1,11 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import {
-  importAesGcmKey,
-  encryptChatId,
-  decryptChatId,
-} from '../src/index.js';
+import { importAesGcmKey, encryptChatId, decryptChatId } from '../src/index.js';
 
 // Generate a 32-byte AES-256 key
 const rawAesKey = crypto.getRandomValues(new Uint8Array(32));
 const wrongRawKey = crypto.getRandomValues(new Uint8Array(32));
 // Ensure wrong key is different
-while (
-  wrongRawKey.length === rawAesKey.length &&
-  wrongRawKey.every((b, i) => b === rawAesKey[i])
-) {
+while (wrongRawKey.length === rawAesKey.length && wrongRawKey.every((b, i) => b === rawAesKey[i])) {
   crypto.getRandomValues(wrongRawKey);
 }
 
@@ -81,9 +74,7 @@ describe('encryptChatId', () => {
   it('produces envelope matching format aesgcm:v1:<integer>:<base64url>:<base64url>', async () => {
     const envelope = await encryptChatId(aesKey, 1, 'test-opaque', 12345);
     // Format: aesgcm:v1:<keyVersion>:<nonce_b64>:<ciphertext_b64>
-    expect(envelope).toMatch(
-      /^aesgcm:v1:\d+:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+$/,
-    );
+    expect(envelope).toMatch(/^aesgcm:v1:\d+:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+$/);
   });
 
   it('round-trip: encrypt then decrypt returns original chatId (number)', async () => {
@@ -120,12 +111,7 @@ describe('encryptChatId', () => {
 
   it('round-trip works with various keyVersion values', async () => {
     for (const keyVersion of [1, 2, 10, 100, 999]) {
-      const envelope = await encryptChatId(
-        aesKey,
-        keyVersion,
-        'opaque',
-        'chat123',
-      );
+      const envelope = await encryptChatId(aesKey, keyVersion, 'opaque', 'chat123');
       const result = await decryptChatId(aesKey, envelope, 'opaque');
       expect(result.ok).toBe(true);
       if (result.ok) {

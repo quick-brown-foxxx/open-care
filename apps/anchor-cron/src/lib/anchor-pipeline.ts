@@ -42,7 +42,11 @@ export interface AnchorRunFailed {
   error: { code: 'ANCHOR_FAILED'; message: string };
 }
 
-export type AnchorRunResult = AnchorRunSuccess | AnchorRunSkipped | AnchorRunConflict | AnchorRunFailed;
+export type AnchorRunResult =
+  | AnchorRunSuccess
+  | AnchorRunSkipped
+  | AnchorRunConflict
+  | AnchorRunFailed;
 
 export async function runAnchor(
   db: VaultDb,
@@ -161,7 +165,9 @@ export async function runAnchor(
 
   if (!appendResult.ok) {
     // Ledger append failed but transaction succeeded — log but don't fail the anchor
-    console.error(`Anchor tx ${txSignature} succeeded but ledger append failed: ${appendResult.error.message}`);
+    console.error(
+      `Anchor tx ${txSignature} succeeded but ledger append failed: ${appendResult.error.message}`,
+    );
   }
 
   return {

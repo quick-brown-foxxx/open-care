@@ -10,22 +10,22 @@
 
 ## Current State
 
-| What                                                      | Status                                                                        |
-| --------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| D1 migrations (`vault-db`, `bot-db`)                      | ✅ Real, deployed, spec-aligned                                               |
-| `wrangler.jsonc` configs (bindings, routes, D1 IDs, vars) | ✅ Real, preserve                                                             |
-| `package.json` files (names, deps, scripts)               | ✅ Real, preserve; workspace deps added to all apps                            |
-| `tsconfig.json` files                                     | ✅ Root with project references; all 9 sub-projects extend root               |
-| `pnpm-workspace.yaml`, `.env.example`                     | ✅ Real, preserve                                                             |
-| Worker `src/index.ts` (all 6)                             | ✅ Clean typed Hono stubs with correct bindings, route stubs, package imports |
-| `packages/vault-core/src/`                                | ✅ Full impl: canonical JSON, 4 event schemas, hash chain, test vector (221 tests) |
-| `packages/vault-db/src/`                                  | ✅ Full impl: Drizzle schemas (6 tables), ledger append, query helpers (72 tests) |
-| `packages/bot-crypto/src/`                                | ✅ Full impl: HMAC-SHA256, AES-GCM encrypt/decrypt, base64url (95 tests)      |
+| What                                                      | Status                                                                                |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| D1 migrations (`vault-db`, `bot-db`)                      | ✅ Real, deployed, spec-aligned                                                       |
+| `wrangler.jsonc` configs (bindings, routes, D1 IDs, vars) | ✅ Real, preserve                                                                     |
+| `package.json` files (names, deps, scripts)               | ✅ Real, preserve; workspace deps added to all apps                                   |
+| `tsconfig.json` files                                     | ✅ Root with project references; all 9 sub-projects extend root                       |
+| `pnpm-workspace.yaml`, `.env.example`                     | ✅ Real, preserve                                                                     |
+| Worker `src/index.ts` (all 6)                             | ✅ Clean typed Hono stubs with correct bindings, route stubs, package imports         |
+| `packages/vault-core/src/`                                | ✅ Full impl: canonical JSON, 4 event schemas, hash chain, test vector (221 tests)    |
+| `packages/vault-db/src/`                                  | ✅ Full impl: Drizzle schemas (6 tables), ledger append, query helpers (72 tests)     |
+| `packages/bot-crypto/src/`                                | ✅ Full impl: HMAC-SHA256, AES-GCM encrypt/decrypt, base64url (95 tests)              |
 | `apps/web/src/`                                           | ✅ Clean SvelteKit 2 + Svelte 5 scaffold: API client, Valibot schemas, utils, Bits UI |
-| ESLint, Prettier, Vitest, Playwright configs              | ✅ All configured at root                                                     |
-| Root `tsconfig.json` (project references)                 | ✅ 9 project references, strict compilerOptions                               |
-| Drizzle ORM schemas                                       | ✅ vault-db (4 tables) + bot-db (2 tables), drizzle.config.ts                 |
-| GitHub Actions CI workflow                                | ✅ `.github/workflows/ci.yml` (lint, format:check, typecheck, test, build)    |
+| ESLint, Prettier, Vitest, Playwright configs              | ✅ All configured at root                                                             |
+| Root `tsconfig.json` (project references)                 | ✅ 9 project references, strict compilerOptions                                       |
+| Drizzle ORM schemas                                       | ✅ vault-db (4 tables) + bot-db (2 tables), drizzle.config.ts                         |
+| GitHub Actions CI workflow                                | ✅ `.github/workflows/ci.yml` (lint, format:check, typecheck, test, build)            |
 
 ---
 

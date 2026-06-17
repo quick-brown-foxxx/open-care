@@ -11,12 +11,14 @@ import { Result, ok, err } from '@open-care/vault-core';
  */
 export interface ParsedUpdate {
   update_id: number;
-  message: {
-    message_id: number;
-    from: { id: number; first_name: string | undefined } | undefined;
-    chat: { id: number } | undefined;
-    text: string | undefined;
-  } | undefined;
+  message:
+    | {
+        message_id: number;
+        from: { id: number; first_name: string | undefined } | undefined;
+        chat: { id: number } | undefined;
+        text: string | undefined;
+      }
+    | undefined;
 }
 
 /**
@@ -47,9 +49,7 @@ export async function sendTelegramMessage(
 
     if (!response.ok) {
       const body = await response.text();
-      return err(
-        `Telegram API returned ${response.status}: ${body.slice(0, 200)}`,
-      );
+      return err(`Telegram API returned ${response.status}: ${body.slice(0, 200)}`);
     }
 
     const data: unknown = await response.json();
@@ -78,12 +78,12 @@ export function parseUpdate(body: unknown): ParsedUpdate | null {
 
   const obj = body as Record<string, unknown>;
 
-  const updateId = obj['update_id'];
+  const updateId = obj.update_id;
   if (typeof updateId !== 'number') {
     return null;
   }
 
-  const message = obj['message'];
+  const message = obj.message;
   if (message === undefined || message === null || typeof message !== 'object') {
     // Updates without a message (e.g. callback queries) are valid
     // but we don't process them.
@@ -91,35 +91,34 @@ export function parseUpdate(body: unknown): ParsedUpdate | null {
   }
 
   const msg = message as Record<string, unknown>;
-  const messageId = msg['message_id'];
+  const messageId = msg.message_id;
   if (typeof messageId !== 'number') {
     return null;
   }
 
-  const from = msg['from'];
+  const from = msg.from;
   let parsedFrom: { id: number; first_name: string | undefined } | undefined;
   if (from !== undefined && from !== null && typeof from === 'object') {
     const f = from as Record<string, unknown>;
-    if (typeof f['id'] === 'number') {
+    if (typeof f.id === 'number') {
       parsedFrom = {
-        id: f['id'],
-        first_name: typeof f['first_name'] === 'string' ? f['first_name'] : undefined,
+        id: f.id,
+        first_name: typeof f.first_name === 'string' ? f.first_name : undefined,
       };
     }
   }
 
-  const chat = msg['chat'];
+  const chat = msg.chat;
   let parsedChat: { id: number } | undefined;
   if (chat !== undefined && chat !== null && typeof chat === 'object') {
     const c = chat as Record<string, unknown>;
-    if (typeof c['id'] === 'number') {
-      parsedChat = { id: c['id'] };
+    if (typeof c.id === 'number') {
+      parsedChat = { id: c.id };
     }
   }
 
-  const text = msg['text'];
-  const parsedText: string | undefined =
-    typeof text === 'string' ? text : undefined;
+  const text = msg.text;
+  const parsedText: string | undefined = typeof text === 'string' ? text : undefined;
 
   return {
     update_id: updateId,
@@ -149,9 +148,7 @@ export function parseUpdate(body: unknown): ParsedUpdate | null {
  * @returns The parsed command and argument, or `null` if the text
  *   does not start with a command.
  */
-export function extractCommand(
-  text: string,
-): { command: string; arg: string } | null {
+export function extractCommand(text: string): { command: string; arg: string } | null {
   // Commands start with '/' followed by a bot username or command name.
   // We accept: /command, /command@botname, /command arg
   const match = /^\/([a-zA-Z0-9_]+)(?:@[a-zA-Z0-9_]+)?(?:\s+(.*))?$/.exec(text);

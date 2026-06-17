@@ -47,10 +47,7 @@ function utcNow(): string {
  * Compute the SHA-256 hash of a string and return it as a lowercase hex string.
  */
 async function sha256Hex(input: string): Promise<string> {
-  const buffer = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(input),
-  );
+  const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
   const bytes = new Uint8Array(buffer);
   let hex = '';
   for (const byte of bytes) {
@@ -128,7 +125,7 @@ export async function deliverCode(
     .where(eq(conversations.id, input.conversationId))
     .get();
 
-  if (!conversationRow || conversationRow.opaque_id !== input.opaqueId) {
+  if (conversationRow?.opaque_id !== input.opaqueId) {
     return err({
       code: 'CONVERSATION_NOT_OWNED',
       message: `Conversation ${input.conversationId} does not belong to ${input.opaqueId}`,
@@ -144,11 +141,7 @@ export async function deliverCode(
   }
 
   // 4. Decrypt the chat ID
-  const chatIdResult = await decryptChatId(
-    encKey,
-    handleRow.telegram_chat_id_enc,
-    input.opaqueId,
-  );
+  const chatIdResult = await decryptChatId(encKey, handleRow.telegram_chat_id_enc, input.opaqueId);
 
   if (!chatIdResult.ok) {
     return err({
@@ -170,9 +163,7 @@ export async function deliverCode(
     const ttlBlob = await encryptCodeForTtl(encKey, input.opaqueId, input.code);
     // Strip milliseconds to satisfy the encrypted_code_expires_at_utc CHECK
     // constraint (GLOB '????-??-??T??:??:??Z' — second precision, no ms).
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
-      .toISOString()
-      .replace(/\.\d{3}Z$/, 'Z');
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z');
 
     await db
       .update(conversations)

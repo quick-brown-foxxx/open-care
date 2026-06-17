@@ -33,6 +33,7 @@ Implement the full donation ingest pipeline in `apps/ingest`: Helius webhook han
 ### Phase 1: Foundation (env, auth, errors)
 
 **Task 1: Create `src/lib/env.ts` — Env interface**
+
 - **Description:** Extract the `Env` interface from `src/index.ts` into its own file. Add any additional types needed for the RPC response parsing.
 - **Acceptance criteria:**
   - [ ] `Env` interface with all bindings: `vault_db`, `HELIUS_WEBHOOK_AUTH_HEADER`, `HELIUS_RPC_URL`, `SOLANA_CLUSTER`, `USDC_MINT`, `TREASURY_WALLET_ADDRESS`, `VAULT_USDC_ATA`, `ANCHOR_WALLET_ADDRESS`, `SITE_URL`
@@ -43,6 +44,7 @@ Implement the full donation ingest pipeline in `apps/ingest`: Helius webhook han
 - **Files:** `apps/ingest/src/lib/env.ts` (new)
 
 **Task 2: Create `src/lib/auth.ts` — constant-time auth**
+
 - **Description:** Implement `constantTimeEqual(a, b)` using Web Crypto API (`crypto.subtle.timingSafeEqual` or manual byte comparison). Implement `authMiddleware` as Hono middleware that extracts `Bearer <token>` from `Authorization` header, strips prefix, and compares against `HELIUS_WEBHOOK_AUTH_HEADER` secret. Returns 401 on mismatch.
 - **Acceptance criteria:**
   - [ ] `constantTimeEqual()` uses `crypto.subtle.timingSafeEqual` if available, falls back to manual byte-by-byte comparison
@@ -55,6 +57,7 @@ Implement the full donation ingest pipeline in `apps/ingest`: Helius webhook han
 - **Files:** `apps/ingest/src/lib/auth.ts` (new)
 
 **Task 3: Create `src/lib/errors.ts` — error response helpers**
+
 - **Description:** Create helper functions for standard error responses: `unauthorizedResponse()`, `badRequestResponse(message)`, `internalErrorResponse(message)`. Each returns a Hono `Response` with appropriate status code and JSON body.
 - **Acceptance criteria:**
   - [ ] `unauthorizedResponse()` → 401 `{ error: "unauthorized" }`
@@ -66,12 +69,14 @@ Implement the full donation ingest pipeline in `apps/ingest`: Helius webhook han
 - **Files:** `apps/ingest/src/lib/errors.ts` (new)
 
 ### Checkpoint: Foundation
+
 - [ ] `tsc -b` clean for `apps/ingest`
 - [ ] All three lib files exist and compile
 
 ### Phase 2: Slice 2.1 — Webhook Handler
 
 **Task 4: Create `src/lib/inbox.ts` — inbox operations**
+
 - **Description:** Implement `insertIntoInbox()` and `processInbox()` functions. `insertIntoInbox` does `INSERT OR IGNORE` into `helius_inbox` using Drizzle, returns count of accepted vs duplicates. `processInbox` queries rows with `status='received'`, processes each through the async pipeline (RPC fetch → parse → ledger append → status update). Accepts optional `fetchFn` for testability.
 - **Acceptance criteria:**
   - [ ] `insertIntoInbox(db, entries)` — each entry has `{signature, rawPayloadJson, source, receivedAtUtc}`. Uses Drizzle `insert().onConflictDoNothing()`. Returns `{accepted: number, duplicates: number}`.
@@ -84,6 +89,7 @@ Implement the full donation ingest pipeline in `apps/ingest`: Helius webhook han
 - **Files:** `apps/ingest/src/lib/inbox.ts` (new)
 
 **Task 5: Create `src/lib/solana-rpc.ts` — RPC fetch and SPL parsing**
+
 - **Description:** Implement `fetchTransaction()` using direct JSON-RPC POST to `HELIUS_RPC_URL` with `getTransaction` method, `encoding: "jsonParsed"`, `maxSupportedTransactionVersion: 0`, `commitment: "finalized"`. Implement `parseSplTransfer()` to extract USDC transfer from parsed response. Implement `fetchSignaturesForAddress()` for reconciliation. All functions return `Result<T, RpcError>`.
 - **Acceptance criteria:**
   - [ ] `fetchTransaction(rpcUrl, signature, fetchFn?)` → `Result<ParsedTransaction, RpcError>`. Handles null result (not finalized), HTTP errors (429, 5xx), JSON-RPC errors. Returns typed parsed transaction.
@@ -98,6 +104,7 @@ Implement the full donation ingest pipeline in `apps/ingest`: Helius webhook han
 - **Files:** `apps/ingest/src/lib/solana-rpc.ts` (new)
 
 **Task 6: Create `src/routes/webhook.ts` — POST /webhook/helius**
+
 - **Description:** Implement the webhook route handler. Validates auth via middleware, parses JSON body as array of Helius webhook events, inserts each into inbox via `insertIntoInbox()`, returns fast 200 ACK with counts, then calls `ctx.waitUntil(processInbox())` for async processing.
 - **Acceptance criteria:**
   - [ ] Uses `authMiddleware` for Authorization validation
@@ -112,6 +119,7 @@ Implement the full donation ingest pipeline in `apps/ingest`: Helius webhook han
 - **Files:** `apps/ingest/src/routes/webhook.ts` (new)
 
 **Task 7: Create `src/routes/health.ts` — GET /health**
+
 - **Description:** Simple health check endpoint. Returns `{ status: 'ok', timestamp: '<ISO>' }`.
 - **Acceptance criteria:**
   - [ ] Returns 200 with status and current UTC timestamp
@@ -121,6 +129,7 @@ Implement the full donation ingest pipeline in `apps/ingest`: Helius webhook han
 - **Files:** `apps/ingest/src/routes/health.ts` (new)
 
 **Task 8: Rewrite `src/index.ts` — Hono app wiring**
+
 - **Description:** Overwrite the stub with the real Hono app. Import and mount all routes. Export default app. Keep the `Env` import from `./lib/env.js`.
 - **Acceptance criteria:**
   - [ ] Imports `Env` from `./lib/env.js` (not defined inline)
@@ -134,6 +143,7 @@ Implement the full donation ingest pipeline in `apps/ingest`: Helius webhook han
 - **Files:** `apps/ingest/src/index.ts` (overwrite)
 
 ### Checkpoint: Slice 2.1
+
 - [ ] `tsc -b` clean for `apps/ingest`
 - [ ] Webhook endpoint accepts valid payloads, rejects invalid auth
 - [ ] Inbox INSERT OR IGNORE works
@@ -143,6 +153,7 @@ Implement the full donation ingest pipeline in `apps/ingest`: Helius webhook han
 The async processing logic is already built into Task 4 (`processInbox`) and Task 5 (`fetchTransaction`, `parseSplTransfer`). This phase is about ensuring they work together correctly.
 
 **Task 9: Implement RPC retry logic in `processInbox`**
+
 - **Description:** The `processInbox` function (Task 4) must handle RPC failures with retry. When `fetchTransaction` returns a retryable error, increment `attempt_count`, set `last_error`, and keep `status='received'` (don't advance to failed unless max attempts reached). Max 10 attempts. Exponential backoff between retries: 1s, 2s, 4s, 8s, 16s, 32s, 60s (cap).
 - **Acceptance criteria:**
   - [ ] On retryable RPC error: increment `attempt_count`, set `last_error`, keep `status='received'`
@@ -156,6 +167,7 @@ The async processing logic is already built into Task 4 (`processInbox`) and Tas
 - **Files:** `apps/ingest/src/lib/inbox.ts` (modify)
 
 ### Checkpoint: Slice 2.2
+
 - [ ] Full async processing pipeline works: webhook → inbox → RPC → parse → ledger → status
 - [ ] RPC retry with backoff
 - [ ] Duplicate-safe ledger append
@@ -163,6 +175,7 @@ The async processing logic is already built into Task 4 (`processInbox`) and Tas
 ### Phase 4: Slice 2.3 — Reconciliation
 
 **Task 10: Create `src/lib/reconciliation.ts` — reconciliation logic**
+
 - **Description:** Implement `reconcileMissedSignatures()` that fetches recent transaction signatures for the vault USDC ATA via `getSignaturesForAddress` RPC, checks which are missing from `helius_inbox` and `ledger_events`, and inserts missing ones into inbox with `source='reconciliation'`.
 - **Acceptance criteria:**
   - [ ] `reconcileMissedSignatures(db, env, fetchFn?)` → `Result<{inserted: number, skipped: number}, Error>`
@@ -177,6 +190,7 @@ The async processing logic is already built into Task 4 (`processInbox`) and Tas
 - **Files:** `apps/ingest/src/lib/reconciliation.ts` (new)
 
 **Task 11: Create `src/routes/reconcile.ts` — POST /internal/reconcile**
+
 - **Description:** Endpoint to trigger reconciliation manually. Calls `reconcileMissedSignatures()` and returns results. No auth required for MVP (internal-only, not publicly routed).
 - **Acceptance criteria:**
   - [ ] POST /internal/reconcile calls `reconcileMissedSignatures(db, c.env)`
@@ -188,6 +202,7 @@ The async processing logic is already built into Task 4 (`processInbox`) and Tas
 - **Files:** `apps/ingest/src/routes/reconcile.ts` (new)
 
 ### Checkpoint: Slice 2.3
+
 - [ ] Reconciliation endpoint works
 - [ ] Missed signatures are inserted with `source='reconciliation'`
 - [ ] Same async processor handles reconciliation rows
@@ -195,6 +210,7 @@ The async processing logic is already built into Task 4 (`processInbox`) and Tas
 ### Phase 5: Tests
 
 **Task 12: Create `test/webhook.test.ts` — webhook endpoint tests**
+
 - **Description:** Integration tests for the webhook endpoint using `@cloudflare/vitest-pool-workers`. Test valid auth, invalid auth, valid payload, invalid payload, duplicate signatures.
 - **Acceptance criteria:**
   - [ ] Valid webhook with auth → 200, inbox has rows with `status='received'`
@@ -210,6 +226,7 @@ The async processing logic is already built into Task 4 (`processInbox`) and Tas
 - **Files:** `apps/ingest/test/webhook.test.ts` (new)
 
 **Task 13: Create `test/inbox.test.ts` — inbox and async processing tests**
+
 - **Description:** Integration tests for inbox operations and async processing. Mock the RPC fetch to return canned parsed transactions. Test status transitions, ledger append, duplicate detection.
 - **Acceptance criteria:**
   - [ ] `insertIntoInbox` INSERT OR IGNORE behavior: new row inserted, duplicate ignored
@@ -226,6 +243,7 @@ The async processing logic is already built into Task 4 (`processInbox`) and Tas
 - **Files:** `apps/ingest/test/inbox.test.ts` (new)
 
 **Task 14: Create `test/reconciliation.test.ts` — reconciliation tests**
+
 - **Description:** Integration tests for reconciliation. Mock the RPC `getSignaturesForAddress` to return a list of signatures. Test that missed signatures are inserted with `source='reconciliation'` and already-present signatures are skipped.
 - **Acceptance criteria:**
   - [ ] Reconciliation inserts missed signatures with `source='reconciliation'`
@@ -238,6 +256,7 @@ The async processing logic is already built into Task 4 (`processInbox`) and Tas
 - **Files:** `apps/ingest/test/reconciliation.test.ts` (new)
 
 ### Checkpoint: All Tests
+
 - [ ] All new ingest tests pass
 - [ ] Existing 452 tests still pass
 - [ ] `pnpm run test` passes project-wide
@@ -245,6 +264,7 @@ The async processing logic is already built into Task 4 (`processInbox`) and Tas
 ### Phase 6: Final Verification
 
 **Task 15: Full verification**
+
 - **Description:** Run all verification commands and confirm clean results.
 - **Acceptance criteria:**
   - [ ] `pnpm install` — no errors
@@ -259,12 +279,12 @@ The async processing logic is already built into Task 4 (`processInbox`) and Tas
 
 ## Risks and Mitigations
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| `crypto.subtle.timingSafeEqual` not available in Workers runtime | Med | Fall back to manual byte-by-byte comparison with constant-time property (compare all bytes, don't early-exit) |
-| JSON-RPC `encoding: "jsonParsed"` response shape differs from expected | Med | Add defensive parsing with Zod schema for the RPC response; handle missing fields gracefully |
-| `ctx.waitUntil` may not complete before Worker CPU limit | Low | Process only 10 inbox rows per invocation; rely on retry for remainder |
-| D1 `json_extract` performance on large ledger | Low | Ledger is append-only and small in MVP; add index later if needed |
+| Risk                                                                   | Impact | Mitigation                                                                                                    |
+| ---------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------- |
+| `crypto.subtle.timingSafeEqual` not available in Workers runtime       | Med    | Fall back to manual byte-by-byte comparison with constant-time property (compare all bytes, don't early-exit) |
+| JSON-RPC `encoding: "jsonParsed"` response shape differs from expected | Med    | Add defensive parsing with Zod schema for the RPC response; handle missing fields gracefully                  |
+| `ctx.waitUntil` may not complete before Worker CPU limit               | Low    | Process only 10 inbox rows per invocation; rely on retry for remainder                                        |
+| D1 `json_extract` performance on large ledger                          | Low    | Ledger is append-only and small in MVP; add index later if needed                                             |
 
 ## Open Questions
 

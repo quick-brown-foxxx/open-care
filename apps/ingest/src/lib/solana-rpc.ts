@@ -18,7 +18,7 @@ export interface RpcError {
 
 /** A matched SPL transfer from a parsed transaction */
 export interface TransferMatch {
-  amount: string;           // raw minor units as string (e.g. "100000000")
+  amount: string; // raw minor units as string (e.g. "100000000")
   instructionIndex: number; // position in top-level instructions
   innerIndex: number | null; // position within inner instructions, null if top-level
 }
@@ -29,8 +29,8 @@ interface ParsedTransferInfo {
   destination: string;
   authority: string;
   amount: string;
-  mint?: string;     // present for transferChecked
-  decimals?: number;  // present for transferChecked
+  mint?: string; // present for transferChecked
+  decimals?: number; // present for transferChecked
 }
 
 /** A parsed instruction from JSON-RPC */
@@ -92,9 +92,7 @@ function buildRpcBody(method: string, params: unknown[]): string {
 }
 
 /** Map an HTTP status code and JSON-RPC response to an RpcError. */
-function classifyHttpError(
-  status: number,
-): RpcError {
+function classifyHttpError(status: number): RpcError {
   if (status === 429) {
     return { code: 'RATE_LIMITED', message: 'Rate limited by RPC provider', retryable: true };
   }
@@ -276,10 +274,7 @@ export async function fetchSignaturesForAddress(
     response = await fetchFn(rpcUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: buildRpcBody('getSignaturesForAddress', [
-        address,
-        { limit: 50 },
-      ]),
+      body: buildRpcBody('getSignaturesForAddress', [address, { limit: 50 }]),
     });
   } catch {
     return err({

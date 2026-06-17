@@ -21,7 +21,10 @@ export async function recoverStaleLock(
     if (txResult.ok && txResult.value !== null) {
       // Transaction found and finalized — backfill.
       // Fetch anchor wallet balance for health monitoring.
-      const balanceResult = await getBalance(connection, new PublicKey(staleRow.anchor_wallet_address));
+      const balanceResult = await getBalance(
+        connection,
+        new PublicKey(staleRow.anchor_wallet_address),
+      );
       const solBalance = balanceResult.ok ? balanceResult.value : 0;
 
       await db

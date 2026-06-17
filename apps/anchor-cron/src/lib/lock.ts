@@ -111,7 +111,9 @@ export async function findPublishedAnchorForHash(
   const rows = await db
     .select()
     .from(anchorRuns)
-    .where(and(eq(anchorRuns.status, 'published'), eq(anchorRuns.anchored_head_hash, anchoredHeadHash)))
+    .where(
+      and(eq(anchorRuns.status, 'published'), eq(anchorRuns.anchored_head_hash, anchoredHeadHash)),
+    )
     .limit(1);
   return rows[0] ?? null;
 }

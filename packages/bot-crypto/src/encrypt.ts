@@ -9,9 +9,13 @@ import { base64urlEncode } from './base64url.js';
 export async function importAesGcmKey(rawKey: Uint8Array | ArrayBuffer): Promise<CryptoKey> {
   // .buffer.slice() returns ArrayBuffer | SharedArrayBuffer in TS types,
   // but Uint8Array is always backed by ArrayBuffer at runtime.
-  const keyData: ArrayBuffer = rawKey instanceof Uint8Array
-    ? rawKey.buffer.slice(rawKey.byteOffset, rawKey.byteOffset + rawKey.byteLength) as ArrayBuffer
-    : rawKey;
+  const keyData: ArrayBuffer =
+    rawKey instanceof Uint8Array
+      ? (rawKey.buffer.slice(
+          rawKey.byteOffset,
+          rawKey.byteOffset + rawKey.byteLength,
+        ) as ArrayBuffer)
+      : rawKey;
 
   return crypto.subtle.importKey(
     'raw',

@@ -124,14 +124,13 @@ export default defineConfig({
       // @solana/web3.js (which has CJS/ESM interop issues in workerd).
       // The mock provides FakeConnection/FakeKeypair types and returns
       // synthetic success values for all Solana operations.
-      [path.resolve(import.meta.dirname, 'src/lib/solana.ts')]:
-        path.resolve(import.meta.dirname, 'test/__mocks__/lib/solana.ts'),
+      [path.resolve(import.meta.dirname, 'src/lib/solana.ts')]: path.resolve(
+        import.meta.dirname,
+        'test/__mocks__/lib/solana.ts',
+      ),
       // Stub @solana/web3.js so recovery.ts's type-only import of
       // Connection resolves without pulling in the real package.
-      '@solana/web3.js': path.resolve(
-        import.meta.dirname,
-        'test/__mocks__/solana-web3-stub.ts',
-      ),
+      '@solana/web3.js': path.resolve(import.meta.dirname, 'test/__mocks__/solana-web3-stub.ts'),
     },
   },
   plugins: [

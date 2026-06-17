@@ -110,9 +110,7 @@ export class Connection {
     return { blockhash, feeCalculator: { lamportsPerSignature: 5000 } };
   }
 
-  async sendRawTransaction(
-    rawTransaction: Buffer | Uint8Array | number[],
-  ): Promise<string> {
+  async sendRawTransaction(rawTransaction: Buffer | Uint8Array | number[]): Promise<string> {
     void rawTransaction;
     const response = await fetch(this.rpcEndpoint, {
       method: 'POST',
@@ -128,9 +126,7 @@ export class Connection {
     return data.result;
   }
 
-  async getSignatureStatuses(
-    signatures: string[],
-  ): Promise<{
+  async getSignatureStatuses(signatures: string[]): Promise<{
     context: { slot: number };
     value: ({
       confirmationStatus: string;

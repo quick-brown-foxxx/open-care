@@ -15,7 +15,9 @@ const app = new Hono<{ Bindings: Env }>();
 
 const THIRTY_SIX_HOURS_MS = 36 * 60 * 60 * 1000;
 
-function isAnchorStale(anchor: ReturnType<typeof getLatestAnchor> extends Promise<infer T> ? T : never): boolean {
+function isAnchorStale(
+  anchor: ReturnType<typeof getLatestAnchor> extends Promise<infer T> ? T : never,
+): boolean {
   if (!anchor) return true;
   const publishedAt = new Date(anchor.created_at_utc).getTime();
   return publishedAt < Date.now() - THIRTY_SIX_HOURS_MS;

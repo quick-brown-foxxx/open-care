@@ -11,4 +11,6 @@ export interface Env {
 }
 
 /** Hono generic parameter: { Bindings: Env } */
-export interface HonoEnv { Bindings: Env }
+export interface HonoEnv {
+  Bindings: Env;
+}

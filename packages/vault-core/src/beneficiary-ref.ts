@@ -14,7 +14,7 @@
 // ---------------------------------------------------------------------------
 
 /** RFC 4648 base32 alphabet (uppercase, no padding). */
-const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
 /** Number of random bytes to read (80 bits = 10 bytes = 16 base32 chars). */
 const RANDOM_BYTE_COUNT = 10;
@@ -29,7 +29,7 @@ const BITS_PER_CHUNK = 5;
 const BITS_PER_BYTE = 8;
 
 /** Prefix for all system-generated beneficiary references. */
-const PREFIX = "benpub_";
+const PREFIX = 'benpub_';
 
 /** Regex matching a valid beneficiary reference (prefix + 16 base32 chars). */
 const BENPUB_RE = /^benpub_[A-Z2-7]{16}$/;
@@ -77,7 +77,7 @@ export function generateBeneficiaryRef(): string {
     chars.push(ch);
   }
 
-  return PREFIX + chars.join("");
+  return PREFIX + chars.join('');
 }
 
 /**

@@ -1,23 +1,18 @@
-import { Hono } from "hono";
-import type { ZodError } from "zod";
-import { createVaultDb, appendLedgerEvent } from "@open-care/vault-db";
-import type { VaultDb } from "@open-care/vault-db";
-import {
-  generateBeneficiaryRef,
-} from "@open-care/vault-core";
-import type {
-  DisbursementPayload,
-  LedgerEvent,
-} from "@open-care/vault-core";
-import type { Env } from "../lib/env.js";
-import { generateRequestId } from "../lib/request-id.js";
+import { Hono } from 'hono';
+import type { ZodError } from 'zod';
+import { createVaultDb, appendLedgerEvent } from '@open-care/vault-db';
+import type { VaultDb } from '@open-care/vault-db';
+import { generateBeneficiaryRef } from '@open-care/vault-core';
+import type { DisbursementPayload, LedgerEvent } from '@open-care/vault-core';
+import type { Env } from '../lib/env.js';
+import { generateRequestId } from '../lib/request-id.js';
 import {
   badRequestResponse,
   validationErrorResponse,
   internalErrorResponse,
-} from "../lib/errors.js";
-import { DisbursementRequestSchema } from "../lib/schema.js";
-import type { DisbursementRequest } from "../lib/schema.js";
+} from '../lib/errors.js';
+import { DisbursementRequestSchema } from '../lib/schema.js';
+import type { DisbursementRequest } from '../lib/schema.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -28,7 +23,7 @@ import type { DisbursementRequest } from "../lib/schema.js";
  * and a `Z` suffix (milliseconds stripped).
  */
 function nowUtc(): string {
-  return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+  return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
 
 // ---------------------------------------------------------------------------
@@ -46,7 +41,7 @@ const disbursementsRoute = new Hono<{ Bindings: Env }>();
  * vault-operator, which already validates OPERATOR_TOKEN. No auth
  * middleware is needed here.
  */
-disbursementsRoute.post("/api/disbursements", async (c) => {
+disbursementsRoute.post('/api/disbursements', async (c) => {
   const requestId = generateRequestId();
 
   // 1. Parse JSON body
@@ -54,16 +49,13 @@ disbursementsRoute.post("/api/disbursements", async (c) => {
   try {
     rawBody = await c.req.json();
   } catch {
-    return badRequestResponse("Request body is not valid JSON", requestId);
+    return badRequestResponse('Request body is not valid JSON', requestId);
   }
 
   // 2. Validate with Zod schema
   const parseResult = DisbursementRequestSchema.safeParse(rawBody);
   if (!parseResult.success) {
-    return validationErrorResponse(
-      parseResult.error as ZodError,
-      requestId,
-    );
+    return validationErrorResponse(parseResult.error as ZodError, requestId);
   }
 
   const data: DisbursementRequest = parseResult.data;
@@ -89,7 +81,7 @@ disbursementsRoute.post("/api/disbursements", async (c) => {
     public_beneficiary_ref: beneficiaryRef,
     purchased_at_utc: data.purchased_at_utc,
     recorded_at_utc: nowUtc(),
-    recorded_by: "operator",
+    recorded_by: 'operator',
   };
 
   // 6. Create D1 instance
@@ -100,17 +92,14 @@ disbursementsRoute.post("/api/disbursements", async (c) => {
 
   // 8. Append to ledger
   const result = await appendLedgerEvent(db, {
-    event_type: "disbursement_recorded",
+    event_type: 'disbursement_recorded',
     payload,
     created_at_utc,
   });
 
   // 9. Handle Result
   if (!result.ok) {
-    return internalErrorResponse(
-      `Ledger append failed: ${result.error.message}`,
-      requestId,
-    );
+    return internalErrorResponse(`Ledger append failed: ${result.error.message}`, requestId);
   }
 
   const event: LedgerEvent = result.value;
@@ -121,7 +110,7 @@ disbursementsRoute.post("/api/disbursements", async (c) => {
       event_hash: event.event_hash,
       head_hash: event.event_hash,
       public_beneficiary_ref: beneficiaryRef,
-      next_action: "send_code_to_beneficiary_via_bot",
+      next_action: 'send_code_to_beneficiary_via_bot',
     },
     201,
   );

@@ -5,34 +5,19 @@ import * as v from 'valibot';
 // ---------------------------------------------------------------------------
 
 /** ISO-8601 UTC timestamp with second precision and Z suffix. */
-const timestamp = v.pipe(
-  v.string(),
-  v.regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/),
-);
+const timestamp = v.pipe(v.string(), v.regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/));
 
 /** USDC minor-unit amount: 1–16 digit integer string. */
-const usdcMinor = v.pipe(
-  v.string(),
-  v.regex(/^[0-9]{1,16}$/),
-);
+const usdcMinor = v.pipe(v.string(), v.regex(/^[0-9]{1,16}$/));
 
 /** 64-character lowercase hex string. */
-const hex64 = v.pipe(
-  v.string(),
-  v.regex(/^[0-9a-f]{64}$/),
-);
+const hex64 = v.pipe(v.string(), v.regex(/^[0-9a-f]{64}$/));
 
 /** Base58-encoded Solana address or signature. */
-const base58 = v.pipe(
-  v.string(),
-  v.regex(/^[1-9A-HJ-NP-Za-km-z]+$/),
-);
+const base58 = v.pipe(v.string(), v.regex(/^[1-9A-HJ-NP-Za-km-z]+$/));
 
 /** Solscan transaction URL. */
-const solscanUrl = v.pipe(
-  v.string(),
-  v.regex(/^https:\/\/solscan\.io\/tx\//),
-);
+const solscanUrl = v.pipe(v.string(), v.regex(/^https:\/\/solscan\.io\/tx\//));
 
 // ---------------------------------------------------------------------------
 // AnchorInfo

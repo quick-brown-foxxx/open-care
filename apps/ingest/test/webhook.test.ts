@@ -1,9 +1,4 @@
-import {
-  env,
-  createExecutionContext,
-  waitOnExecutionContext,
-  SELF,
-} from 'cloudflare:test';
+import { env, createExecutionContext, waitOnExecutionContext, SELF } from 'cloudflare:test';
 import { describe, it, expect, beforeAll } from 'vitest';
 
 const VALID_AUTH_TOKEN = 'test-webhook-secret-token-12345';
@@ -28,10 +23,7 @@ describe('POST /webhook/helius', () => {
    * optional auth token. Returns the Response after waiting for any
    * ctx.waitUntil() promises to settle.
    */
-  async function postWebhook(
-    body: unknown,
-    authToken?: string,
-  ): Promise<Response> {
+  async function postWebhook(body: unknown, authToken?: string): Promise<Response> {
     const ctx = createExecutionContext();
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -39,14 +31,11 @@ describe('POST /webhook/helius', () => {
     if (authToken !== undefined) {
       headers.Authorization = `Bearer ${authToken}`;
     }
-    const request = new Request(
-      'https://staging.open-care.org/webhook/helius',
-      {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-      },
-    );
+    const request = new Request('https://staging.open-care.org/webhook/helius', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
     const response = await SELF.fetch(request);
     await waitOnExecutionContext(ctx);
     return response;
@@ -66,17 +55,14 @@ describe('POST /webhook/helius', () => {
 
     it('returns 401 when Authorization header does not use Bearer scheme', async () => {
       const ctx = createExecutionContext();
-      const request = new Request(
-        'https://staging.open-care.org/webhook/helius',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Basic dGVzdDp0ZXN0',
-          },
-          body: JSON.stringify([]),
+      const request = new Request('https://staging.open-care.org/webhook/helius', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Basic dGVzdDp0ZXN0',
         },
-      );
+        body: JSON.stringify([]),
+      });
       const response = await SELF.fetch(request);
       await waitOnExecutionContext(ctx);
       expect(response.status).toBe(401);
@@ -110,17 +96,14 @@ describe('POST /webhook/helius', () => {
   describe('payload validation', () => {
     it('returns 400 for invalid JSON body', async () => {
       const ctx = createExecutionContext();
-      const request = new Request(
-        'https://staging.open-care.org/webhook/helius',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${VALID_AUTH_TOKEN}`,
-          },
-          body: 'not-json',
+      const request = new Request('https://staging.open-care.org/webhook/helius', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${VALID_AUTH_TOKEN}`,
         },
-      );
+        body: 'not-json',
+      });
       const response = await SELF.fetch(request);
       await waitOnExecutionContext(ctx);
       expect(response.status).toBe(400);
@@ -129,46 +112,31 @@ describe('POST /webhook/helius', () => {
     });
 
     it('returns 400 when body is not an array', async () => {
-      const response = await postWebhook(
-        { not: 'an array' },
-        VALID_AUTH_TOKEN,
-      );
+      const response = await postWebhook({ not: 'an array' }, VALID_AUTH_TOKEN);
       expect(response.status).toBe(400);
       const json = await response.json<{ error: string }>();
       expect(json.error).toBe('Body must be a JSON array of webhook events');
     });
 
     it('returns 400 when array element has no signature', async () => {
-      const response = await postWebhook(
-        [{ slot: 123 }],
-        VALID_AUTH_TOKEN,
-      );
+      const response = await postWebhook([{ slot: 123 }], VALID_AUTH_TOKEN);
       expect(response.status).toBe(400);
       const json = await response.json<{ error: string }>();
-      expect(json.error).toBe(
-        'Each webhook event must have a string "signature" field',
-      );
+      expect(json.error).toBe('Each webhook event must have a string "signature" field');
     });
 
     it('returns 400 when array element has non-string signature', async () => {
-      const response = await postWebhook(
-        [{ signature: 12345 }],
-        VALID_AUTH_TOKEN,
-      );
+      const response = await postWebhook([{ signature: 12345 }], VALID_AUTH_TOKEN);
       expect(response.status).toBe(400);
       const json = await response.json<{ error: string }>();
-      expect(json.error).toBe(
-        'Each webhook event must have a string "signature" field',
-      );
+      expect(json.error).toBe('Each webhook event must have a string "signature" field');
     });
 
     it('returns 400 when array element is null', async () => {
       const response = await postWebhook([null], VALID_AUTH_TOKEN);
       expect(response.status).toBe(400);
       const json = await response.json<{ error: string }>();
-      expect(json.error).toBe(
-        'Each webhook event must have a string "signature" field',
-      );
+      expect(json.error).toBe('Each webhook event must have a string "signature" field');
     });
   });
 
@@ -234,11 +202,7 @@ describe('POST /webhook/helius', () => {
       expect(result.results[0].source).toBe('webhook');
       // Status may be 'failed' after processInbox runs (RPC is unreachable),
       // but the row must exist.
-      expect(result.results[0].status).toBeOneOf([
-        'received',
-        'processing',
-        'failed',
-      ]);
+      expect(result.results[0].status).toBeOneOf(['received', 'processing', 'failed']);
     });
   });
 

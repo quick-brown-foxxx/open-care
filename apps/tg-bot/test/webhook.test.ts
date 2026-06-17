@@ -36,11 +36,10 @@ const originalFetch = globalThis.fetch;
 
 beforeEach(() => {
   sentMessages.length = 0;
-  globalThis.fetch = vi.fn().mockImplementation(
-    async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === 'string' ? input
-        : input instanceof URL ? input.href
-        : input.url;
+  globalThis.fetch = vi
+    .fn()
+    .mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       if (url.includes('api.telegram.org')) {
         const body = JSON.parse((init?.body ?? '{}') as string);
         sentMessages.push({ chat_id: body.chat_id as number, text: body.text as string });
@@ -50,8 +49,7 @@ beforeEach(() => {
         });
       }
       return originalFetch(input, init);
-    },
-  ) as typeof globalThis.fetch;
+    }) as typeof globalThis.fetch;
 });
 
 afterEach(() => {

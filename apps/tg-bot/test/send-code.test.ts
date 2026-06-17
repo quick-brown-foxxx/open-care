@@ -23,10 +23,7 @@ const HMAC_KEY_HEX = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9
 const hmacKey = await importHmacKey(hexToBytes(HMAC_KEY_HEX));
 
 async function sha256Hex(input: string): Promise<string> {
-  const buffer = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(input),
-  );
+  const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
   const bytes = new Uint8Array(buffer);
   let hex = '';
   for (const byte of bytes) {
@@ -42,11 +39,10 @@ async function sha256Hex(input: string): Promise<string> {
 const originalFetch = globalThis.fetch;
 
 function setupSuccessMock(): void {
-  globalThis.fetch = vi.fn().mockImplementation(
-    async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === 'string' ? input
-        : input instanceof URL ? input.href
-        : input.url;
+  globalThis.fetch = vi
+    .fn()
+    .mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       if (url.includes('api.telegram.org')) {
         return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), {
           status: 200,
@@ -54,16 +50,14 @@ function setupSuccessMock(): void {
         });
       }
       return originalFetch(input, init);
-    },
-  ) as typeof globalThis.fetch;
+    }) as typeof globalThis.fetch;
 }
 
 function setupFailureMock(): void {
-  globalThis.fetch = vi.fn().mockImplementation(
-    async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === 'string' ? input
-        : input instanceof URL ? input.href
-        : input.url;
+  globalThis.fetch = vi
+    .fn()
+    .mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       if (url.includes('api.telegram.org')) {
         return new Response('Internal Server Error', {
           status: 500,
@@ -71,8 +65,7 @@ function setupFailureMock(): void {
         });
       }
       return originalFetch(input, init);
-    },
-  ) as typeof globalThis.fetch;
+    }) as typeof globalThis.fetch;
 }
 
 beforeEach(() => {
@@ -153,7 +146,7 @@ async function createConversation(userId: number): Promise<number> {
   return convRow.id;
 }
 
-async function sendCode(body: Record<string, unknown>): Promise<Response> {
+function sendCode(body: Record<string, unknown>): Promise<Response> {
   return SELF.fetch('https://example.com/tg/internal/send-code', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -188,11 +181,7 @@ describe('POST /tg/internal/send-code', () => {
 
     // Verify conversation updated
     const db = createBotDb(env.bot_db);
-    const convRow = await db
-      .select()
-      .from(conversations)
-      .where(eq(conversations.id, convId))
-      .get();
+    const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
     expect(convRow!.status).toBe('delivered');
     expect(convRow!.delivery_code_hash).toBeDefined();
@@ -214,11 +203,7 @@ describe('POST /tg/internal/send-code', () => {
     });
 
     const db = createBotDb(env.bot_db);
-    const convRow = await db
-      .select()
-      .from(conversations)
-      .where(eq(conversations.id, convId))
-      .get();
+    const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
 
     const expectedHash = await sha256Hex(code);
@@ -238,11 +223,7 @@ describe('POST /tg/internal/send-code', () => {
     });
 
     const db = createBotDb(env.bot_db);
-    const convRow = await db
-      .select()
-      .from(conversations)
-      .where(eq(conversations.id, convId))
-      .get();
+    const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
     expect(convRow!.delivery_code_last4).toBe('UVWX');
   });
@@ -272,11 +253,7 @@ describe('POST /tg/internal/send-code', () => {
 
     // Verify conversation was NOT updated (stays pending, no benpub ref)
     const db = createBotDb(env.bot_db);
-    const convRow = await db
-      .select()
-      .from(conversations)
-      .where(eq(conversations.id, convId))
-      .get();
+    const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
     expect(convRow!.status).toBe('pending');
     expect(convRow!.public_beneficiary_ref).toBeNull();
@@ -295,11 +272,7 @@ describe('POST /tg/internal/send-code', () => {
     });
 
     const db = createBotDb(env.bot_db);
-    const convRow = await db
-      .select()
-      .from(conversations)
-      .where(eq(conversations.id, convId))
-      .get();
+    const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
     expect(convRow!.public_beneficiary_ref).toBeNull();
   });
@@ -317,11 +290,7 @@ describe('POST /tg/internal/send-code', () => {
     });
 
     const db = createBotDb(env.bot_db);
-    const convRow = await db
-      .select()
-      .from(conversations)
-      .where(eq(conversations.id, convId))
-      .get();
+    const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
     expect(convRow!.public_beneficiary_ref).toBeNull();
   });
@@ -347,18 +316,13 @@ describe('POST /tg/internal/send-code', () => {
     const userA = 400007;
     const userB = 400008;
 
-    const opaqueIdA = await registerUser(userA, 'owner_a');
+    await registerUser(userA, 'owner_a');
     await registerUser(userB, 'owner_b');
     const convIdA = await createConversation(userA);
 
     // Try to deliver to convIdA using userB's opaque_id
-    const response = await sendCode({
-      opaque_id: opaqueIdA, // This is userA's opaque_id, but we'll use a different conv
-      code: 'CODE-1234',
-      conversation_id: convIdA, // This belongs to userA
-    });
-    // Actually this should succeed since opaqueIdA matches convIdA's owner.
-    // Let me fix: use userB's opaque_id with userA's conversation.
+    // (First attempt with userA's opaque_id would succeed — skip it and go
+    // straight to the cross-owner test with userB's opaque_id.)
 
     // Get userB's opaque_id
     const db = createBotDb(env.bot_db);
@@ -429,11 +393,7 @@ describe('POST /tg/internal/send-code', () => {
 
     // Verify conversation was marked as failed with TTL blob
     const db = createBotDb(env.bot_db);
-    const conv = await db
-      .select()
-      .from(conversations)
-      .where(eq(conversations.id, convId))
-      .get();
+    const conv = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(conv).not.toBeNull();
     expect(conv!.status).toBe('failed');
     expect(conv!.encrypted_code_ttl_blob).not.toBeNull();
@@ -630,11 +590,7 @@ describe('POST /tg/internal/send-code', () => {
     expect(response.status).toBe(200);
 
     const db = createBotDb(env.bot_db);
-    const convRow = await db
-      .select()
-      .from(conversations)
-      .where(eq(conversations.id, convId))
-      .get();
+    const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
     expect(convRow!.delivery_code_last4).toBe('()_+');
   });
@@ -654,11 +610,7 @@ describe('POST /tg/internal/send-code', () => {
     expect(response.status).toBe(200);
 
     const db = createBotDb(env.bot_db);
-    const convRow = await db
-      .select()
-      .from(conversations)
-      .where(eq(conversations.id, convId))
-      .get();
+    const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
     expect(convRow!.delivery_code_last4).toBe('AAAA');
   });
@@ -678,11 +630,7 @@ describe('POST /tg/internal/send-code', () => {
     expect(response.status).toBe(200);
 
     const db = createBotDb(env.bot_db);
-    const convRow = await db
-      .select()
-      .from(conversations)
-      .where(eq(conversations.id, convId))
-      .get();
+    const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
     expect(convRow!.delivery_code_last4).toBe('X');
   });

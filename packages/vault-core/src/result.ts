@@ -4,9 +4,7 @@
  * @template T - The success value type
  * @template E - The error type (defaults to Error)
  */
-export type Result<T, E = Error> =
-  | { ok: true; value: T }
-  | { ok: false; error: E };
+export type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E };
 
 /** Construct a successful Result. */
 export function ok<T>(value: T): Result<T, never> {

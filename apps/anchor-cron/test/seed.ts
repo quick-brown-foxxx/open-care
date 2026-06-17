@@ -18,9 +18,7 @@ export async function cleanTables(): Promise<void> {
  * head to anchor.  Returns the event hash and sequence number for
  * assertions.
  */
-export async function seedLedgerEvent(
-  db: VaultDb,
-): Promise<{ hash: string; seq: number }> {
+export async function seedLedgerEvent(db: VaultDb): Promise<{ hash: string; seq: number }> {
   const result = await appendLedgerEvent(db, {
     event_type: 'donation_confirmed',
     payload: {

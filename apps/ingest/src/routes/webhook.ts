@@ -37,9 +37,7 @@ webhookRoute.post('/', async (c) => {
       event === null ||
       typeof (event as Record<string, unknown>).signature !== 'string'
     ) {
-      return badRequestResponse(
-        'Each webhook event must have a string "signature" field',
-      );
+      return badRequestResponse('Each webhook event must have a string "signature" field');
     }
     entries.push({
       signature: (event as { signature: string }).signature,
@@ -55,10 +53,7 @@ webhookRoute.post('/', async (c) => {
   // Launch async processing after response
   c.executionCtx.waitUntil(processInbox(db, c.env));
 
-  return c.json(
-    { accepted: result.accepted, duplicates: result.duplicates },
-    200,
-  );
+  return c.json({ accepted: result.accepted, duplicates: result.duplicates }, 200);
 });
 
 export default webhookRoute;

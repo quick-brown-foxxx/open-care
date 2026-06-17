@@ -123,9 +123,7 @@ describe('Anchor Cron Worker', () => {
         .from(anchorRuns)
         .where(eq(anchorRuns.status, 'failed'))
         .all();
-      const recoveredStale = failedRows.find(
-        (r) => r.last_error === 'lock_expired_no_tx_found',
-      );
+      const recoveredStale = failedRows.find((r) => r.last_error === 'lock_expired_no_tx_found');
       expect(recoveredStale).toBeDefined();
       expect(recoveredStale!.locked_until_utc).toBeNull();
 

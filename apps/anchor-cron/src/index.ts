@@ -11,11 +11,7 @@ app.route('/', health);
 app.route('/', manual);
 
 // Scheduled handler — triggered by cron `0 1 * * *`
-async function scheduled(
-  _event: ScheduledEvent,
-  env: Env,
-  ctx: ExecutionContext,
-): Promise<void> {
+async function scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
   const db = createVaultDb(env.vault_db);
   const result = await runAnchor(db, env, 'cron');
 

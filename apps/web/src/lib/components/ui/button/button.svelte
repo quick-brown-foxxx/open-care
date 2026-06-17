@@ -29,11 +29,7 @@
 </script>
 
 {#if href}
-  <a
-    {href}
-    class={cn('btn', variantClasses[variant], sizeClasses[size], className)}
-    role="button"
-  >
+  <a {href} class={cn('btn', variantClasses[variant], sizeClasses[size], className)} role="button">
     {@render children()}
   </a>
 {:else}
@@ -58,7 +54,9 @@
     cursor: pointer;
     border: none;
     text-decoration: none;
-    transition: background 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
     white-space: nowrap;
     line-height: 1;
   }
@@ -70,27 +68,58 @@
   }
 
   /* Sizes */
-  .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.85rem; }
-  .btn-md { padding: 0.5rem 1.25rem; font-size: 0.95rem; }
-  .btn-lg { padding: 0.75rem 1.75rem; font-size: 1.05rem; }
+  .btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.85rem;
+  }
+  .btn-md {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.95rem;
+  }
+  .btn-lg {
+    padding: 0.75rem 1.75rem;
+    font-size: 1.05rem;
+  }
 
   /* Variants */
-  .btn-primary { background: var(--color-primary); color: #ffffff; }
-  .btn-primary:hover { background: var(--color-primary-hover); }
+  .btn-primary {
+    background: var(--color-primary);
+    color: #ffffff;
+  }
+  .btn-primary:hover {
+    background: var(--color-primary-hover);
+  }
 
-  .btn-accent { background: var(--color-accent); color: #ffffff; }
-  .btn-accent:hover { background: #047857; }
+  .btn-accent {
+    background: var(--color-accent);
+    color: #ffffff;
+  }
+  .btn-accent:hover {
+    background: #047857;
+  }
 
   .btn-outline {
     background: transparent;
     border: 1px solid var(--color-border);
     color: var(--color-text);
   }
-  .btn-outline:hover { background: #f3f4f6; }
+  .btn-outline:hover {
+    background: #f3f4f6;
+  }
 
-  .btn-ghost { background: transparent; color: var(--color-text); }
-  .btn-ghost:hover { background: #f3f4f6; }
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-text);
+  }
+  .btn-ghost:hover {
+    background: #f3f4f6;
+  }
 
-  .btn-danger { background: var(--color-danger); color: #ffffff; }
-  .btn-danger:hover { background: #b91c1c; }
+  .btn-danger {
+    background: var(--color-danger);
+    color: #ffffff;
+  }
+  .btn-danger:hover {
+    background: #b91c1c;
+  }
 </style>

@@ -23,7 +23,11 @@ export function createKeypair(base58Secret: string): Result<Keypair, Error> {
     const keypair = Keypair.fromSecretKey(secretBytes);
     return ok(keypair);
   } catch (e) {
-    return err(new Error(`Failed to decode anchor wallet secret: ${e instanceof Error ? e.message : String(e)}`));
+    return err(
+      new Error(
+        `Failed to decode anchor wallet secret: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+    );
   }
 }
 
@@ -46,7 +50,9 @@ export async function sendMemoTransaction(
     });
     return ok(signature);
   } catch (e) {
-    return err(new Error(`Failed to send anchor transaction: ${e instanceof Error ? e.message : String(e)}`));
+    return err(
+      new Error(`Failed to send anchor transaction: ${e instanceof Error ? e.message : String(e)}`),
+    );
   }
 }
 
@@ -58,7 +64,9 @@ export async function getBalance(
     const balance = await connection.getBalance(address);
     return ok(balance);
   } catch (e) {
-    return err(new Error(`Failed to get wallet balance: ${e instanceof Error ? e.message : String(e)}`));
+    return err(
+      new Error(`Failed to get wallet balance: ${e instanceof Error ? e.message : String(e)}`),
+    );
   }
 }
 
@@ -70,6 +78,8 @@ export async function getTransaction(
     const tx = await connection.getTransaction(signature, { commitment: 'finalized' });
     return ok(tx);
   } catch (e) {
-    return err(new Error(`Failed to get transaction: ${e instanceof Error ? e.message : String(e)}`));
+    return err(
+      new Error(`Failed to get transaction: ${e instanceof Error ? e.message : String(e)}`),
+    );
   }
 }

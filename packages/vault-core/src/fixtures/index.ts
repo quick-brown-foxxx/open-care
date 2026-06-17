@@ -4,7 +4,7 @@ export {
   sampleDonation3Payload,
   sampleDonation1Event,
   sampleDonationPayloads,
-} from "./donations.js";
+} from './donations.js';
 
 export {
   sampleDisbursement1Payload,
@@ -12,14 +12,8 @@ export {
   sampleDisbursement1Event,
   sampleDisbursement2Event,
   sampleDisbursementPayloads,
-} from "./disbursements.js";
+} from './disbursements.js';
 
-export {
-  sampleAnchorPayload,
-  sampleAnchorEvent,
-} from "./anchors.js";
+export { sampleAnchorPayload, sampleAnchorEvent } from './anchors.js';
 
-export {
-  sampleCorrectionPayload,
-  sampleCorrectionEvent,
-} from "./corrections.js";
+export { sampleCorrectionPayload, sampleCorrectionEvent } from './corrections.js';

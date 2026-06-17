@@ -42,13 +42,19 @@ export function validateLimit(
 ): number | Response {
   const result = parsePositiveInt(raw, 'limit');
   if (result === undefined) return defaultLimit;
-  if (!result.ok) return Response.json(
-    { error: { code: 'BAD_REQUEST', message: result.message } },
-    { status: 400 },
-  );
+  if (!result.ok)
+    return Response.json(
+      { error: { code: 'BAD_REQUEST', message: result.message } },
+      { status: 400 },
+    );
   if (result.value > maxLimit) {
     return Response.json(
-      { error: { code: 'BAD_REQUEST', message: `'limit' must not exceed ${maxLimit}, got ${result.value}` } },
+      {
+        error: {
+          code: 'BAD_REQUEST',
+          message: `'limit' must not exceed ${maxLimit}, got ${result.value}`,
+        },
+      },
       { status: 400 },
     );
   }
@@ -61,14 +67,13 @@ export function validateLimit(
  * @param raw - Raw query string value (or undefined).
  * @returns The cursor value (undefined when absent), or a 400 Response if invalid.
  */
-export function validateCursor(
-  raw: string | undefined,
-): number | undefined | Response {
+export function validateCursor(raw: string | undefined): number | undefined | Response {
   const result = parsePositiveInt(raw, 'after_sequence_no');
   if (result === undefined) return undefined;
-  if (!result.ok) return Response.json(
-    { error: { code: 'BAD_REQUEST', message: result.message } },
-    { status: 400 },
-  );
+  if (!result.ok)
+    return Response.json(
+      { error: { code: 'BAD_REQUEST', message: result.message } },
+      { status: 400 },
+    );
   return result.value;
 }

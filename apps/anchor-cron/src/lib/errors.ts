@@ -7,7 +7,11 @@ export interface ApiError {
   };
 }
 
-export function errorResponse(code: string, message: string, status: ContentfulStatusCode): Response {
+export function errorResponse(
+  code: string,
+  message: string,
+  status: ContentfulStatusCode,
+): Response {
   const body: ApiError = { error: { code, message } };
   return Response.json(body, { status });
 }

@@ -19,8 +19,9 @@ export function constantTimeEqual(a: string, b: string): boolean {
     // timingSafeEqual requires equal-length buffers; if lengths differ,
     // the strings are definitely not equal.
     if (aBytes.byteLength !== bBytes.byteLength) return false;
-    return (crypto.subtle as unknown as { timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean })
-      .timingSafeEqual(aBytes, bBytes);
+    return (
+      crypto.subtle as unknown as { timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean }
+    ).timingSafeEqual(aBytes, bBytes);
   }
 
   // Fallback: constant-time manual comparison (no early exit)

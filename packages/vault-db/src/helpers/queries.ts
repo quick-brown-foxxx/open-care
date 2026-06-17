@@ -1,24 +1,20 @@
-import { desc, eq, gt, and, sql } from "drizzle-orm";
-import type { SQL } from "drizzle-orm";
+import { desc, eq, gt, and, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import {
   parseLedgerEvent,
   DonationPayloadSchema,
   DisbursementPayloadSchema,
-} from "@open-care/vault-core";
-import type {
-  LedgerEvent,
-  DonationPayload,
-  DisbursementPayload,
-} from "@open-care/vault-core";
-import { ledgerEvents, anchorRuns } from "../schema/vault-db.js";
-import type { VaultDb, VaultDbTest } from "../client/vault.js";
+} from '@open-care/vault-core';
+import type { LedgerEvent, DonationPayload, DisbursementPayload } from '@open-care/vault-core';
+import { ledgerEvents, anchorRuns } from '../schema/vault-db.js';
+import type { VaultDb, VaultDbTest } from '../client/vault.js';
 import type {
   PaginationOptions,
   PaginatedResult,
   Totals,
   DonationView,
   DisbursementView,
-} from "./types.js";
+} from './types.js';
 
 // ---------------------------------------------------------------------------
 // Private helpers
@@ -28,9 +24,7 @@ import type {
  * Parse a raw ledger_events row into a fully-typed {@link LedgerEvent}.
  * Throws if the payload fails validation (indicates database corruption).
  */
-function rowToLedgerEvent(
-  row: typeof ledgerEvents.$inferSelect,
-): LedgerEvent {
+function rowToLedgerEvent(row: typeof ledgerEvents.$inferSelect): LedgerEvent {
   const rawPayload = JSON.parse(row.payload_json) as unknown;
   const result = parseLedgerEvent({
     sequence_no: row.sequence_no,
@@ -40,9 +34,7 @@ function rowToLedgerEvent(
     created_at_utc: row.created_at_utc,
   });
   if (!result.ok) {
-    throw new Error(
-      `Corrupt ledger event at sequence_no ${row.sequence_no}: invalid payload`,
-    );
+    throw new Error(`Corrupt ledger event at sequence_no ${row.sequence_no}: invalid payload`);
   }
   return { ...result.value, event_hash: row.event_hash };
 }
@@ -73,9 +65,7 @@ function validatePayload<T>(
  * Returns the latest ledger event (highest `sequence_no`), or `null` if the
  * ledger is empty.
  */
-export async function getHead(
-  db: VaultDb | VaultDbTest,
-): Promise<LedgerEvent | null> {
+export async function getHead(db: VaultDb | VaultDbTest): Promise<LedgerEvent | null> {
   const rows = await db
     .select()
     .from(ledgerEvents)
@@ -124,8 +114,7 @@ export async function getEventsPaginated(
   const hasMore = rows.length > limit;
   const pageItems = hasMore ? rows.slice(0, limit) : rows;
   const lastItem = pageItems[pageItems.length - 1];
-  const nextCursor: number | null =
-    hasMore && lastItem ? lastItem.sequence_no : null;
+  const nextCursor: number | null = hasMore && lastItem ? lastItem.sequence_no : null;
 
   return {
     items: pageItems.map(rowToLedgerEvent),
@@ -139,9 +128,7 @@ export async function getEventsPaginated(
  * Uses raw SQL with SQLite JSON functions so aggregation happens server-side.
  * Sums are returned as decimal strings (via `BigInt` → `.toString()`).
  */
-export async function getTotals(
-  db: VaultDb | VaultDbTest,
-): Promise<Totals> {
+export async function getTotals(db: VaultDb | VaultDbTest): Promise<Totals> {
   // Raw SQL avoids the VaultDb | VaultDbTest union-type issues with the
   // query builder's .get() return type.  db.all() accepts SQLWrapper and
   // returns unknown[]; we cast the row shape explicitly.
@@ -181,9 +168,7 @@ export async function getDonations(
 ): Promise<PaginatedResult<DonationView>> {
   const limit = Math.min(options.limit ?? 50, 100);
 
-  const conditions: SQL[] = [
-    eq(ledgerEvents.event_type, "donation_confirmed"),
-  ];
+  const conditions: SQL[] = [eq(ledgerEvents.event_type, 'donation_confirmed')];
   if (options.cursor !== undefined) {
     conditions.push(gt(ledgerEvents.sequence_no, options.cursor));
   }
@@ -201,8 +186,7 @@ export async function getDonations(
   const hasMore = rows.length > limit;
   const pageItems = hasMore ? rows.slice(0, limit) : rows;
   const lastItem = pageItems[pageItems.length - 1];
-  const nextCursor: number | null =
-    hasMore && lastItem ? lastItem.sequence_no : null;
+  const nextCursor: number | null = hasMore && lastItem ? lastItem.sequence_no : null;
 
   const items: DonationView[] = [];
   for (const row of pageItems) {
@@ -211,7 +195,7 @@ export async function getDonations(
       row.sequence_no,
       rawPayload,
       DonationPayloadSchema,
-      "donation",
+      'donation',
     );
     items.push({
       sequence_no: row.sequence_no,
@@ -240,9 +224,7 @@ export async function getDisbursements(
 ): Promise<PaginatedResult<DisbursementView>> {
   const limit = Math.min(options.limit ?? 50, 100);
 
-  const conditions: SQL[] = [
-    eq(ledgerEvents.event_type, "disbursement_recorded"),
-  ];
+  const conditions: SQL[] = [eq(ledgerEvents.event_type, 'disbursement_recorded')];
   if (options.cursor !== undefined) {
     conditions.push(gt(ledgerEvents.sequence_no, options.cursor));
   }
@@ -260,8 +242,7 @@ export async function getDisbursements(
   const hasMore = rows.length > limit;
   const pageItems = hasMore ? rows.slice(0, limit) : rows;
   const lastItem = pageItems[pageItems.length - 1];
-  const nextCursor: number | null =
-    hasMore && lastItem ? lastItem.sequence_no : null;
+  const nextCursor: number | null = hasMore && lastItem ? lastItem.sequence_no : null;
 
   const items: DisbursementView[] = [];
   for (const row of pageItems) {
@@ -270,7 +251,7 @@ export async function getDisbursements(
       row.sequence_no,
       rawPayload,
       DisbursementPayloadSchema,
-      "disbursement",
+      'disbursement',
     );
     items.push({
       sequence_no: row.sequence_no,
@@ -301,7 +282,7 @@ export async function getLatestAnchor(
   const rows = await db
     .select()
     .from(anchorRuns)
-    .where(eq(anchorRuns.status, "published"))
+    .where(eq(anchorRuns.status, 'published'))
     .orderBy(desc(anchorRuns.anchored_head_sequence_no))
     .limit(1)
     .all();

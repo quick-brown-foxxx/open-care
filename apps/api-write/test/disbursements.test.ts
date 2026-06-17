@@ -87,9 +87,7 @@ describe('POST /api/disbursements', () => {
   // ------------------------------------------------------------------
 
   it('rejects a string public_beneficiary_ref with 422', async () => {
-    const response = await post(
-      validBody({ public_beneficiary_ref: 'benpub_7G9Q2KX4N5P8R2T6' }),
-    );
+    const response = await post(validBody({ public_beneficiary_ref: 'benpub_7G9Q2KX4N5P8R2T6' }));
     expect(response.status).toBe(422);
 
     const json = await response.json();
@@ -152,9 +150,7 @@ describe('POST /api/disbursements', () => {
   // ------------------------------------------------------------------
 
   it('returns 422 when service is "Other" and service_note is null', async () => {
-    const response = await post(
-      validBody({ service: 'Other', service_note: null }),
-    );
+    const response = await post(validBody({ service: 'Other', service_note: null }));
     expect(response.status).toBe(422);
 
     const json = await response.json();
@@ -180,9 +176,7 @@ describe('POST /api/disbursements', () => {
   // ------------------------------------------------------------------
 
   it('returns 422 when a known service has a non-null service_note', async () => {
-    const response = await post(
-      validBody({ service: 'Alter', service_note: 'should be null' }),
-    );
+    const response = await post(validBody({ service: 'Alter', service_note: 'should be null' }));
     expect(response.status).toBe(422);
 
     const json = await response.json();
@@ -207,17 +201,13 @@ describe('POST /api/disbursements', () => {
 
   it('builds a valid hash chain across multiple disbursements', async () => {
     // First disbursement
-    const r1 = await post(
-      validBody({ receipt_ref: 'ALTER-2026-06-14-CHAIN1' }),
-    );
+    const r1 = await post(validBody({ receipt_ref: 'ALTER-2026-06-14-CHAIN1' }));
     expect(r1.status).toBe(201);
     const j1 = await r1.json();
     const seq1 = j1.sequence_no;
 
     // Second disbursement
-    const r2 = await post(
-      validBody({ receipt_ref: 'ALTER-2026-06-14-CHAIN2' }),
-    );
+    const r2 = await post(validBody({ receipt_ref: 'ALTER-2026-06-14-CHAIN2' }));
     expect(r2.status).toBe(201);
     const j2 = await r2.json();
     const seq2 = j2.sequence_no;

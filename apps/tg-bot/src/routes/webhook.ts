@@ -53,7 +53,7 @@ export async function webhookHandler(
   }
 
   const update = parseUpdate(body);
-  if (!update || !update.message) {
+  if (!update?.message) {
     // No message in the update (e.g. callback query, inline query) — ignore
     return c.json({ ok: true });
   }

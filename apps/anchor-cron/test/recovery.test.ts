@@ -18,9 +18,7 @@ function postManual(): Request {
  * locked_until_utc.  The recovery path should look up the tx on-chain
  * (mocked) and backfill to published.
  */
-async function seedStaleLockWithTx(
-  db: ReturnType<typeof createVaultDb>,
-): Promise<void> {
+async function seedStaleLockWithTx(db: ReturnType<typeof createVaultDb>): Promise<void> {
   const pastDate = new Date(Date.now() - 20 * 60 * 1000).toISOString();
   await db.insert(anchorRuns).values({
     anchor_date: '2026-06-16',
@@ -43,9 +41,7 @@ async function seedStaleLockWithTx(
  * Insert a stale sending row with no tx_signature and an expired
  * locked_until_utc.  The recovery path should mark it as failed.
  */
-async function seedStaleLockNoTx(
-  db: ReturnType<typeof createVaultDb>,
-): Promise<void> {
+async function seedStaleLockNoTx(db: ReturnType<typeof createVaultDb>): Promise<void> {
   const pastDate = new Date(Date.now() - 20 * 60 * 1000).toISOString();
   await db.insert(anchorRuns).values({
     anchor_date: '2026-06-16',
@@ -102,9 +98,7 @@ describe('Stale lock recovery', () => {
       // Should have at least 2 published rows: the recovered stale + the new anchor
       expect(publishedRows.length).toBeGreaterThanOrEqual(2);
 
-      const recoveredStale = publishedRows.find(
-        (r) => r.anchored_head_hash === 'b'.repeat(64),
-      );
+      const recoveredStale = publishedRows.find((r) => r.anchored_head_hash === 'b'.repeat(64));
       expect(recoveredStale).toBeDefined();
       expect(recoveredStale!.status).toBe('published');
       expect(recoveredStale!.locked_until_utc).toBeNull();
@@ -113,9 +107,7 @@ describe('Stale lock recovery', () => {
       );
 
       // Verify a new anchor was created for the current head
-      const newAnchor = publishedRows.find(
-        (r) => r.anchored_head_hash === hash,
-      );
+      const newAnchor = publishedRows.find((r) => r.anchored_head_hash === hash);
       expect(newAnchor).toBeDefined();
       expect(newAnchor!.trigger_source).toBe('operator-manual');
     });
@@ -161,9 +153,7 @@ describe('Stale lock recovery', () => {
         .where(eq(anchorRuns.status, 'failed'))
         .all();
 
-      const recoveredStale = failedRows.find(
-        (r) => r.last_error === 'lock_expired_no_tx_found',
-      );
+      const recoveredStale = failedRows.find((r) => r.last_error === 'lock_expired_no_tx_found');
       expect(recoveredStale).toBeDefined();
       expect(recoveredStale!.locked_until_utc).toBeNull();
       expect(recoveredStale!.tx_signature).toBeNull();

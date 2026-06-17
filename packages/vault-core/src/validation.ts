@@ -22,8 +22,7 @@ export function isValidTimestamp(s: string): boolean {
 
   const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
   // Leap year adjustment for February
-  const isLeap =
-    (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  const isLeap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
   const maxDay = month === 2 ? (isLeap ? 29 : 28) : daysInMonth[month - 1]!;
   if (day < 1 || day > maxDay) return false;
 
@@ -67,7 +66,7 @@ export function isValidUsdcMinor(s: string): boolean {
  */
 export function isValidHandle(s: string): boolean {
   if (!/^[A-Za-z0-9_]{3,32}$/.test(s)) return false;
-  if (s.toLowerCase().startsWith("benpub_")) return false;
+  if (s.toLowerCase().startsWith('benpub_')) return false;
   return true;
 }
 

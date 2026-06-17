@@ -1,4 +1,4 @@
-import { desc } from "drizzle-orm";
+import { desc } from 'drizzle-orm';
 import {
   computeEventHash,
   ZERO_HASH,
@@ -7,15 +7,11 @@ import {
   PayloadSchemas,
   ok,
   err,
-} from "@open-care/vault-core";
-import type {
-  LedgerEvent,
-  LedgerEventBase,
-  Result,
-} from "@open-care/vault-core";
-import { ledgerEvents } from "../schema/vault-db.js";
-import type { VaultDb, VaultDbTest } from "../client/vault.js";
-import type { AppendLedgerEventInput, LedgerAppendError } from "./types.js";
+} from '@open-care/vault-core';
+import type { LedgerEvent, LedgerEventBase, Result } from '@open-care/vault-core';
+import { ledgerEvents } from '../schema/vault-db.js';
+import type { VaultDb, VaultDbTest } from '../client/vault.js';
+import type { AppendLedgerEventInput, LedgerAppendError } from './types.js';
 
 const MAX_RETRIES = 3;
 const MAX_PAYLOAD_LENGTH = 16384;
@@ -30,7 +26,7 @@ const MAX_PAYLOAD_LENGTH = 16384;
 function bumpTimestamp(iso: string, seconds: number): string {
   const date = new Date(iso);
   date.setSeconds(date.getSeconds() + seconds);
-  return date.toISOString().replace(/\.\d{3}Z$/, "Z");
+  return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
 
 /**
@@ -56,7 +52,7 @@ export async function appendLedgerEvent(
   const payloadSchema = PayloadSchemas[input.event_type];
   if (!payloadSchema) {
     return err({
-      code: "INVALID_INPUT",
+      code: 'INVALID_INPUT',
       message: `Unknown event_type: ${input.event_type}`,
     });
   }
@@ -65,8 +61,8 @@ export async function appendLedgerEvent(
   const parseResult = payloadSchema.safeParse(input.payload);
   if (!parseResult.success) {
     return err({
-      code: "INVALID_INPUT",
-      message: "Payload validation failed",
+      code: 'INVALID_INPUT',
+      message: 'Payload validation failed',
       zodError: parseResult.error,
     });
   }
@@ -74,8 +70,8 @@ export async function appendLedgerEvent(
   // Validate the timestamp format.
   if (!isValidTimestamp(input.created_at_utc)) {
     return err({
-      code: "INVALID_INPUT",
-      message: "Invalid created_at_utc timestamp",
+      code: 'INVALID_INPUT',
+      message: 'Invalid created_at_utc timestamp',
     });
   }
 
@@ -86,7 +82,7 @@ export async function appendLedgerEvent(
   const payload_json = canonicalJson(input.payload);
   if (payload_json.length > MAX_PAYLOAD_LENGTH) {
     return err({
-      code: "INVALID_INPUT",
+      code: 'INVALID_INPUT',
       message: `Payload JSON exceeds ${MAX_PAYLOAD_LENGTH} bytes`,
     });
   }
@@ -153,7 +149,7 @@ export async function appendLedgerEvent(
       break; // success — exit the retry loop
     } catch (error) {
       const msg = String(error);
-      if (msg.includes("UNIQUE constraint failed") && attempt < MAX_RETRIES) {
+      if (msg.includes('UNIQUE constraint failed') && attempt < MAX_RETRIES) {
         // Bump timestamp by 1 second per attempt and recompute the hash.
         // The changed created_at_utc alters the preimage, producing a
         // different event_hash that should not collide.
@@ -162,14 +158,14 @@ export async function appendLedgerEvent(
         event_hash = await computeEventHash(base);
         continue;
       }
-      if (msg.includes("UNIQUE constraint failed")) {
+      if (msg.includes('UNIQUE constraint failed')) {
         return err({
-          code: "HASH_COLLISION",
-          message: "Failed after max retries",
+          code: 'HASH_COLLISION',
+          message: 'Failed after max retries',
         });
       }
       return err({
-        code: "DB_ERROR",
+        code: 'DB_ERROR',
         message: msg,
         cause: error,
       });

@@ -23,7 +23,9 @@ const MIN_ANCHOR_SOL_LAMPORTS = 50_000_000;
 /**
  * Returns `true` when the latest anchor is stale (null or published >36h ago).
  */
-function isAnchorStale(anchor: ReturnType<typeof getLatestAnchor> extends Promise<infer T> ? T : never): boolean {
+function isAnchorStale(
+  anchor: ReturnType<typeof getLatestAnchor> extends Promise<infer T> ? T : never,
+): boolean {
   if (!anchor) return true;
   const publishedAt = new Date(anchor.created_at_utc).getTime();
   return publishedAt < Date.now() - THIRTY_SIX_HOURS_MS;
@@ -32,7 +34,9 @@ function isAnchorStale(anchor: ReturnType<typeof getLatestAnchor> extends Promis
 /**
  * Returns `true` when the anchor wallet SOL balance is low or unknown.
  */
-function isAnchorWalletLowSol(anchor: ReturnType<typeof getLatestAnchor> extends Promise<infer T> ? T : never): boolean {
+function isAnchorWalletLowSol(
+  anchor: ReturnType<typeof getLatestAnchor> extends Promise<infer T> ? T : never,
+): boolean {
   if (!anchor) return true;
   const lamports = anchor.last_anchor_wallet_sol_lamports;
   return lamports === null || lamports < MIN_ANCHOR_SOL_LAMPORTS;

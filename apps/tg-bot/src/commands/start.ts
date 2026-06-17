@@ -68,11 +68,7 @@ export async function handleStart(
 
   if (existingRow) {
     // Re-identification: check if the new handle is already taken by someone else
-    const handleOwner = await db
-      .select()
-      .from(handles)
-      .where(eq(handles.handle, arg))
-      .get();
+    const handleOwner = await db.select().from(handles).where(eq(handles.handle, arg)).get();
 
     if (handleOwner && handleOwner.telegram_user_ref !== telegramUserRef) {
       return `Sorry, @${arg} is already taken.`;
@@ -97,11 +93,7 @@ export async function handleStart(
   }
 
   // New registration: check if handle is already taken
-  const handleOwner = await db
-    .select()
-    .from(handles)
-    .where(eq(handles.handle, arg))
-    .get();
+  const handleOwner = await db.select().from(handles).where(eq(handles.handle, arg)).get();
 
   if (handleOwner) {
     return `Sorry, @${arg} is already taken.`;

@@ -1,19 +1,11 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import {
-  importAesGcmKey,
-  encryptChatId,
-  decryptChatId,
-  parseEnvelope,
-} from '../src/index.js';
+import { importAesGcmKey, encryptChatId, decryptChatId, parseEnvelope } from '../src/index.js';
 // ParseError and DecryptError types are used implicitly via result.error.type checks
 
 // Generate a 32-byte AES-256 key
 const rawAesKey = crypto.getRandomValues(new Uint8Array(32));
 const wrongRawKey = crypto.getRandomValues(new Uint8Array(32));
-while (
-  wrongRawKey.length === rawAesKey.length &&
-  wrongRawKey.every((b, i) => b === rawAesKey[i])
-) {
+while (wrongRawKey.length === rawAesKey.length && wrongRawKey.every((b, i) => b === rawAesKey[i])) {
   crypto.getRandomValues(wrongRawKey);
 }
 
@@ -318,11 +310,7 @@ describe('decryptChatId', () => {
     });
 
     it('ParseError has correct structure for invalid_base64url', async () => {
-      const result = await decryptChatId(
-        aesKey,
-        'aesgcm:v1:1:invalid!!!:ct1234',
-        'opaque',
-      );
+      const result = await decryptChatId(aesKey, 'aesgcm:v1:1:invalid!!!:ct1234', 'opaque');
       expect(result.ok).toBe(false);
       if (!result.ok && result.error.type === 'parse_error') {
         const cause = result.error.cause;

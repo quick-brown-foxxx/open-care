@@ -16,9 +16,7 @@ function postManual(): Request {
  * Insert a sending anchor_runs row with a future locked_until_utc so
  * the pipeline detects a genuine concurrent run (conflict).
  */
-async function seedActiveLock(
-  db: ReturnType<typeof createVaultDb>,
-): Promise<void> {
+async function seedActiveLock(db: ReturnType<typeof createVaultDb>): Promise<void> {
   const now = new Date();
   const futureDate = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
   await db.insert(anchorRuns).values({

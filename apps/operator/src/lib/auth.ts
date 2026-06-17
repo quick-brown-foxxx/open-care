@@ -48,10 +48,7 @@ export async function authMiddleware(
   const token = authHeader.slice(7); // Remove "Bearer " prefix
 
   if (!constantTimeEqual(token, c.env.OPERATOR_TOKEN)) {
-    return c.json(
-      { error: { code: 'UNAUTHORIZED', message: 'Invalid operator token.' } },
-      401,
-    );
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid operator token.' } }, 401);
   }
 
   await next();

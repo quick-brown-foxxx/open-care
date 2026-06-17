@@ -6,6 +6,6 @@
  */
 
 export function generateRequestId(): string {
-  const uuid = crypto.randomUUID().replace(/-/g, "");
-  return "req_" + uuid.slice(0, 8);
+  const uuid = crypto.randomUUID().replace(/-/g, '');
+  return 'req_' + uuid.slice(0, 8);
 }

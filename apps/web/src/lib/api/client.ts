@@ -19,9 +19,7 @@ import {
 // ---------------------------------------------------------------------------
 
 /** A discriminated result: either success with a typed value, or failure with an ApiError. */
-export type Result<T, E = ApiError> =
-  | { ok: true; value: T }
-  | { ok: false; error: E };
+export type Result<T, E = ApiError> = { ok: true; value: T } | { ok: false; error: E };
 
 /** Structured error returned by the API client on any failure path. */
 export interface ApiError {
@@ -70,9 +68,7 @@ export function setBaseUrl(url: string): void {
  * `undefined`.  Keys with `null` values are included as `key=` (empty value).
  */
 function buildQuery(params: Record<string, string | number | undefined | null>): string {
-  const entries = Object.entries(params).filter(
-    ([, v]) => v !== undefined,
-  );
+  const entries = Object.entries(params).filter(([, v]) => v !== undefined);
   if (entries.length === 0) return '';
   const usp = new URLSearchParams();
   for (const [k, v] of entries) {
@@ -90,10 +86,7 @@ function buildQuery(params: Record<string, string | number | undefined | null>):
  * 3. On 2xx: parses JSON and validates against the supplied Valibot schema.
  * 4. On network/parse exceptions: returns a NETWORK_ERROR result.
  */
-async function fetchAndValidate<T>(
-  url: string,
-  schema: v.GenericSchema,
-): Promise<Result<T>> {
+async function fetchAndValidate<T>(url: string, schema: v.GenericSchema): Promise<Result<T>> {
   let response: Response;
   try {
     response = await fetch(url);
@@ -173,10 +166,7 @@ async function fetchAndValidate<T>(
  * GET /api/totals
  */
 export async function getTotals(): Promise<Result<TotalsResponse>> {
-  return fetchAndValidate<TotalsResponse>(
-    `${baseUrl}/api/totals`,
-    TotalsResponseSchema,
-  );
+  return fetchAndValidate<TotalsResponse>(`${baseUrl}/api/totals`, TotalsResponseSchema);
 }
 
 /**
@@ -184,9 +174,7 @@ export async function getTotals(): Promise<Result<TotalsResponse>> {
  *
  * GET /api/donations?limit=50&before_sequence_no=<n>
  */
-export async function getDonations(
-  params?: PaginationParams,
-): Promise<Result<DonationsResponse>> {
+export async function getDonations(params?: PaginationParams): Promise<Result<DonationsResponse>> {
   const qs = buildQuery({
     limit: params?.limit,
     before_sequence_no: params?.before_sequence_no,
@@ -239,10 +227,7 @@ export async function getLedgerEvents(
  * GET /api/verify
  */
 export async function getVerify(): Promise<Result<VerifyResponse>> {
-  return fetchAndValidate<VerifyResponse>(
-    `${baseUrl}/api/verify`,
-    VerifyResponseSchema,
-  );
+  return fetchAndValidate<VerifyResponse>(`${baseUrl}/api/verify`, VerifyResponseSchema);
 }
 
 /**
@@ -251,8 +236,5 @@ export async function getVerify(): Promise<Result<VerifyResponse>> {
  * GET /api/health
  */
 export async function getHealth(): Promise<Result<HealthResponse>> {
-  return fetchAndValidate<HealthResponse>(
-    `${baseUrl}/api/health`,
-    HealthResponseSchema,
-  );
+  return fetchAndValidate<HealthResponse>(`${baseUrl}/api/health`, HealthResponseSchema);
 }

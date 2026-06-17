@@ -35,12 +35,7 @@ export type {
 } from './schemas/index.js';
 
 // Utils
-export {
-  formatUsdc,
-  formatDate,
-  formatSolscanUrl,
-  truncateHash,
-} from './utils/index.js';
+export { formatUsdc, formatDate, formatSolscanUrl, truncateHash } from './utils/index.js';
 
 // UI Components
 export { Button } from './components/ui/button/index.js';

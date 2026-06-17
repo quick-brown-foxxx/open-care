@@ -130,16 +130,12 @@ describe('DonationPayloadSchema', () => {
     });
 
     it('accepts inner_index: null', () => {
-      const result = DonationPayloadSchema.safeParse(
-        makeDonationPayload({ inner_index: null }),
-      );
+      const result = DonationPayloadSchema.safeParse(makeDonationPayload({ inner_index: null }));
       expect(result.success).toBe(true);
     });
 
     it('accepts inner_index: 0 (number)', () => {
-      const result = DonationPayloadSchema.safeParse(
-        makeDonationPayload({ inner_index: 0 }),
-      );
+      const result = DonationPayloadSchema.safeParse(makeDonationPayload({ inner_index: 0 }));
       expect(result.success).toBe(true);
     });
 
@@ -158,16 +154,12 @@ describe('DonationPayloadSchema', () => {
     });
 
     it('accepts cluster: "devnet"', () => {
-      const result = DonationPayloadSchema.safeParse(
-        makeDonationPayload({ cluster: 'devnet' }),
-      );
+      const result = DonationPayloadSchema.safeParse(makeDonationPayload({ cluster: 'devnet' }));
       expect(result.success).toBe(true);
     });
 
     it('accepts cluster: "localnet"', () => {
-      const result = DonationPayloadSchema.safeParse(
-        makeDonationPayload({ cluster: 'localnet' }),
-      );
+      const result = DonationPayloadSchema.safeParse(makeDonationPayload({ cluster: 'localnet' }));
       expect(result.success).toBe(true);
     });
   });
@@ -184,9 +176,7 @@ describe('DonationPayloadSchema', () => {
     });
 
     it('rejects cluster: "testnet" (not in enum)', () => {
-      const result = DonationPayloadSchema.safeParse(
-        makeDonationPayload({ cluster: 'testnet' }),
-      );
+      const result = DonationPayloadSchema.safeParse(makeDonationPayload({ cluster: 'testnet' }));
       expect(result.success).toBe(false);
     });
 
@@ -240,16 +230,12 @@ describe('DonationPayloadSchema', () => {
     });
 
     it('rejects slot: 0 (must be positive)', () => {
-      const result = DonationPayloadSchema.safeParse(
-        makeDonationPayload({ slot: 0 }),
-      );
+      const result = DonationPayloadSchema.safeParse(makeDonationPayload({ slot: 0 }));
       expect(result.success).toBe(false);
     });
 
     it('rejects slot: -1', () => {
-      const result = DonationPayloadSchema.safeParse(
-        makeDonationPayload({ slot: -1 }),
-      );
+      const result = DonationPayloadSchema.safeParse(makeDonationPayload({ slot: -1 }));
       expect(result.success).toBe(false);
     });
 
@@ -276,9 +262,7 @@ describe('DonationPayloadSchema', () => {
 describe('DisbursementPayloadSchema', () => {
   describe('valid', () => {
     it('accepts a full valid disbursement with service "Alter" and service_note null', () => {
-      const result = DisbursementPayloadSchema.safeParse(
-        makeDisbursementPayload(),
-      );
+      const result = DisbursementPayloadSchema.safeParse(makeDisbursementPayload());
       expect(result.success).toBe(true);
     });
 
@@ -411,9 +395,7 @@ describe('AnchorPayloadSchema', () => {
     });
 
     it('accepts cluster: "devnet"', () => {
-      const result = AnchorPayloadSchema.safeParse(
-        makeAnchorPayload({ cluster: 'devnet' }),
-      );
+      const result = AnchorPayloadSchema.safeParse(makeAnchorPayload({ cluster: 'devnet' }));
       expect(result.success).toBe(true);
     });
 
@@ -535,9 +517,7 @@ describe('ReplacementFieldsSchema', () => {
 describe('CorrectionPayloadSchema', () => {
   describe('valid', () => {
     it('accepts a full valid correction payload', () => {
-      const result = CorrectionPayloadSchema.safeParse(
-        makeCorrectionPayload(),
-      );
+      const result = CorrectionPayloadSchema.safeParse(makeCorrectionPayload());
       expect(result.success).toBe(true);
     });
 
@@ -558,9 +538,7 @@ describe('CorrectionPayloadSchema', () => {
     });
 
     it('rejects reason as an empty string', () => {
-      const result = CorrectionPayloadSchema.safeParse(
-        makeCorrectionPayload({ reason: '' }),
-      );
+      const result = CorrectionPayloadSchema.safeParse(makeCorrectionPayload({ reason: '' }));
       expect(result.success).toBe(false);
     });
 
@@ -585,9 +563,7 @@ describe('LedgerEventBaseSchema', () => {
     });
 
     it('accepts a full disbursement event', () => {
-      const result = LedgerEventBaseSchema.safeParse(
-        makeDisbursementEvent(),
-      );
+      const result = LedgerEventBaseSchema.safeParse(makeDisbursementEvent());
       expect(result.success).toBe(true);
     });
 
@@ -627,9 +603,7 @@ describe('LedgerEventBaseSchema', () => {
     });
 
     it('rejects sequence_no: 0 (must be positive)', () => {
-      const result = LedgerEventBaseSchema.safeParse(
-        makeDonationEvent({ sequence_no: 0 }),
-      );
+      const result = LedgerEventBaseSchema.safeParse(makeDonationEvent({ sequence_no: 0 }));
       expect(result.success).toBe(false);
     });
 
@@ -696,9 +670,7 @@ describe('parseLedgerEvent', () => {
   });
 
   it('returns { ok: false, error } for an invalid event', () => {
-    const result = parseLedgerEvent(
-      makeDonationEvent({ created_at_utc: 'invalid' }),
-    );
+    const result = parseLedgerEvent(makeDonationEvent({ created_at_utc: 'invalid' }));
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error).toBeDefined();

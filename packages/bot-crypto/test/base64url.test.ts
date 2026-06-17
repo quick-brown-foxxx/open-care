@@ -152,7 +152,9 @@ describe('base64url round-trip', () => {
   });
 
   it('encode then decode returns original bytes for various lengths', () => {
-    for (const len of [2, 3, 4, 5, 7, 8, 10, 15, 16, 31, 32, 33, 63, 64, 65, 100, 127, 128, 255, 256, 500]) {
+    for (const len of [
+      2, 3, 4, 5, 7, 8, 10, 15, 16, 31, 32, 33, 63, 64, 65, 100, 127, 128, 255, 256, 500,
+    ]) {
       const original = crypto.getRandomValues(new Uint8Array(len));
       const encoded = base64urlEncode(original);
       const decoded = base64urlDecode(encoded);
