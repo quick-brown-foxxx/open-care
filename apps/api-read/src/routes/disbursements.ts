@@ -14,7 +14,7 @@ app.get('/api/disbursements', async (c) => {
   const limit = validateLimit(c.req.query('limit'), DEFAULT_LIMIT, MAX_LIMIT);
   if (limit instanceof Response) return limit;
 
-  const cursor = validateCursor(c.req.query('after_sequence_no'));
+  const cursor = validateCursor(c.req.query('before_sequence_no'), 'before_sequence_no');
   if (cursor instanceof Response) return cursor;
 
   const db = createVaultDb(c.env.vault_db);

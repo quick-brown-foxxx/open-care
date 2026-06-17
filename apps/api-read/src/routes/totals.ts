@@ -25,7 +25,7 @@ function isAnchorStale(
 function isAnchorWalletLowSol(
   anchor: ReturnType<typeof getLatestAnchor> extends Promise<infer T> ? T : never,
 ): boolean {
-  if (!anchor) return true;
+  if (!anchor) return false;
   const lamports = anchor.last_anchor_wallet_sol_lamports;
   return lamports === null || lamports < MIN_ANCHOR_SOL_LAMPORTS;
 }

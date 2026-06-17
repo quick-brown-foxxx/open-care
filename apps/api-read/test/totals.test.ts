@@ -29,6 +29,8 @@ describe('GET /api/totals', () => {
     const json = await response.json();
     expect(json).toHaveProperty('anchor_stale');
     expect(json).toHaveProperty('anchor_wallet_low_sol');
+    expect(json.anchor_wallet_low_sol).toBe(false);
+    expect(json.anchor_stale).toBe(true);
   });
 
   it('returns Cache-Control header', async () => {

@@ -112,7 +112,7 @@ disbursementsRoute.post('/api/disbursements', async (c) => {
       public_beneficiary_ref: beneficiaryRef,
       next_action: 'send_code_to_beneficiary_via_bot',
     },
-    201,
+    200,
   );
 });
 

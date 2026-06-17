@@ -4,6 +4,7 @@ import { isValidBeneficiaryRef } from '@open-care/vault-core';
 import { deliverCode } from '../../lib/code-delivery.js';
 import type { SendCodeInput } from '../../lib/code-delivery.js';
 import { errorResponse } from '../../lib/errors.js';
+import { janitorExpiredCodeBlobs } from '../../lib/janitor.js';
 
 /**
  * POST /tg/internal/send-code
@@ -41,6 +42,9 @@ export async function sendCodeHandler(
   encKey: CryptoKey,
   botToken: string,
 ): Promise<Response> {
+  // Clean up expired encrypted code blobs before processing
+  c.executionCtx.waitUntil(janitorExpiredCodeBlobs(db));
+
   // Parse and validate request body
   let body: unknown;
   try {

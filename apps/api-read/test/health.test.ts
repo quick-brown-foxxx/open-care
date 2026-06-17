@@ -12,7 +12,8 @@ describe('GET /api/health', () => {
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json.checks.db_reachable).toBe(true);
-    // Status is 'degraded' because no anchor is seeded (anchor_stale=true, anchor_wallet_low_sol=true)
+    expect(json.checks.anchor_wallet_low_sol).toBe(false);
+    // Status is 'degraded' because no anchor is seeded (anchor_stale=true, anchor_wallet_low_sol=false)
     expect(json.status).toBe('degraded');
   });
 

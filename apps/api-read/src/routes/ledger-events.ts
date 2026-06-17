@@ -61,7 +61,7 @@ app.get('/api/ledger-events', async (c) => {
   return c.json(
     {
       items: transformedItems,
-      next_cursor: result.nextCursor,
+      next_after_sequence_no: result.nextCursor,
     },
     200,
   );

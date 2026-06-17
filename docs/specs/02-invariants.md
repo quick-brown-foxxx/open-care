@@ -333,16 +333,16 @@ recomputes the chain must see the same values the chain committed.
 
 ## Invariant cross-reference
 
-| Invariant | Enforced by                                                                    | Tested by                                                                                        |
-| --------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| I-1       | migration/static SQL checks, ledger append helper                              | no update/delete checks, correction event test                                                   |
-| I-2       | `ledger_events.sequence_no`                                                    | chain round-trip tests                                                                           |
-| I-3       | event schemas, canonical JSON                                                  | mutation break tests, parity tests                                                               |
-| I-4       | `anchor_runs` separation                                                       | failed retry vs published event tests                                                            |
-| I-5       | Memo builder                                                                   | UTF-8 memo and regex tests                                                                       |
-| I-6       | secret allowlists, wallet role split                                           | secret scans, anchor-key-only tests                                                              |
-| I-7       | D1 separation, binding allowlist, bot schema denylist, HMAC/encryption helpers | schema/binding tests, HMAC stability tests, chat-route encryption tests, log/API redaction tests |
-| I-8       | public schemas                                                                 | public response contract tests                                                                   |
-| I-9       | public export and scripts                                                      | TypeScript verify script tests                                                                   |
-| I-10      | `helius_inbox.(signature, source)` uniqueness, durable inbox, finality filters | webhook/reconciliation contract tests, two-source scenario                                       |
-| I-11      | Zod refinement on `replacement_fields` whitelist; bivalent public API          | rejection test, byte-for-byte round-trip test                                                    |
+| Invariant | Enforced by                                                                                                     | Tested by                                                                                        |
+| --------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| I-1       | migration/static SQL checks, ledger append helper                                                               | no update/delete checks, correction event test                                                   |
+| I-2       | `ledger_events.sequence_no`                                                                                     | chain round-trip tests                                                                           |
+| I-3       | event schemas, canonical JSON                                                                                   | mutation break tests, parity tests                                                               |
+| I-4       | `anchor_runs` separation                                                                                        | failed retry vs published event tests                                                            |
+| I-5       | Memo builder                                                                                                    | UTF-8 memo and regex tests                                                                       |
+| I-6       | secret allowlists, wallet role split                                                                            | secret scans, anchor-key-only tests                                                              |
+| I-7       | D1 separation, binding allowlist, bot schema denylist, HMAC/encryption helpers                                  | schema/binding tests, HMAC stability tests, chat-route encryption tests, log/API redaction tests |
+| I-8       | public schemas                                                                                                  | public response contract tests                                                                   |
+| I-9       | public export and scripts                                                                                       | TypeScript verify script tests                                                                   |
+| I-10      | `helius_inbox.(signature, source)` uniqueness, durable inbox, finality filters                                  | webhook/reconciliation contract tests, two-source scenario                                       |
+| I-11      | Zod refinement on `replacement_fields` whitelist; bivalent public API. **Write endpoint deferred to post-MVP.** | rejection test, byte-for-byte round-trip test (schema enforcement exists; API surface deferred)  |

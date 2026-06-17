@@ -1,5 +1,6 @@
 node_modules/
 .wrangler/
+.turbo/
 .svelte-kit/
 build/
 .dev.vars*

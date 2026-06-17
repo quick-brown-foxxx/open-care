@@ -19,18 +19,22 @@ describe('GET /api/disbursements', () => {
     expect(disbursement.service).toBe('Alter');
     expect(disbursement.receipt_ref).toBe('ALTER-2026-06-14-A1B2C3');
     expect(disbursement.public_beneficiary_ref).toBe('benpub_A2B3C4D5E6F7G2H3');
+    expect(disbursement.service_note).toBeNull();
+    expect(disbursement.recorded_at_utc).toBeTruthy();
   });
 
-  it('supports pagination with after_sequence_no', async () => {
-    const response = await SELF.fetch('https://example.com/api/disbursements?after_sequence_no=2');
+  it('supports pagination with before_sequence_no', async () => {
+    const response = await SELF.fetch('https://example.com/api/disbursements?before_sequence_no=2');
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json.items.length).toBe(0);
     expect(json.next_cursor).toBeNull();
   });
 
-  it('returns 400 for invalid after_sequence_no', async () => {
-    const response = await SELF.fetch('https://example.com/api/disbursements?after_sequence_no=-1');
+  it('returns 400 for invalid before_sequence_no', async () => {
+    const response = await SELF.fetch(
+      'https://example.com/api/disbursements?before_sequence_no=-1',
+    );
     expect(response.status).toBe(400);
   });
 

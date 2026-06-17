@@ -62,13 +62,18 @@ export function validateLimit(
 }
 
 /**
- * Validate an after_sequence_no cursor parameter.
+ * Validate a cursor parameter (e.g. `after_sequence_no` or `before_sequence_no`).
  *
  * @param raw - Raw query string value (or undefined).
+ * @param paramName - The query parameter name to use in error messages.
+ *   Defaults to `'after_sequence_no'`.
  * @returns The cursor value (undefined when absent), or a 400 Response if invalid.
  */
-export function validateCursor(raw: string | undefined): number | undefined | Response {
-  const result = parsePositiveInt(raw, 'after_sequence_no');
+export function validateCursor(
+  raw: string | undefined,
+  paramName: string = 'after_sequence_no',
+): number | undefined | Response {
+  const result = parsePositiveInt(raw, paramName);
   if (result === undefined) return undefined;
   if (!result.ok)
     return Response.json(

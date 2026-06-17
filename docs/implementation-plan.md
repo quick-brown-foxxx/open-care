@@ -102,6 +102,8 @@ For each of the 6 Workers, **delete everything in `src/`** and write clean stubs
 **Goal:** Append events, compute hash chain, read via public API.  
 **Evidence:** `tsc -b` clean (12 projects), 452 tests pass (25 files), SvelteKit build succeeds. Write path (POST /api/disbursements) with Zod validation + hash-chained append, read API (6 endpoints with 60s cache), operator auth gateway (constant-time token + CORS + service binding forwarding), seed data + fixtures + `pnpm seed` script.
 
+**Deferred:** The `POST /api/corrections` write endpoint for `correction_recorded` events is deferred to post-MVP. The event schema, Zod validation, fixtures, and unit tests exist in `packages/vault-core`, but no write API surface is exposed. The spec (I-11) treats this endpoint as optional for MVP ("if added"). The schema enforcement for `replacement_fields` whitelist is implemented and tested; only the HTTP endpoint is deferred.
+
 ### Slice 1.1: `vault-api-write` — Ledger Append
 
 - `POST /api/disbursements` — Zod validation, `public_beneficiary_ref` generation, ledger append

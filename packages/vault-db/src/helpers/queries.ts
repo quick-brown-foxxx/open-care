@@ -202,6 +202,8 @@ export async function getDonations(
       event_hash: row.event_hash,
       created_at_utc: row.created_at_utc,
       tx_signature: p.tx_signature,
+      usdc_mint: p.usdc_mint,
+      vault_usdc_ata: p.vault_usdc_ata,
       amount_usdc_minor: p.amount_usdc_minor,
       slot: p.slot,
       block_time_utc: p.block_time_utc,
@@ -260,9 +262,11 @@ export async function getDisbursements(
       amount_usdc_minor: p.amount_usdc_minor,
       gift_card_count: p.gift_card_count,
       service: p.service,
+      service_note: p.service_note,
       receipt_ref: p.receipt_ref,
       public_beneficiary_ref: p.public_beneficiary_ref,
       purchased_at_utc: p.purchased_at_utc,
+      recorded_at_utc: p.recorded_at_utc,
       recorded_by: p.recorded_by,
     });
   }

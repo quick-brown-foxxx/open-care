@@ -41,6 +41,8 @@ export interface DonationView {
   event_hash: string;
   created_at_utc: string;
   tx_signature: string;
+  usdc_mint: string;
+  vault_usdc_ata: string;
   amount_usdc_minor: string;
   slot: number;
   block_time_utc: string;
@@ -55,8 +57,10 @@ export interface DisbursementView {
   amount_usdc_minor: string;
   gift_card_count: number;
   service: string;
+  service_note: string | null;
   receipt_ref: string;
   public_beneficiary_ref: string | null;
   purchased_at_utc: string;
+  recorded_at_utc: string;
   recorded_by: string;
 }

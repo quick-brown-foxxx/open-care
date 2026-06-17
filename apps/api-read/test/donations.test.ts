@@ -19,6 +19,8 @@ describe('GET /api/donations', () => {
     expect(donation).toHaveProperty('event_hash');
     expect(donation).toHaveProperty('block_time_utc');
     expect(donation).toHaveProperty('cluster');
+    expect(donation.usdc_mint).toBeTruthy();
+    expect(donation.vault_usdc_ata).toBeTruthy();
   });
 
   it('supports limit query param', async () => {

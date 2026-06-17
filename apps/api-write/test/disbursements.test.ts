@@ -35,12 +35,12 @@ function post(body: unknown, contentType = 'application/json'): Promise<Response
 
 describe('POST /api/disbursements', () => {
   // ------------------------------------------------------------------
-  // 1. Valid disbursement → 201, correct response shape
+  // 1. Valid disbursement → 200, correct response shape
   // ------------------------------------------------------------------
 
-  it('returns 201 with correct response shape for a valid disbursement', async () => {
+  it('returns 200 with correct response shape for a valid disbursement', async () => {
     const response = await post(validBody());
-    expect(response.status).toBe(201);
+    expect(response.status).toBe(200);
 
     const json = await response.json();
     expect(typeof json.sequence_no).toBe('number');
@@ -63,7 +63,7 @@ describe('POST /api/disbursements', () => {
     delete body.public_beneficiary_ref;
 
     const response = await post(body);
-    expect(response.status).toBe(201);
+    expect(response.status).toBe(200);
 
     const json = await response.json();
     expect(typeof json.public_beneficiary_ref).toBe('string');
@@ -76,7 +76,7 @@ describe('POST /api/disbursements', () => {
 
   it('keeps public_beneficiary_ref as null when explicitly set to null', async () => {
     const response = await post(validBody({ public_beneficiary_ref: null }));
-    expect(response.status).toBe(201);
+    expect(response.status).toBe(200);
 
     const json = await response.json();
     expect(json.public_beneficiary_ref).toBeNull();
@@ -158,14 +158,14 @@ describe('POST /api/disbursements', () => {
   });
 
   // ------------------------------------------------------------------
-  // 9. "Other" service with service_note → 201
+  // 9. "Other" service with service_note → 200
   // ------------------------------------------------------------------
 
   it('accepts "Other" service with a service_note', async () => {
     const response = await post(
       validBody({ service: 'Other', service_note: 'Custom provider note' }),
     );
-    expect(response.status).toBe(201);
+    expect(response.status).toBe(200);
 
     const json = await response.json();
     expect(json.sequence_no).toBeGreaterThan(0);
@@ -202,13 +202,13 @@ describe('POST /api/disbursements', () => {
   it('builds a valid hash chain across multiple disbursements', async () => {
     // First disbursement
     const r1 = await post(validBody({ receipt_ref: 'ALTER-2026-06-14-CHAIN1' }));
-    expect(r1.status).toBe(201);
+    expect(r1.status).toBe(200);
     const j1 = await r1.json();
     const seq1 = j1.sequence_no;
 
     // Second disbursement
     const r2 = await post(validBody({ receipt_ref: 'ALTER-2026-06-14-CHAIN2' }));
-    expect(r2.status).toBe(201);
+    expect(r2.status).toBe(200);
     const j2 = await r2.json();
     const seq2 = j2.sequence_no;
 
