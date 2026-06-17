@@ -10,7 +10,8 @@
     "check": "tsc -b",
     "test": "vitest run",
     "build": "tsc -b && pnpm --filter open-care-web build",
-    "cloudflare-wrangler": "wrangler"
+    "cloudflare-wrangler": "wrangler",
+    "seed": "cd apps/ingest && pnpm exec wrangler d1 migrations apply vault-db --local && pnpm exec wrangler d1 execute vault-db --local --file ../../tools/seed/vault-seed.sql && cd ../../apps/tg-bot && pnpm exec wrangler d1 migrations apply bot-db --local && pnpm exec wrangler d1 execute bot-db --local --file ../../tools/seed/bot-seed.sql"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.16.16",

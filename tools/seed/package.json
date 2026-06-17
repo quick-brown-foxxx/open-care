@@ -1,0 +1,15 @@
+{
+  "name": "@open-care/seed",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate-vault-seed": "tsx src/generate-vault-seed.ts"
+  },
+  "dependencies": {
+    "@open-care/vault-core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

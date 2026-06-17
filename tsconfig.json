@@ -10,7 +10,8 @@
     { "path": "apps/api-write" },
     { "path": "apps/anchor-cron" },
     { "path": "apps/operator" },
-    { "path": "apps/web" }
+    { "path": "apps/web" },
+    { "path": "tools/seed" }
   ],
   "compilerOptions": {
     "target": "ES2022",
