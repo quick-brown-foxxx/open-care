@@ -215,9 +215,11 @@ For each of the 6 Workers, **delete everything in `src/`** and write clean stubs
 
 ---
 
-## Epic 5: Frontend — Public & Operator UI
+## Epic 5: Frontend — Public & Operator UI ✅
 
-**Goal:** Working frontend that reads from APIs.
+**Status:** Complete (2026-06-17)  
+**Goal:** Working frontend that reads from APIs.  
+**Evidence:** SvelteKit build succeeds, svelte-check 0 errors, 583 Worker tests pass. 12 routes implemented (7 public + 5 admin), 36 Verifier fixes applied. Operator token memory-only with idle timeout. Russian-first copy with required honest-limits content.
 
 See [[./ui-prototypes/]] for UI plans, docs and prototypes.
 
@@ -277,11 +279,12 @@ See [[./ui-prototypes/]] for UI plans, docs and prototypes.
 **Epic 2: ✅ Complete (2026-06-17)**
 **Epic 3: ✅ Complete (2026-06-17)**
 **Epic 4: ✅ Complete (2026-06-17)**
+**Epic 5: ✅ Complete (2026-06-17)**
 
-**Next:**
+**Remaining:**
 
-- Epic 5 (frontend) — needs read API (done in 1.2), all backend Workers ready
-- Epic 6 (CI/CD) — CI workflow already in place; deploy + monitoring remain
+- Epic 6 (CI/CD) — deploy workflow, monitoring, logging, production readiness
+- Post-MVP: `correction_recorded` write endpoint, Playwright browser tests, +page.ts load functions, CSP, design phase
 
 ---
 
