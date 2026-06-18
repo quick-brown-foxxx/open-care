@@ -3,6 +3,26 @@
 For system architecture and feature map, see [`ARCHITECTURE.md`](ARCHITECTURE.md).
 For development workflow, commands, and local setup, see [`DEVELOPMENT.md`](DEVELOPMENT.md).
 
+## Agent rules for docs
+
+- **Per-app/package AGENTS.md.** Each app (`apps/*/AGENTS.md`) and shared package
+  (`packages/*/AGENTS.md`) has a scoped agent notes file describing its role,
+  routes/bindings, key source files, connections to other components, and key
+  invariants. When you add, remove, or change behavior in an app or package,
+  update its AGENTS.md to match. When you create a new app or package, create
+  its AGENTS.md following the same structure.
+- **DEVELOPMENT.md owns all dev commands.** Every `pnpm run ...`, `wrangler ...`,
+  `curl ...`, and similar operational command lives in `DEVELOPMENT.md`. Do not
+  duplicate dev commands in AGENTS.md or ARCHITECTURE.md. If you add a new
+  script, quality gate, deploy step, or local dev command, update
+  `DEVELOPMENT.md`.
+- **ARCHITECTURE.md is the system map.** It explains how components fit together
+  at a high level. Update it when the component map, data flow, trust
+  boundaries, or feature descriptions change.
+- **All docs are stateless.** No "Status: done", "Implemented in epic N", or
+  similar stateful markers. The only forward-looking content allowed is in
+  "Future work" sections.
+
 ## Project shape
 
 - Cloudflare Workers monorepo, pnpm workspace (`apps/*`, `packages/*`, `tools/*`).
