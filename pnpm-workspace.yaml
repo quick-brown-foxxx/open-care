@@ -20,9 +20,7 @@ minimumReleaseAgeExclude:
   - cookie@0.7.0
   - ws@8.21.0
   - undici@7.28.0
-  - '@cloudflare/vitest-pool-workers@0.16.17'
-  - miniflare@4.20260617.0
-  - wrangler@4.102.0
+
 
 onlyBuiltDependencies:
   - esbuild
