@@ -1,6 +1,6 @@
 import DatabaseConstructor from 'better-sqlite3';
 import type { Database } from 'better-sqlite3';
-import { createVaultDbTest, type VaultDbTest } from '../src/client/vault.js';
+import { createVaultDbTest, type VaultDbTest } from '../src/test-utils.js';
 
 // ---------------------------------------------------------------------------
 // DDL from apps/ingest/migrations/0001_initial_schema.sql (vault-db schema)

@@ -2,12 +2,7 @@
 export { vaultSchema, botSchema } from './schema/index.js';
 
 // Client factories
-export {
-  createVaultDb,
-  createVaultDbTest,
-  type VaultDb,
-  type VaultDbTest,
-} from './client/vault.js';
+export { createVaultDb, type VaultDb } from './client/vault.js';
 export { createBotDb, type BotDb } from './client/bot.js';
 
 // Helpers

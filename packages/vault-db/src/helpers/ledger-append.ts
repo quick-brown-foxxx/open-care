@@ -10,7 +10,8 @@ import {
 } from '@open-care/vault-core';
 import type { LedgerEvent, LedgerEventBase, Result } from '@open-care/vault-core';
 import { ledgerEvents } from '../schema/vault-db.js';
-import type { VaultDb, VaultDbTest } from '../client/vault.js';
+import type { VaultDb } from '../client/vault.js';
+import type { VaultDbTest } from '../test-utils.js';
 import type { AppendLedgerEventInput, LedgerAppendError } from './types.js';
 
 const MAX_RETRIES = 3;

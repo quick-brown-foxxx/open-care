@@ -7,7 +7,8 @@ import {
 } from '@open-care/vault-core';
 import type { LedgerEvent, DonationPayload, DisbursementPayload } from '@open-care/vault-core';
 import { ledgerEvents, anchorRuns } from '../schema/vault-db.js';
-import type { VaultDb, VaultDbTest } from '../client/vault.js';
+import type { VaultDb } from '../client/vault.js';
+import type { VaultDbTest } from '../test-utils.js';
 import type {
   PaginationOptions,
   PaginatedResult,
