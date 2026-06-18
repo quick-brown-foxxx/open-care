@@ -1,5 +1,6 @@
 export * from './events.js';
 export * from './result.js';
+export * from './schemas/index.js';
 export { canonicalJson } from './canonical-json.js';
 export {
   isValidTimestamp,

@@ -4,7 +4,7 @@ import { authMiddleware } from '../lib/auth.js';
 import { badRequestResponse } from '../lib/errors.js';
 import { insertIntoInbox, processInbox, nowIso } from '../lib/inbox.js';
 import { createVaultDb } from '@open-care/vault-db';
-import { logInfo, generateRequestId } from '@open-care/vault-core';
+import { logInfo, generateRequestId, HeliusWebhookEnvelopeSchema } from '@open-care/vault-core';
 
 const webhookRoute = new Hono<HonoEnv>();
 
@@ -24,36 +24,29 @@ webhookRoute.post('/', async (c) => {
     return badRequestResponse('Invalid JSON body', requestId);
   }
 
-  // Validate it's an array
-  if (!Array.isArray(body)) {
-    return badRequestResponse('Body must be a JSON array of webhook events', requestId);
+  // Validate webhook payload with Zod schema
+  const parsed = HeliusWebhookEnvelopeSchema.safeParse(body);
+  if (!parsed.success) {
+    return badRequestResponse(
+      `Invalid webhook payload: ${parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')}`,
+      requestId,
+    );
   }
 
   // Extract entries for inbox
   const receivedAtUtc = nowIso();
-  const entries = [];
-  for (const event of body) {
-    // Each event must have a signature string
-    if (
-      typeof event !== 'object' ||
-      event === null ||
-      typeof (event as Record<string, unknown>).signature !== 'string'
-    ) {
-      return badRequestResponse('Each webhook event must have a string "signature" field', requestId);
-    }
-    entries.push({
-      signature: (event as { signature: string }).signature,
-      source: 'webhook' as const,
-      rawPayloadJson: JSON.stringify(event),
-      receivedAtUtc,
-    });
-  }
+  const entries = parsed.data.map((event) => ({
+    signature: event.signature,
+    source: 'webhook' as const,
+    rawPayloadJson: JSON.stringify(event),
+    receivedAtUtc,
+  }));
 
   // Insert into inbox
   const result = await insertIntoInbox(db, entries);
 
   logInfo('Webhook received', {
-    event_count: body.length,
+    event_count: parsed.data.length,
     accepted: result.accepted,
     duplicates: result.duplicates,
   });

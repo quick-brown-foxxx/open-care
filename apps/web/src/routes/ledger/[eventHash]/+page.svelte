@@ -8,12 +8,10 @@
   import Badge from '$lib/components/ui/badge/badge.svelte';
   import HashDisplay from '$lib/components/public/HashDisplay.svelte';
   import SolscanLink from '$lib/components/public/SolscanLink.svelte';
-  import type { LedgerEventItem } from '$lib/schemas/ledger-events.js';
-
   const eventHash = $derived(page.params.eventHash);
 
   // Validate eventHash is 64-char lowercase hex
-  const isValidHash = $derived(/^[0-9a-f]{64}$/.test(eventHash));
+  const isValidHash = $derived(/^[0-9a-f]{64}$/.test(eventHash ?? ''));
 
   // Fetch all ledger events and find the matching one
   const ledger = createFetch(() => getLedgerEvents({ limit: 500 }));
@@ -67,7 +65,7 @@
 </script>
 
 <svelte:head>
-  <title>Событие {eventHash.slice(0, 8)}... — Open Care</title>
+  <title>Событие {eventHash?.slice(0, 8) ?? '...'}... — Open Care</title>
 </svelte:head>
 
 <section class="event-detail-page">
@@ -90,7 +88,7 @@
   {:else if !event}
     <div class="standalone-card">
       <h1>Событие не найдено</h1>
-      <p>Событие с хешем <HashDisplay hash={eventHash} full={true} /> не найдено в реестре.</p>
+      <p>Событие с хешем <HashDisplay hash={eventHash ?? ''} full={true} /> не найдено в реестре.</p>
     </div>
   {:else}
     <h1>Событие #{event.sequence_no}</h1>

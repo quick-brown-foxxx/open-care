@@ -5,7 +5,6 @@
     type DisbursementBody,
     type DisbursementResponse,
   } from '$lib/api/operator.js';
-  import Badge from '$lib/components/ui/badge/badge.svelte';
   import HashDisplay from '$lib/components/public/HashDisplay.svelte';
 
   let amount = $state('');

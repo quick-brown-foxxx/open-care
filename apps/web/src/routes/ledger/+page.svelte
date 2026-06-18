@@ -8,7 +8,7 @@
   import SolscanLink from '$lib/components/public/SolscanLink.svelte';
   import FilterTabs from '$lib/components/public/FilterTabs.svelte';
   import Pagination from '$lib/components/public/Pagination.svelte';
-  import type { LedgerEventItem, LedgerEventsResponse } from '$lib/schemas/ledger-events.js';
+  import type { LedgerEventItem } from '$lib/schemas/ledger-events.js';
 
   const headInfo = createFetch(getVerify);
   const ledger = createFetch(() => getLedgerEvents({ limit: 50 }));

@@ -84,13 +84,15 @@
         <button class="btn btn-sm" onclick={() => verify.refetch()}>Повторить</button>
       </p>
     </div>
-  {:else if verify.data}
+  {:else if verify.data?.head_hash}
     <div class="standalone-card">
       <HashDisplay hash={verify.data.head_hash} label="HEAD" full={true} />
       <span class="text-muted" style="font-family: ui-monospace, monospace; font-size: 0.9rem;">
         #{verify.data.head_sequence_no}
       </span>
     </div>
+  {:else if verify.data}
+    <div class="standalone-card"><p class="text-muted">Реестр пуст. HEAD появится после первой записи.</p></div>
   {/if}
 
   <!-- Anchor -->

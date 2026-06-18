@@ -1,4 +1,7 @@
-import { Result, ok, err } from '@open-care/vault-core';
+import { Result, ok, err,
+  SolanaGetTransactionResponseSchema,
+  SolanaGetSignaturesForAddressResponseSchema } from '@open-care/vault-core';
+import type { SolanaGetTransactionResult, SolanaParsedInstruction } from '@open-care/vault-core';
 import type { Env } from './env.js';
 
 // Re-export for type documentation; consumers of this module reference Env
@@ -23,50 +26,7 @@ export interface TransferMatch {
   innerIndex: number | null; // position within inner instructions, null if top-level
 }
 
-/** Parsed SPL transfer instruction info from JSON-RPC */
-interface ParsedTransferInfo {
-  source: string;
-  destination: string;
-  authority: string;
-  amount: string;
-  mint?: string; // present for transferChecked
-  decimals?: number; // present for transferChecked
-}
 
-/** A parsed instruction from JSON-RPC */
-interface ParsedInstruction {
-  programId: string;
-  parsed?: {
-    type: string;
-    info: ParsedTransferInfo;
-  };
-}
-
-/** Inner instruction group from JSON-RPC */
-interface ParsedInnerInstruction {
-  index: number;
-  instructions: ParsedInstruction[];
-}
-
-/** The parsed transaction message from JSON-RPC */
-interface ParsedMessage {
-  accountKeys: string[];
-  instructions: ParsedInstruction[];
-}
-
-/** The full parsed transaction response from JSON-RPC getTransaction */
-interface ParsedTransactionResponse {
-  slot: number;
-  blockTime: number | null;
-  transaction: {
-    message: ParsedMessage;
-    signatures: string[];
-  };
-  meta: {
-    err: unknown;
-    innerInstructions?: ParsedInnerInstruction[];
-  } | null;
-}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -133,7 +93,7 @@ export async function fetchTransaction(
   rpcUrl: string,
   signature: string,
   fetchFn: typeof fetch = globalThis.fetch,
-): Promise<Result<ParsedTransactionResponse, RpcError>> {
+): Promise<Result<SolanaGetTransactionResult, RpcError>> {
   let response: Response;
   try {
     response = await fetchFn(rpcUrl, {
@@ -181,11 +141,18 @@ export async function fetchTransaction(
     });
   }
 
-  // Successful response — extract result
-  const result = (body as { result: unknown }).result;
+  // Validate response shape with Zod schema
+  const parsed = SolanaGetTransactionResponseSchema.safeParse(body);
+  if (!parsed.success) {
+    return err({
+      code: 'PARSE_ERROR',
+      message: 'Invalid RPC response shape for getTransaction',
+      retryable: false,
+    });
+  }
 
   // null result means the transaction is not yet finalized / not found
-  if (result === null || result === undefined) {
+  if (parsed.data.result === null) {
     return err({
       code: 'NOT_FINALIZED',
       message: `Transaction ${signature} not found or not finalized`,
@@ -193,7 +160,7 @@ export async function fetchTransaction(
     });
   }
 
-  const tx = result as ParsedTransactionResponse;
+  const tx = parsed.data.result;
 
   // The transaction itself may have failed on-chain
   if (tx.meta?.err !== null && tx.meta?.err !== undefined) {
@@ -220,7 +187,7 @@ export async function fetchTransaction(
  * @returns        - TransferMatch on success, RpcError if no match found
  */
 export function parseSplTransfer(
-  tx: ParsedTransactionResponse,
+  tx: SolanaGetTransactionResult,
   usdcMint: string,
   vaultAta: string,
 ): Result<TransferMatch, RpcError> {
@@ -307,9 +274,9 @@ export async function fetchSignaturesForAddress(
     });
   }
 
-  const result = (body as { result: unknown }).result;
-
-  if (!Array.isArray(result)) {
+  // Validate response shape with Zod schema
+  const parsed = SolanaGetSignaturesForAddressResponseSchema.safeParse(body);
+  if (!parsed.success) {
     return err({
       code: 'PARSE_ERROR',
       message: 'Unexpected RPC response shape for getSignaturesForAddress',
@@ -317,18 +284,9 @@ export async function fetchSignaturesForAddress(
     });
   }
 
-  const signatures: string[] = [];
-  for (const item of result) {
-    if (
-      typeof item === 'object' &&
-      item !== null &&
-      'signature' in item &&
-      typeof (item as Record<string, unknown>).signature === 'string' &&
-      (item as Record<string, unknown>).err === null
-    ) {
-      signatures.push((item as { signature: string }).signature);
-    }
-  }
+  const signatures = parsed.data.result
+    .filter((item) => item.err === null)
+    .map((item) => item.signature);
 
   return ok(signatures);
 }
@@ -342,7 +300,7 @@ export async function fetchSignaturesForAddress(
  * vault ATA. Returns a TransferMatch or null.
  */
 function matchInstruction(
-  instr: ParsedInstruction,
+  instr: SolanaParsedInstruction,
   instructionIndex: number,
   innerIndex: number | null,
   usdcMint: string,

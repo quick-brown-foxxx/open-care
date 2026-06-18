@@ -1,5 +1,4 @@
 import * as v from 'valibot';
-import type { HealthResponse as HealthResponseContract, HealthChecks as HealthChecksContract } from '@open-care/api-contract';
 
 // ---------------------------------------------------------------------------
 // HealthChecks
@@ -28,8 +27,3 @@ export const HealthResponseSchema = v.object({
 
 export type HealthResponse = v.InferOutput<typeof HealthResponseSchema>;
 
-// Compile-time contract verification: Valibot-inferred type must satisfy the API contract.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-type _HealthContractCheck = HealthResponse extends HealthResponseContract ? true : never;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-type _HealthChecksContractCheck = HealthChecks extends HealthChecksContract ? true : never;

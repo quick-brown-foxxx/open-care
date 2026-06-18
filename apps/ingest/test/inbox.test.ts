@@ -282,6 +282,8 @@ describe('inbox operations', () => {
                     info: {
                       source: 'a',
                       destination: 'b',
+                      authority: 'a',
+                      amount: '1000',
                       lamports: 1000,
                     },
                   },

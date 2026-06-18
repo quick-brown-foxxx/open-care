@@ -132,7 +132,7 @@ describe('POST /webhook/helius', () => {
       expect(response.status).toBe(400);
       const json = await response.json<{ error: { code: string; message: string; request_id: string } }>();
       expect(json.error.code).toBe('BAD_REQUEST');
-      expect(json.error.message).toBe('Body must be a JSON array of webhook events');
+      expect(json.error.message).toMatch(/^Invalid webhook payload:/);
       expect(json.error.request_id).toBeDefined();
       expect(typeof json.error.request_id).toBe('string');
       expect(json.error.request_id).toMatch(/^req_[a-f0-9]{8}$/);
@@ -143,7 +143,7 @@ describe('POST /webhook/helius', () => {
       expect(response.status).toBe(400);
       const json = await response.json<{ error: { code: string; message: string; request_id: string } }>();
       expect(json.error.code).toBe('BAD_REQUEST');
-      expect(json.error.message).toBe('Each webhook event must have a string "signature" field');
+      expect(json.error.message).toMatch(/^Invalid webhook payload:.*signature/);
       expect(json.error.request_id).toBeDefined();
       expect(typeof json.error.request_id).toBe('string');
       expect(json.error.request_id).toMatch(/^req_[a-f0-9]{8}$/);
@@ -154,7 +154,7 @@ describe('POST /webhook/helius', () => {
       expect(response.status).toBe(400);
       const json = await response.json<{ error: { code: string; message: string; request_id: string } }>();
       expect(json.error.code).toBe('BAD_REQUEST');
-      expect(json.error.message).toBe('Each webhook event must have a string "signature" field');
+      expect(json.error.message).toMatch(/^Invalid webhook payload:.*signature/);
       expect(json.error.request_id).toBeDefined();
       expect(typeof json.error.request_id).toBe('string');
       expect(json.error.request_id).toMatch(/^req_[a-f0-9]{8}$/);
@@ -165,7 +165,7 @@ describe('POST /webhook/helius', () => {
       expect(response.status).toBe(400);
       const json = await response.json<{ error: { code: string; message: string; request_id: string } }>();
       expect(json.error.code).toBe('BAD_REQUEST');
-      expect(json.error.message).toBe('Each webhook event must have a string "signature" field');
+      expect(json.error.message).toMatch(/^Invalid webhook payload:/);
       expect(json.error.request_id).toBeDefined();
       expect(typeof json.error.request_id).toBe('string');
       expect(json.error.request_id).toMatch(/^req_[a-f0-9]{8}$/);
