@@ -29,6 +29,7 @@ directory are the current technical design.
 | 10  | [`10-frontend-architecture.md`](10-frontend-architecture.md) | SvelteKit frontend stack, layers, validation, state, privacy, and gates.      |
 | 11  | [`11-public-frontend-ux.md`](11-public-frontend-ux.md)       | Public landing, donate, ledger, verify, FAQ/about/contact UX requirements.    |
 | 12  | [`12-operator-frontend-ux.md`](12-operator-frontend-ux.md)   | `/admin` operator UX, token handling, disbursement, anchors, and bot handoff. |
+| 13  | [`13-post-review-hardening.md`](13-post-review-hardening.md) | Post-MVP-review hardening: error standardization, shared types, test gaps, testing layers, code quality, environment polish. |
 
 ## Current design summary
 
