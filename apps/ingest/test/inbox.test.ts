@@ -3,6 +3,7 @@ import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { createVaultDb, vaultSchema } from '@open-care/vault-db';
 import { eq } from 'drizzle-orm';
 import { utcNow } from '@open-care/vault-core';
+import { resetLedgerEventsForTest } from './reset-ledger-events.js';
 import { insertIntoInbox, processInbox, checkDuplicateDonation } from '../src/lib/inbox.js';
 import type { Env } from '../src/lib/env.js';
 
@@ -118,7 +119,7 @@ describe('inbox operations', () => {
   beforeEach(async () => {
     // Clean slate: delete all rows from both tables before each test.
     // Drizzle's delete() without .where() deletes all rows.
-    await db.delete(vaultSchema.ledgerEvents);
+    await resetLedgerEventsForTest(db);
     await db.delete(vaultSchema.heliusInbox);
   });
 

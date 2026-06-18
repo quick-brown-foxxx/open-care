@@ -28,6 +28,18 @@ CREATE TABLE ledger_events (
 CREATE INDEX idx_ledger_events_type_sequence
     ON ledger_events(event_type, sequence_no);
 
+CREATE TRIGGER ledger_events_no_delete
+BEFORE DELETE ON ledger_events
+BEGIN
+    SELECT RAISE(ABORT, 'ledger_events is append-only — DELETE forbidden');
+END;
+
+CREATE TRIGGER ledger_events_no_update
+BEFORE UPDATE ON ledger_events
+BEGIN
+    SELECT RAISE(ABORT, 'ledger_events is append-only — UPDATE forbidden');
+END;
+
 CREATE TABLE wallets (
     id                   INTEGER PRIMARY KEY,
     role                 TEXT NOT NULL CHECK (role IN ('treasury', 'anchor')),

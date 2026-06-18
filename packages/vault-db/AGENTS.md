@@ -84,6 +84,7 @@ binding and reaches the database indirectly through service bindings to
 ## Key invariants
 
 - `appendLedgerEvent` is the **only** way to write to `ledger_events`. Never INSERT directly.
+- D1 migrations install `ledger_events` triggers that abort UPDATE and DELETE; test-only reset helpers may temporarily bypass and reinstall them for isolated test state.
 - Hash chain integrity is enforced at write time: `prev_hash` must match the current head's `event_hash`.
 - `event_hash` has a UNIQUE constraint — retry on collision (bump `created_at_utc` by 1s).
 - `helius_inbox` uses `INSERT OR IGNORE` for idempotent webhook ACK.

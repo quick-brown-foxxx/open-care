@@ -1,6 +1,6 @@
 import { env, SELF } from 'cloudflare:test';
 import { createVaultDb, getEventsPaginated, getHead } from '@open-care/vault-db';
-import { anchorRuns, ledgerEvents } from '@open-care/vault-db/schema/vault-db';
+import { anchorRuns } from '@open-care/vault-db/schema/vault-db';
 import { computeEventHash, isAnchorPayload } from '@open-care/vault-core';
 import { eq } from 'drizzle-orm';
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -12,6 +12,7 @@ import {
   seedStaleLockNoTx,
   seedStaleLockWithTx,
 } from './seed.js';
+import { resetLedgerEventsForTest } from './reset-ledger-events.js';
 import { runAnchor } from '../src/lib/anchor-pipeline.js';
 
 // ---------------------------------------------------------------------------
@@ -369,8 +370,10 @@ describe('Anchor Cron Worker', () => {
       });
       expect(events1.items.length).toBe(1);
 
-      // Simulate appendLedgerEvent failure: delete the ledger event
-      await db.delete(ledgerEvents);
+      // Simulate appendLedgerEvent failure: delete the ledger event through
+      // the test-only reset helper, which temporarily bypasses append-only
+      // triggers and then reinstalls them.
+      await resetLedgerEventsForTest(db);
 
       // Verify no anchor_published events remain
       const eventsAfterDelete = await getEventsPaginated(db, {

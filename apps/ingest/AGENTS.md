@@ -64,4 +64,4 @@ are reachable only internally (e.g. via service binding from `vault-operator`).
 - Three-layer duplicate protection: `ON CONFLICT DO NOTHING` on inbox PK, pre-insert check, `checkDuplicateDonation` against ledger
 - Inbox rows retry up to 10 attempts; retryable errors (network, rate limit, not finalized) keep `received` status
 - Reconciliation scans vault ATA history for signatures not in inbox or ledger — ensures no missed donations
-- This app owns `vault-db` migrations (`apps/ingest/migrations/`)
+- This app owns `vault-db` migrations (`apps/ingest/migrations/`), including the append-only `ledger_events` UPDATE/DELETE prevention triggers

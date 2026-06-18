@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:test';
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import { createVaultDb, vaultSchema } from '@open-care/vault-db';
+import { resetLedgerEventsForTest } from './reset-ledger-events.js';
 import type { Env } from '../src/lib/env.js';
 import worker from '../src/index.js';
 
@@ -50,7 +51,7 @@ describe('scheduled handler', () => {
   beforeEach(async () => {
     // Clean state: delete all rows from both tables before each test.
     await db.delete(vaultSchema.heliusInbox);
-    await db.delete(vaultSchema.ledgerEvents);
+    await resetLedgerEventsForTest(db);
   });
 
   it('triggers reconciliation and processes results without crashing on empty state', async () => {

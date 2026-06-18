@@ -51,7 +51,8 @@ pnpm exec wrangler d1 migrations apply bot-db --local
 pnpm run final-check   # format:check → lint → typecheck → test → build
 ```
 
-This runs the exact same sequence as CI. All 5 gates must exit 0.
+This runs the exact same sequence as CI, including the ledger mutation guard.
+All gates must exit 0.
 
 Individual gates:
 
@@ -61,6 +62,7 @@ pnpm run lint           # eslint .
 pnpm run check          # tsc -b
 pnpm run test           # vitest run
 pnpm run build          # tsc -b + SvelteKit build
+pnpm run final-check:ledger-guard # reject ledger_events UPDATE/DELETE in production src dirs
 ```
 
 ## Secrets and config

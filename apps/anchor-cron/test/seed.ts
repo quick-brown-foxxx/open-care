@@ -1,7 +1,8 @@
 import { env } from 'cloudflare:test';
 import { createVaultDb, appendLedgerEvent } from '@open-care/vault-db';
-import { anchorRuns, ledgerEvents } from '@open-care/vault-db/schema/vault-db';
+import { anchorRuns } from '@open-care/vault-db/schema/vault-db';
 import type { VaultDb } from '@open-care/vault-db';
+import { resetLedgerEventsForTest } from './reset-ledger-events.js';
 
 /**
  * Clean all rows from anchor_runs and ledger_events tables.
@@ -10,7 +11,7 @@ import type { VaultDb } from '@open-care/vault-db';
 export async function cleanTables(): Promise<void> {
   const db = createVaultDb(env.vault_db);
   await db.delete(anchorRuns);
-  await db.delete(ledgerEvents);
+  await resetLedgerEventsForTest(db);
 }
 
 /**
