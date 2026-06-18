@@ -16,7 +16,7 @@ operator.
 | Method | Path                 | Purpose                                                                                                                                                            |
 | ------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | POST   | `/api/disbursements` | Record a gift-card disbursement. Validates body, generates `benpub_` ref if omitted, appends `disbursement_recorded` to ledger.                                    |
-| POST   | `/api/corrections`   | Record a correction to a previous event. Validates body, enforces replacement field whitelist (`receipt_ref`, `service_note` only), appends `correction_recorded`. |
+| POST   | `/api/corrections`   | Record a correction to a previous disbursement event. Validates body, requires the target to be `disbursement_recorded`, enforces replacement field whitelist (`receipt_ref`, `service_note` only), appends `correction_recorded`. |
 | GET    | `/health`            | Liveness check.                                                                                                                                                    |
 
 All routes are internal-only (no public route in `wrangler.jsonc`).
@@ -36,7 +36,7 @@ All routes are internal-only (no public route in `wrangler.jsonc`).
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `src/index.ts`                | Hono app factory, mounts routes. No auth middleware.                                                                                |
 | `src/routes/disbursements.ts` | Disbursement handler: Zod validation, beneficiary ref generation, ledger append                                                     |
-| `src/routes/corrections.ts`   | Correction handler: Zod validation, head boundary check, whitelist enforcement, ledger append                                       |
+| `src/routes/corrections.ts`   | Correction handler: Zod validation, head boundary check, target event-type check, whitelist enforcement, ledger append              |
 | `src/lib/schema.ts`           | Zod schemas: `DisbursementRequestSchema` (with `service`/`service_note` cross-field rules), `CorrectionRequestSchema` (`.strict()`) |
 | `src/lib/errors.ts`           | Standardized error responses: 400, 422 (with field errors), 500                                                                     |
 
@@ -45,7 +45,7 @@ All routes are internal-only (no public route in `wrangler.jsonc`).
 ### Depends on
 
 - `@open-care/vault-core` — `generateBeneficiaryRef`, `isValidTimestamp`, `isTimestampInPast`, `ReplacementFieldsSchema`, types (`DisbursementPayload`, `CorrectionPayload`, `LedgerEvent`), logging
-- `@open-care/vault-db` — `createVaultDb`, `appendLedgerEvent`, `getHead`
+- `@open-care/vault-db` — `createVaultDb`, `appendLedgerEvent`, `getEventsPaginated`, `getHead`
 
 ### Connected to
 
@@ -62,5 +62,6 @@ All routes are internal-only (no public route in `wrangler.jsonc`).
 - `service_note` required when `service === "Other"`, must be null for known services (`Alter`, `Yasno`, `Zigmund`)
 - Correction whitelist: only `receipt_ref` and `service_note` can be replaced. Defense-in-depth: Zod `.strict()` + runtime check.
 - `corrects_sequence_no` must be strictly less than current head
+- `corrects_sequence_no` must reference an existing `disbursement_recorded` event; donation, anchor, and correction events are not valid correction targets.
 - Every append goes through `appendLedgerEvent` from vault-db — hash chain integrity enforced at write time
 - If `public_beneficiary_ref` is omitted, server generates one via `generateBeneficiaryRef()`. Explicit `null` stays `null`. Strings rejected.

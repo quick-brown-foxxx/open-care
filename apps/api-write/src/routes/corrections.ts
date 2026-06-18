@@ -1,10 +1,11 @@
 import { Hono } from 'hono';
-import { createVaultDb, appendLedgerEvent, getHead } from '@open-care/vault-db';
+import { createVaultDb, appendLedgerEvent, getEventsPaginated, getHead } from '@open-care/vault-db';
 import type { VaultDb } from '@open-care/vault-db';
 import { logInfo, logError, generateRequestId, utcNow } from '@open-care/vault-core';
 import type { CorrectionPayload, LedgerEvent } from '@open-care/vault-core';
 import type { Env } from '../lib/env.js';
 import {
+  errorResponse,
   badRequestResponse,
   validationErrorResponse,
   internalErrorResponse,
@@ -15,6 +16,40 @@ import type { CorrectionRequest } from '../lib/schema.js';
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+async function getLedgerEventBySequenceNo(
+  db: VaultDb,
+  sequenceNo: number,
+): Promise<LedgerEvent | null> {
+  const page = await getEventsPaginated(db, { cursor: sequenceNo - 1, limit: 1 });
+  const event = page.items[0];
+
+  if (!event || event.sequence_no !== sequenceNo) {
+    return null;
+  }
+
+  return event;
+}
+
+function correctionTargetNotDisbursementResponse(
+  correctsSequenceNo: number,
+  requestId: string,
+): Response {
+  return errorResponse(
+    'VALIDATION_ERROR',
+    'Request body validation failed',
+    422,
+    requestId,
+    {
+      code: 'CORRECTION_TARGET_NOT_DISBURSEMENT',
+      field_errors: {
+        corrects_sequence_no: [
+          `corrects_sequence_no (${correctsSequenceNo}) must reference a disbursement_recorded event`,
+        ],
+      },
+    },
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Route
@@ -84,7 +119,15 @@ correctionsRoute.post('/api/corrections', async (c) => {
     );
   }
 
-  // 5. Validate replacement_fields whitelist: reject any key not in
+  // 5. Validate the target event type. Corrections only apply to
+  //    disbursement events because only disbursements have receipt_ref and
+  //    service_note fields.
+  const targetEvent = await getLedgerEventBySequenceNo(db, data.corrects_sequence_no);
+  if (targetEvent?.event_type !== 'disbursement_recorded') {
+    return correctionTargetNotDisbursementResponse(data.corrects_sequence_no, requestId);
+  }
+
+  // 6. Validate replacement_fields whitelist: reject any key not in
   //    ['receipt_ref', 'service_note']. The Zod schema already enforces
   //    .strict() on ReplacementFieldsSchema, so unknown keys are caught
   //    at parse time. This is a defense-in-depth runtime check.
@@ -105,7 +148,7 @@ correctionsRoute.post('/api/corrections', async (c) => {
     }
   }
 
-  // 6. Build CorrectionPayload
+  // 7. Build CorrectionPayload
   const payload: CorrectionPayload = {
     corrects_sequence_no: data.corrects_sequence_no,
     reason: data.reason,
@@ -114,14 +157,14 @@ correctionsRoute.post('/api/corrections', async (c) => {
     recorded_by: 'operator',
   };
 
-  // 7. Append to ledger
+  // 8. Append to ledger
   const result = await appendLedgerEvent(db, {
     event_type: 'correction_recorded',
     payload,
     created_at_utc: payload.recorded_at_utc,
   });
 
-  // 8. Handle Result
+  // 9. Handle Result
   if (!result.ok) {
     logError('Correction ledger append failed', {
       error: result.error.message,
