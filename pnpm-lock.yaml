@@ -90,6 +90,9 @@ importers:
 
   apps/api-read:
     dependencies:
+      '@open-care/api-contract':
+        specifier: workspace:*
+        version: link:../../packages/api-contract
       '@open-care/vault-core':
         specifier: workspace:*
         version: link:../../packages/vault-core
@@ -182,6 +185,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@open-care/api-contract':
+        specifier: workspace:*
+        version: link:../../packages/api-contract
       '@sveltejs/adapter-cloudflare':
         specifier: ^5
         version: 5.1.0(@sveltejs/kit@2.65.1(@sveltejs/vite-plugin-svelte@5.1.1(svelte@5.56.3(@typescript-eslint/types@8.61.1))(vite@6.4.3(@types/node@25.9.3)(tsx@4.22.4)))(svelte@5.56.3(@typescript-eslint/types@8.61.1))(typescript@5.9.3)(vite@6.4.3(@types/node@25.9.3)(tsx@4.22.4)))(wrangler@4.101.0(@cloudflare/workers-types@4.20260616.1)(bufferutil@4.1.0)(utf-8-validate@6.0.6))
@@ -231,6 +237,8 @@ importers:
       vite:
         specifier: ^6
         version: 6.4.3(@types/node@25.9.3)(tsx@4.22.4)
+
+  packages/api-contract: {}
 
   packages/bot-crypto:
     dependencies:

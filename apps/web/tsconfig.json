@@ -12,5 +12,5 @@
     "moduleResolution": "bundler"
   },
   "include": ["src", "vite.config.ts", "svelte.config.js", "vitest.config.ts"],
-  "references": [{ "path": "../../packages/vault-core" }]
+  "references": [{ "path": "../../packages/api-contract" }, { "path": "../../packages/vault-core" }]
 }

@@ -5,6 +5,7 @@ import type { Env } from '../lib/env.js';
 import { withCache } from '../lib/cache.js';
 import { internalErrorResponse } from '../lib/errors.js';
 import { solscanTxUrl } from '../lib/solscan.js';
+import type { TotalsResponse, TotalsAnchor } from '@open-care/api-contract';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -51,13 +52,7 @@ app.get('/api/totals', async (c) => {
   const totalOut = BigInt(totals.total_disbursements_usdc_minor);
   const balance = (totalIn - totalOut).toString();
 
-  let anchor: {
-    anchored_head_hash: string;
-    published_at_utc: string;
-    tx_signature: string;
-    anchor_wallet_address: string;
-    solscan_url: string;
-  } | null = null;
+  let anchor: TotalsAnchor | null = null;
   let anchorStale = false;
   let anchorWalletLowSol = false;
 
@@ -79,19 +74,17 @@ app.get('/api/totals', async (c) => {
   }
 
   withCache(c);
-  return c.json(
-    {
-      total_in_usdc_minor: totals.total_donations_usdc_minor,
-      total_out_usdc_minor: totals.total_disbursements_usdc_minor,
-      balance_usdc_minor: balance,
-      donations_count: totals.donation_count,
-      disbursements_count: totals.disbursement_count,
-      anchor,
-      anchor_stale: anchorStale,
-      anchor_wallet_low_sol: anchorWalletLowSol,
-    },
-    200,
-  );
+  const body: TotalsResponse = {
+    total_in_usdc_minor: totals.total_donations_usdc_minor,
+    total_out_usdc_minor: totals.total_disbursements_usdc_minor,
+    balance_usdc_minor: balance,
+    donations_count: totals.donation_count,
+    disbursements_count: totals.disbursement_count,
+    anchor,
+    anchor_stale: anchorStale,
+    anchor_wallet_low_sol: anchorWalletLowSol,
+  };
+  return c.json(body, 200);
 });
 
 export default app;

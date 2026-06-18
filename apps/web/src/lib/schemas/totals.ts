@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import type { TotalsResponse as TotalsResponseContract, TotalsAnchor as TotalsAnchorContract } from '@open-care/api-contract';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -49,3 +50,9 @@ export const TotalsResponseSchema = v.object({
 });
 
 export type TotalsResponse = v.InferOutput<typeof TotalsResponseSchema>;
+
+// Compile-time contract verification: Valibot-inferred type must satisfy the API contract.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type _TotalsContractCheck = TotalsResponse extends TotalsResponseContract ? true : never;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type _TotalsAnchorContractCheck = AnchorInfo extends TotalsAnchorContract ? true : never;

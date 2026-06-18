@@ -10,6 +10,7 @@
     { "path": "apps/api-write" },
     { "path": "apps/anchor-cron" },
     { "path": "apps/operator" },
+    { "path": "packages/api-contract" },
     { "path": "apps/web" },
     { "path": "tools/seed" }
   ],

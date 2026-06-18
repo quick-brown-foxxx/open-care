@@ -5,6 +5,7 @@ import { generateRequestId } from '@open-care/vault-core';
 import type { Env } from '../lib/env.js';
 import { withCache } from '../lib/cache.js';
 import { unavailableResponse } from '../lib/errors.js';
+import type { HealthResponse } from '@open-care/api-contract';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -113,21 +114,19 @@ app.get('/api/health', async (c) => {
   const version = c.env.DEPLOY_VERSION ?? '0.1.0-dev';
 
   withCache(c);
-  return c.json(
-    {
-      status: allOk ? 'ok' : 'degraded',
-      version,
-      response_time_ms: responseTimeMs,
-      checks: {
-        db_reachable: dbReachable,
-        anchor_stale: anchorStale,
-        anchor_wallet_low_sol: anchorWalletLowSol,
-        ingest_recent_or_empty: ingestRecentOrEmpty,
-        helius_inbox_backlog_ok: heliusInboxBacklogOk,
-      },
+  const body: HealthResponse = {
+    status: allOk ? 'ok' : 'degraded',
+    version,
+    response_time_ms: responseTimeMs,
+    checks: {
+      db_reachable: dbReachable,
+      anchor_stale: anchorStale,
+      anchor_wallet_low_sol: anchorWalletLowSol,
+      ingest_recent_or_empty: ingestRecentOrEmpty,
+      helius_inbox_backlog_ok: heliusInboxBacklogOk,
     },
-    200,
-  );
+  };
+  return c.json(body, 200);
 });
 
 export default app;
