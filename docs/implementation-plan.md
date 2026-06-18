@@ -248,9 +248,11 @@ See [[./ui-prototypes/]] for UI plans, docs and prototypes.
 
 ---
 
-## Epic 6: CI/CD & Production Readiness
+## Epic 6: CI/CD & Production Readiness ✅
 
-**Goal:** PR CI is green. Staging deploys automatically.
+**Status:** Complete (2026-06-18)  
+**Goal:** PR CI is green. Staging deploys automatically.  
+**Evidence:** CI workflow (lint, format:check, typecheck, test, build) passes. Deploy workflow (migrate-d1, deploy-workers matrix, deploy-frontend) on push to main. Structured JSON logging with redaction across all 6 Workers. Health endpoint enhanced with response_time_ms and version.
 
 ### Slice 6.1: GitHub Actions CI
 
@@ -280,11 +282,17 @@ See [[./ui-prototypes/]] for UI plans, docs and prototypes.
 **Epic 3: ✅ Complete (2026-06-17)**
 **Epic 4: ✅ Complete (2026-06-17)**
 **Epic 5: ✅ Complete (2026-06-17)**
+**Epic 6: ✅ Complete (2026-06-18)**
 
-**Remaining:**
+**All 6 epics complete. All Workers + frontend deployed to staging.**
 
-- Epic 6 (CI/CD) — deploy workflow, monitoring, logging, production readiness
-- Post-MVP: `correction_recorded` write endpoint, Playwright browser tests, +page.ts load functions, CSP, design phase
+**Post-MVP backlog:**
+- `correction_recorded` write endpoint (I-11)
+- Playwright browser tests for frontend
+- +page.ts load functions (SSR data loading)
+- Content-Security-Policy
+- Design phase (replace disposable frontend layers)
+- Production environment (mainnet launch)
 
 ---
 
