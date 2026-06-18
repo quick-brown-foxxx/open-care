@@ -25,3 +25,4 @@ export {
 } from './lib/errors.js';
 export type { ErrorResponseBody } from './lib/errors.js';
 export { constantTimeEqual } from './lib/constant-time.js';
+export { utcNow } from './lib/time.js';

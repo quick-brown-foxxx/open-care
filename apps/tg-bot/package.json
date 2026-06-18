@@ -7,13 +7,13 @@
     "dev": "wrangler dev"
   },
   "dependencies": {
+    "@open-care/bot-crypto": "workspace:*",
     "@open-care/vault-core": "workspace:*",
     "@open-care/vault-db": "workspace:*",
-    "@open-care/bot-crypto": "workspace:*",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4"
+    "hono": "^4.12.25"
   },
   "devDependencies": {
-    "wrangler": "^4"
+    "wrangler": "^4.100.0"
   }
 }

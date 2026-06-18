@@ -2,8 +2,9 @@ import { env } from 'cloudflare:test';
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { createVaultDb, vaultSchema } from '@open-care/vault-db';
 import { eq, sql } from 'drizzle-orm';
+import { utcNow } from '@open-care/vault-core';
 import { reconcileMissedSignatures } from '../src/lib/reconciliation.js';
-import { insertIntoInbox, processInbox, nowIso } from '../src/lib/inbox.js';
+import { insertIntoInbox, processInbox } from '../src/lib/inbox.js';
 import type { Env } from '../src/lib/env.js';
 
 // ---------------------------------------------------------------------------
@@ -165,7 +166,7 @@ describe('reconciliation', () => {
         signature: existingSig,
         source: 'webhook',
         rawPayloadJson: '{}',
-        receivedAtUtc: nowIso(),
+        receivedAtUtc: utcNow(),
       },
     ]);
 
@@ -202,7 +203,7 @@ describe('reconciliation', () => {
         signature: ledgerSig,
         source: 'webhook',
         rawPayloadJson: JSON.stringify({ signature: ledgerSig }),
-        receivedAtUtc: nowIso(),
+        receivedAtUtc: utcNow(),
       },
     ]);
     const rpcMock = createRpcMockFetch(validTransferResponse(ledgerSig));
@@ -238,7 +239,7 @@ describe('reconciliation', () => {
         signature: inboxSig,
         source: 'webhook',
         rawPayloadJson: '{}',
-        receivedAtUtc: nowIso(),
+        receivedAtUtc: utcNow(),
       },
     ]);
 
@@ -248,7 +249,7 @@ describe('reconciliation', () => {
         signature: ledgerSig,
         source: 'webhook',
         rawPayloadJson: JSON.stringify({ signature: ledgerSig }),
-        receivedAtUtc: nowIso(),
+        receivedAtUtc: utcNow(),
       },
     ]);
     const rpcMock = createRpcMockFetch(validTransferResponse(ledgerSig));

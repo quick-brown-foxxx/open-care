@@ -22,7 +22,7 @@
   "dependencies": {
     "@open-care/vault-core": "workspace:*",
     "drizzle-orm": "^0.45.2",
-    "zod": "^3.24.0"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

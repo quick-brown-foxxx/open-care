@@ -2,9 +2,9 @@ import { Hono } from 'hono';
 import type { HonoEnv } from '../lib/env.js';
 import { authMiddleware } from '../lib/auth.js';
 import { badRequestResponse } from '../lib/errors.js';
-import { insertIntoInbox, processInbox, nowIso } from '../lib/inbox.js';
+import { insertIntoInbox, processInbox } from '../lib/inbox.js';
 import { createVaultDb } from '@open-care/vault-db';
-import { logInfo, generateRequestId, HeliusWebhookEnvelopeSchema } from '@open-care/vault-core';
+import { logInfo, generateRequestId, HeliusWebhookEnvelopeSchema, utcNow } from '@open-care/vault-core';
 
 const webhookRoute = new Hono<HonoEnv>();
 
@@ -34,7 +34,7 @@ webhookRoute.post('/', async (c) => {
   }
 
   // Extract entries for inbox
-  const receivedAtUtc = nowIso();
+  const receivedAtUtc = utcNow();
   const entries = parsed.data.map((event) => ({
     signature: event.signature,
     source: 'webhook' as const,

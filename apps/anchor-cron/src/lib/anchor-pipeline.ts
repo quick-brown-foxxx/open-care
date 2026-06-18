@@ -1,6 +1,6 @@
 import { getHead, appendLedgerEvent } from '@open-care/vault-db';
 import type { VaultDb } from '@open-care/vault-db';
-import { buildAnchorMemo, logInfo, logError } from '@open-care/vault-core';
+import { buildAnchorMemo, logInfo, logError, utcNow } from '@open-care/vault-core';
 import type { Cluster } from '@open-care/vault-core';
 import { createConnection, createKeypair, sendMemoTransaction, getBalance } from './solana';
 import {
@@ -10,7 +10,6 @@ import {
   clearLockOnFailure,
   findPublishedAnchorForHash,
   findStaleLocks,
-  utcNow,
 } from './lock';
 import { recoverStaleLock } from './recovery';
 import type { Env } from './env';

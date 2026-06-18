@@ -2,10 +2,9 @@ import { eq } from 'drizzle-orm';
 import { anchorRuns } from '@open-care/vault-db/schema/vault-db';
 import { appendLedgerEvent } from '@open-care/vault-db';
 import type { VaultDb } from '@open-care/vault-db';
-import { parseAnchorMemo } from '@open-care/vault-core';
+import { parseAnchorMemo, utcNow } from '@open-care/vault-core';
 import type { Cluster } from '@open-care/vault-core';
 import { getTransaction, getBalance } from './solana';
-import { utcNow } from './lock';
 import type { Connection } from '@solana/web3.js';
 import { PublicKey } from '@solana/web3.js';
 

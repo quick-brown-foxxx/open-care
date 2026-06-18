@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { botSchema } from '@open-care/vault-db';
 import type { BotDb } from '@open-care/vault-db';
 import { decryptChatId, encryptChatId } from '@open-care/bot-crypto';
-import { Result, ok, err } from '@open-care/vault-core';
+import { Result, ok, err, utcNow } from '@open-care/vault-core';
 import { sendTelegramMessage } from './telegram-api.js';
 
 const { handles, conversations } = botSchema;
@@ -35,13 +35,6 @@ export interface SendCodeSuccess {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/**
- * Return the current UTC time as an ISO-8601 string with 'Z' suffix.
- */
-function utcNow(): string {
-  return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
-}
 
 /**
  * Compute the SHA-256 hash of a string and return it as a lowercase hex string.

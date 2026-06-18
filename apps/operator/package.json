@@ -8,9 +8,9 @@
   },
   "dependencies": {
     "@open-care/vault-core": "workspace:*",
-    "hono": "^4"
+    "hono": "^4.12.25"
   },
   "devDependencies": {
-    "wrangler": "^4"
+    "wrangler": "^4.100.0"
   }
 }

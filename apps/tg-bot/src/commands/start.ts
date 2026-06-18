@@ -2,17 +2,10 @@ import { eq } from 'drizzle-orm';
 import { botSchema } from '@open-care/vault-db';
 import type { BotDb } from '@open-care/vault-db';
 import { deriveTelegramUserRef, encryptChatId } from '@open-care/bot-crypto';
-import { isValidHandle } from '@open-care/vault-core';
+import { isValidHandle, utcNow } from '@open-care/vault-core';
 import type { ParsedUpdate } from '../lib/telegram-api.js';
 
 const { handles } = botSchema;
-
-/**
- * Return the current UTC time as an ISO-8601 string with 'Z' suffix.
- */
-function utcNow(): string {
-  return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
-}
 
 /**
  * Handle the /start command.

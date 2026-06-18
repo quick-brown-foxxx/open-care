@@ -1,15 +1,12 @@
 import { eq, and, gt, lt } from 'drizzle-orm';
 import { anchorRuns } from '@open-care/vault-db/schema/vault-db';
 import type { VaultDb } from '@open-care/vault-db';
+import { utcNow } from '@open-care/vault-core';
 
 const LOCK_DURATION_MINUTES = 10;
 
 export function lockExpiresAt(): string {
   return new Date(Date.now() + LOCK_DURATION_MINUTES * 60 * 1000).toISOString();
-}
-
-export function utcNow(): string {
-  return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
 
 export async function findActiveLock(db: VaultDb): Promise<typeof anchorRuns.$inferSelect | null> {

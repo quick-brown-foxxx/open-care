@@ -9,10 +9,10 @@
   "dependencies": {
     "@open-care/vault-core": "workspace:*",
     "@open-care/vault-db": "workspace:*",
-    "hono": "^4",
-    "zod": "^3.24.0"
+    "hono": "^4.12.25",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "wrangler": "^4"
+    "wrangler": "^4.100.0"
   }
 }

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { createVaultDb, appendLedgerEvent, getHead } from '@open-care/vault-db';
 import type { VaultDb } from '@open-care/vault-db';
-import { logInfo, logError, generateRequestId } from '@open-care/vault-core';
+import { logInfo, logError, generateRequestId, utcNow } from '@open-care/vault-core';
 import type { CorrectionPayload, LedgerEvent } from '@open-care/vault-core';
 import type { Env } from '../lib/env.js';
 import {
@@ -15,14 +15,6 @@ import type { CorrectionRequest } from '../lib/schema.js';
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/**
- * Return the current UTC time as an ISO-8601 string with second precision
- * and a `Z` suffix (milliseconds stripped).
- */
-function nowUtc(): string {
-  return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
-}
 
 // ---------------------------------------------------------------------------
 // Route
@@ -118,7 +110,7 @@ correctionsRoute.post('/api/corrections', async (c) => {
     corrects_sequence_no: data.corrects_sequence_no,
     reason: data.reason,
     replacement_fields: data.replacement_fields,
-    recorded_at_utc: nowUtc(),
+    recorded_at_utc: utcNow(),
     recorded_by: 'operator',
   };
 

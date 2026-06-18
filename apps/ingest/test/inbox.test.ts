@@ -2,7 +2,8 @@ import { env } from 'cloudflare:test';
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { createVaultDb, vaultSchema } from '@open-care/vault-db';
 import { eq } from 'drizzle-orm';
-import { insertIntoInbox, processInbox, checkDuplicateDonation, nowIso } from '../src/lib/inbox.js';
+import { utcNow } from '@open-care/vault-core';
+import { insertIntoInbox, processInbox, checkDuplicateDonation } from '../src/lib/inbox.js';
 import type { Env } from '../src/lib/env.js';
 
 // ---------------------------------------------------------------------------
@@ -129,7 +130,7 @@ describe('inbox operations', () => {
           signature: SIG_INSERT_1,
           source: 'webhook',
           rawPayloadJson: JSON.stringify({ test: true }),
-          receivedAtUtc: nowIso(),
+          receivedAtUtc: utcNow(),
         },
       ]);
       expect(result.accepted).toBe(1);
@@ -141,7 +142,7 @@ describe('inbox operations', () => {
         signature: SIG_INSERT_2,
         source: 'webhook' as const,
         rawPayloadJson: JSON.stringify({ test: true }),
-        receivedAtUtc: nowIso(),
+        receivedAtUtc: utcNow(),
       };
       const r1 = await insertIntoInbox(db, [entry]);
       expect(r1.accepted).toBe(1);
@@ -158,7 +159,7 @@ describe('inbox operations', () => {
           signature: sig,
           source: 'webhook',
           rawPayloadJson: '{}',
-          receivedAtUtc: nowIso(),
+          receivedAtUtc: utcNow(),
         },
       ]);
       expect(r1.accepted).toBe(1);
@@ -168,7 +169,7 @@ describe('inbox operations', () => {
           signature: sig,
           source: 'reconciliation',
           rawPayloadJson: '{}',
-          receivedAtUtc: nowIso(),
+          receivedAtUtc: utcNow(),
         },
       ]);
       expect(r2.accepted).toBe(1);
@@ -182,7 +183,7 @@ describe('inbox operations', () => {
           signature: sig,
           source: 'webhook',
           rawPayloadJson: '{}',
-          receivedAtUtc: nowIso(),
+          receivedAtUtc: utcNow(),
         },
       ]);
 
@@ -192,19 +193,19 @@ describe('inbox operations', () => {
           signature: sig,
           source: 'webhook',
           rawPayloadJson: '{}',
-          receivedAtUtc: nowIso(),
+          receivedAtUtc: utcNow(),
         },
         {
           signature: 'new-1',
           source: 'webhook',
           rawPayloadJson: '{}',
-          receivedAtUtc: nowIso(),
+          receivedAtUtc: utcNow(),
         },
         {
           signature: 'new-2',
           source: 'webhook',
           rawPayloadJson: '{}',
-          receivedAtUtc: nowIso(),
+          receivedAtUtc: utcNow(),
         },
       ]);
       expect(result.accepted).toBe(2);
@@ -223,7 +224,7 @@ describe('inbox operations', () => {
           signature: SIG_VALID,
           source: 'webhook',
           rawPayloadJson: JSON.stringify({ signature: SIG_VALID }),
-          receivedAtUtc: nowIso(),
+          receivedAtUtc: utcNow(),
         },
       ]);
 
@@ -260,7 +261,7 @@ describe('inbox operations', () => {
           signature: SIG_NO_MATCH,
           source: 'webhook',
           rawPayloadJson: JSON.stringify({ signature: SIG_NO_MATCH }),
-          receivedAtUtc: nowIso(),
+          receivedAtUtc: utcNow(),
         },
       ]);
 
@@ -318,7 +319,7 @@ describe('inbox operations', () => {
           signature: SIG_DUP,
           source: 'webhook',
           rawPayloadJson: JSON.stringify({ signature: SIG_DUP }),
-          receivedAtUtc: nowIso(),
+          receivedAtUtc: utcNow(),
         },
       ]);
       const mockFetch1 = createMockFetch(validTransferResponse(SIG_DUP));
@@ -331,7 +332,7 @@ describe('inbox operations', () => {
           signature: SIG_DUP,
           source: 'reconciliation',
           rawPayloadJson: JSON.stringify({ signature: SIG_DUP }),
-          receivedAtUtc: nowIso(),
+          receivedAtUtc: utcNow(),
         },
       ]);
       const mockFetch2 = createMockFetch(validTransferResponse(SIG_DUP, { slot: 999 }));
@@ -359,7 +360,7 @@ describe('inbox operations', () => {
           signature: SIG_RPC_FAIL,
           source: 'webhook',
           rawPayloadJson: JSON.stringify({ signature: SIG_RPC_FAIL }),
-          receivedAtUtc: nowIso(),
+          receivedAtUtc: utcNow(),
         },
       ]);
 
@@ -385,7 +386,7 @@ describe('inbox operations', () => {
           signature: SIG_MAX_RETRY,
           source: 'webhook',
           rawPayloadJson: JSON.stringify({ signature: SIG_MAX_RETRY }),
-          receivedAtUtc: nowIso(),
+          receivedAtUtc: utcNow(),
         },
       ]);
 
@@ -424,7 +425,7 @@ describe('inbox operations', () => {
           signature: SIG_CHECK_DUP,
           source: 'webhook',
           rawPayloadJson: JSON.stringify({ signature: SIG_CHECK_DUP }),
-          receivedAtUtc: nowIso(),
+          receivedAtUtc: utcNow(),
         },
       ]);
       const mockFetch = createMockFetch(validTransferResponse(SIG_CHECK_DUP));

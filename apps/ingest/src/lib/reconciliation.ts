@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { vaultSchema } from '@open-care/vault-db';
 import type { VaultDb } from '@open-care/vault-db';
-import { ok, err, logInfo, logError } from '@open-care/vault-core';
+import { ok, err, logInfo, logError, utcNow } from '@open-care/vault-core';
 import type { Result } from '@open-care/vault-core';
 import type { Env } from './env.js';
 import { fetchSignaturesForAddress } from './solana-rpc.js';
@@ -10,10 +10,6 @@ import { fetchSignaturesForAddress } from './solana-rpc.js';
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** ISO-8601 UTC timestamp without milliseconds (e.g. "2026-06-17T12:34:56Z"). */
-function nowIso(): string {
-  return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
-}
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -82,7 +78,7 @@ export async function reconcileMissedSignatures(
       }
 
       // 3. Signature is not in either table — insert into helius_inbox
-      const now = nowIso();
+      const now = utcNow();
       await db.insert(vaultSchema.heliusInbox).values({
         signature,
         source: 'reconciliation',

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { createVaultDb, appendLedgerEvent } from '@open-care/vault-db';
 import type { VaultDb } from '@open-care/vault-db';
-import { generateBeneficiaryRef, logInfo, logError, generateRequestId } from '@open-care/vault-core';
+import { generateBeneficiaryRef, logInfo, logError, generateRequestId, utcNow } from '@open-care/vault-core';
 import type { DisbursementPayload, LedgerEvent } from '@open-care/vault-core';
 import type { Env } from '../lib/env.js';
 import {
@@ -15,14 +15,6 @@ import type { DisbursementRequest } from '../lib/schema.js';
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/**
- * Return the current UTC time as an ISO-8601 string with second precision
- * and a `Z` suffix (milliseconds stripped).
- */
-function nowUtc(): string {
-  return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
-}
 
 function categorizeAmount(amountUsdcMinor: string): 'small' | 'medium' | 'large' {
   try {
@@ -89,7 +81,7 @@ disbursementsRoute.post('/api/disbursements', async (c) => {
     receipt_ref: data.receipt_ref,
     public_beneficiary_ref: beneficiaryRef,
     purchased_at_utc: data.purchased_at_utc,
-    recorded_at_utc: nowUtc(),
+    recorded_at_utc: utcNow(),
     recorded_by: 'operator',
   };
 
@@ -97,7 +89,7 @@ disbursementsRoute.post('/api/disbursements', async (c) => {
   const db: VaultDb = createVaultDb(c.env.vault_db);
 
   // 7. Get current UTC timestamp for ledger
-  const created_at_utc = nowUtc();
+  const created_at_utc = utcNow();
 
   // 8. Append to ledger
   const result = await appendLedgerEvent(db, {

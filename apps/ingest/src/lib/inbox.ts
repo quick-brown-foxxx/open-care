@@ -2,7 +2,7 @@ import { and, eq, lt, inArray, sql } from 'drizzle-orm';
 import { vaultSchema, appendLedgerEvent } from '@open-care/vault-db';
 import type { VaultDb } from '@open-care/vault-db';
 import type { DonationPayload, Cluster } from '@open-care/vault-core';
-import { logInfo, logError } from '@open-care/vault-core';
+import { logInfo, logError, utcNow } from '@open-care/vault-core';
 import type { Env } from './env.js';
 import { fetchTransaction, parseSplTransfer } from './solana-rpc.js';
 
@@ -12,10 +12,6 @@ const { heliusInbox } = vaultSchema;
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Returns current UTC time as ISO-8601 second-precision with Z suffix. */
-export function nowIso(): string {
-  return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
-}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -213,14 +209,14 @@ export async function processInbox(
       slot: tx.slot,
       block_time_utc: tx.blockTime
         ? new Date(tx.blockTime * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z')
-        : nowIso(),
+        : utcNow(),
       amount_usdc_minor: match.amount,
     };
 
     const appendResult = await appendLedgerEvent(db, {
       event_type: 'donation_confirmed',
       payload,
-      created_at_utc: nowIso(),
+      created_at_utc: utcNow(),
     });
 
     if (!appendResult.ok) {
@@ -267,7 +263,7 @@ export async function updateInboxStatus(
     .update(heliusInbox)
     .set({
       status: update.status,
-      updated_at_utc: nowIso(),
+      updated_at_utc: utcNow(),
       ...(update.reason !== undefined ? { reason: update.reason } : {}),
       ...(update.attemptCount !== undefined ? { attempt_count: update.attemptCount } : {}),
       ...(update.lastError !== undefined ? { last_error: update.lastError } : {}),
