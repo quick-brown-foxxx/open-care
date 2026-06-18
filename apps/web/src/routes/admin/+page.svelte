@@ -3,10 +3,10 @@
   import { createFetch } from '$lib/state/api.svelte.js';
   import { formatDate } from '$lib/utils/format-date.js';
   import { formatUsdc } from '$lib/utils/format-usdc.js';
-  import Card from '$lib/components/ui/card/card.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
   import HashDisplay from '$lib/components/public/HashDisplay.svelte';
   import SolscanLink from '$lib/components/public/SolscanLink.svelte';
+
   const health = createFetch(getHealth);
   const totals = createFetch(getTotals);
   const verify = createFetch(getVerify);
@@ -40,17 +40,22 @@
   <!-- Health -->
   <h2>Состояние системы</h2>
   {#if health.loading}
-    <p class="muted">Загрузка...</p>
+    <p class="text-muted">Загрузка...</p>
   {:else if health.error}
-    <Card class="error-card"
-      ><p>Ошибка загрузки. <button onclick={() => health.refetch()}>Повторить</button></p></Card
-    >
-  {:else if health.data}
-    <Card>
+    <div class="standalone-card" style="border-color: #c44;">
       <p>
-        Статус: <Badge variant={health.data.status === 'ok' ? 'accent' : 'danger'}
-          >{health.data.status === 'ok' ? 'OK' : 'DEGRADED'}</Badge
+        Ошибка загрузки. <button class="btn btn-sm" onclick={() => health.refetch()}
+          >Повторить</button
         >
+      </p>
+    </div>
+  {:else if health.data}
+    <div class="standalone-card">
+      <p>
+        Статус:
+        <Badge variant={health.data.status === 'ok' ? 'green' : 'amber'}>
+          {health.data.status === 'ok' ? 'OK' : 'DEGRADED'}
+        </Badge>
       </p>
       <dl class="checks-grid">
         <dt>База данных</dt>
@@ -64,68 +69,72 @@
         <dt>Helius без задержек</dt>
         <dd>{health.data.checks.helius_inbox_backlog_ok ? '✓' : '✗'}</dd>
       </dl>
-    </Card>
+    </div>
   {/if}
 
   <!-- Head -->
   <h2>Текущий HEAD</h2>
   {#if verify.loading}
-    <p class="muted">Загрузка...</p>
+    <p class="text-muted">Загрузка...</p>
   {:else if verify.error}
-    <Card class="error-card"
-      ><p>
+    <div class="standalone-card" style="border-color: #c44;">
+      <p>
         Ошибка загрузки: {verify.error.message}.
-        <button onclick={() => verify.refetch()}>Повторить</button>
-      </p></Card
-    >
+        <button class="btn btn-sm" onclick={() => verify.refetch()}>Повторить</button>
+      </p>
+    </div>
   {:else if verify.data}
-    <Card>
+    <div class="standalone-card">
       <HashDisplay hash={verify.data.head_hash} label="HEAD" full={true} />
-      <span class="head-seq">#{verify.data.head_sequence_no}</span>
-    </Card>
+      <span class="text-muted" style="font-family: ui-monospace, monospace; font-size: 0.9rem;">
+        #{verify.data.head_sequence_no}
+      </span>
+    </div>
   {/if}
 
   <!-- Anchor -->
   <h2>Последний якорь</h2>
   {#if totals.loading}
-    <p class="muted">Загрузка...</p>
+    <p class="text-muted">Загрузка...</p>
   {:else if totals.error}
-    <Card class="error-card"
-      ><p>
+    <div class="standalone-card" style="border-color: #c44;">
+      <p>
         Ошибка загрузки: {totals.error.message}.
-        <button onclick={() => totals.refetch()}>Повторить</button>
-      </p></Card
-    >
+        <button class="btn btn-sm" onclick={() => totals.refetch()}>Повторить</button>
+      </p>
+    </div>
   {:else if totals.data?.anchor}
-    <Card>
+    <div class="standalone-card">
       <HashDisplay hash={totals.data.anchor.anchored_head_hash} label="Закреплённый HEAD" />
       <p>Опубликован: {formatDate(totals.data.anchor.published_at_utc)}</p>
       <SolscanLink txSignature={totals.data.anchor.tx_signature} />
-    </Card>
+    </div>
   {:else if totals.data}
-    <Card><p>Якорь ещё не опубликован.</p></Card>
+    <div class="standalone-card"><p>Якорь ещё не опубликован.</p></div>
   {/if}
 
   {#if totals.data?.anchor_stale}
-    <Card class="warning-card"><Badge variant="danger">Якорь устарел (более 25 часов)</Badge></Card>
+    <div class="standalone-card" style="border-color: #f59e0b;">
+      <Badge variant="amber">Якорь устарел (более 25 часов)</Badge>
+    </div>
   {/if}
 
   {#if totals.data?.anchor_wallet_low_sol}
-    <Card class="error-card">
-      <Badge variant="danger">Низкий баланс SOL</Badge>
+    <div class="standalone-card" style="border-color: #c44;">
+      <Badge variant="amber">Низкий баланс SOL</Badge>
       <p>
         Баланс SOL на кошельке якоря низкий. Публикация якоря может быть невозможна. Пополните
         кошелёк якоря.
       </p>
-    </Card>
+    </div>
   {/if}
 
   <!-- Totals -->
   <h2>Итоги</h2>
   {#if totals.loading}
-    <p class="muted">Загрузка...</p>
+    <p class="text-muted">Загрузка...</p>
   {:else if totals.data}
-    <Card>
+    <div class="standalone-card">
       <dl class="totals-grid">
         <dt>Всего получено</dt>
         <dd>{formatUsdc(totals.data.total_in_usdc_minor)} USDC</dd>
@@ -138,42 +147,42 @@
         <dt>Выплат</dt>
         <dd>{totals.data.disbursements_count}</dd>
       </dl>
-    </Card>
+    </div>
   {/if}
 
   <!-- Quick links -->
   <h2>Действия</h2>
   <div class="quick-links">
-    <Card><a href="/admin/disbursements">Записать выплату →</a></Card>
-    <Card><a href="/admin/anchors">Управление якорем →</a></Card>
-    <Card><a href="/admin/bot">Доставка сертификатов →</a></Card>
+    <a href="/admin/disbursements" class="standalone-card btn">Записать выплату →</a>
+    <a href="/admin/anchors" class="standalone-card btn">Управление якорем →</a>
+    <a href="/admin/bot" class="standalone-card btn">Доставка сертификатов →</a>
   </div>
 
   <!-- Recent events -->
   <h2>Последние события</h2>
   {#if recentEvents.loading}
-    <p class="muted">Загрузка...</p>
+    <p class="text-muted">Загрузка...</p>
   {:else if recentEvents.error}
-    <Card class="error-card"
-      ><p>
+    <div class="standalone-card" style="border-color: #c44;">
+      <p>
         Ошибка загрузки: {recentEvents.error.message}.
-        <button onclick={() => recentEvents.refetch()}>Повторить</button>
-      </p></Card
-    >
+        <button class="btn btn-sm" onclick={() => recentEvents.refetch()}>Повторить</button>
+      </p>
+    </div>
   {:else if recentEvents.data && recentEvents.data.items.length > 0}
     <div class="events-list">
       {#each recentEvents.data.items as event (event.event_hash)}
-        <a href="/ledger/{event.event_hash}" class="event-row">
-          <Badge variant={event.event_type === 'anchor_published' ? 'accent' : 'default'}>
+        <a href="/ledger/{event.event_hash}" class="standalone-card event-row">
+          <Badge variant={event.event_type === 'anchor_published' ? 'green' : 'default'}>
             {event.event_type}
           </Badge>
           <span class="event-summary">{eventSummary(event)}</span>
-          <span class="event-time">{formatDate(event.created_at_utc)}</span>
+          <span class="text-muted event-time">{formatDate(event.created_at_utc)}</span>
         </a>
       {/each}
     </div>
   {:else}
-    <Card><p class="muted">Событий пока нет.</p></Card>
+    <div class="standalone-card"><p class="text-muted">Событий пока нет.</p></div>
   {/if}
 </section>
 
@@ -191,16 +200,11 @@
   }
   .checks-grid dt {
     font-size: 0.85rem;
-    color: var(--color-text-muted);
+    color: var(--muted);
   }
   .checks-grid dd {
     font-size: 0.9rem;
     font-weight: 600;
-  }
-  .head-seq {
-    font-family: 'SF Mono', 'Fira Code', monospace;
-    font-size: 0.9rem;
-    color: var(--color-text-muted);
   }
   .totals-grid {
     display: grid;
@@ -209,7 +213,7 @@
   }
   .totals-grid dt {
     font-size: 0.85rem;
-    color: var(--color-text-muted);
+    color: var(--muted);
   }
   .totals-grid dd {
     font-size: 0.9rem;
@@ -224,15 +228,6 @@
     text-decoration: none;
     font-weight: 500;
   }
-  .muted {
-    color: var(--color-text-muted);
-  }
-  .error-card {
-    border-color: var(--color-danger);
-  }
-  .warning-card {
-    border-color: #f59e0b;
-  }
   .events-list {
     display: flex;
     flex-direction: column;
@@ -243,24 +238,16 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.625rem 0.75rem;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
     text-decoration: none;
-    color: var(--color-text);
+    color: var(--title);
     font-size: 0.9rem;
-    transition: background 0.15s;
     flex-wrap: wrap;
-  }
-  .event-row:hover {
-    background: #f9fafb;
   }
   .event-summary {
     font-weight: 500;
   }
   .event-time {
     font-size: 0.8rem;
-    color: var(--color-text-muted);
     margin-left: auto;
   }
 </style>

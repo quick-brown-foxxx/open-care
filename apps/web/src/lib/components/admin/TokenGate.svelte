@@ -1,9 +1,6 @@
 <script lang="ts">
   import { setToken, clearToken } from '$lib/state/token.svelte.js';
   import { getPendingRequests } from '$lib/api/operator.js';
-  import Input from '$lib/components/ui/input/input.svelte';
-  import Button from '$lib/components/ui/button/button.svelte';
-  import Card from '$lib/components/ui/card/card.svelte';
 
   let token = $state('');
   let error = $state('');
@@ -31,41 +28,35 @@
   }
 </script>
 
-<Card>
+<div class="standalone-card token-gate">
   <h2>Вход для оператора</h2>
-  <p class="gate-note">
+  <p class="text-muted" style="margin-bottom: 1rem; font-size: 0.85rem;">
     Токен не сохраняется. При перезагрузке страницы потребуется ввести заново.
   </p>
 
   <form onsubmit={handleSubmit}>
-    <Input
+    <input
+      class="form-input"
       type="password"
       placeholder="Введите токен оператора"
       autocomplete="off"
-      value={token}
-      oninput={(e) => (token = (e.target as HTMLInputElement).value)}
+      bind:value={token}
     />
 
     {#if error}
-      <p class="gate-error">{error}</p>
+      <p class="form-error">{error}</p>
     {/if}
 
-    <Button type="submit" variant="primary" disabled={checking || !token.trim()}>
+    <button class="btn primary" type="submit" disabled={checking || !token.trim()}>
       {checking ? 'Проверка...' : 'Войти'}
-    </Button>
+    </button>
   </form>
-</Card>
+</div>
 
 <style>
-  .gate-note {
-    color: var(--color-text-muted);
-    font-size: 0.85rem;
-    margin-bottom: 1rem;
-  }
-  .gate-error {
-    color: var(--color-danger);
-    font-size: 0.85rem;
-    margin-top: 0.5rem;
+  .token-gate {
+    max-width: 28rem;
+    margin: 4rem auto;
   }
   form {
     display: flex;

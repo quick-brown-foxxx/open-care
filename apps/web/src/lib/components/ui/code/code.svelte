@@ -11,6 +11,6 @@
   } = $props();
 </script>
 
-<div class={cn('standalone-card', className)}>
+<code class={cn(className)}>
   {@render children()}
-</div>
+</code>

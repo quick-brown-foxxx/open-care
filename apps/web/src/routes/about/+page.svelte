@@ -74,31 +74,3 @@
   <p><a href="/verify">Проверить реестр →</a></p>
   <p><a href="/faq">Частые вопросы →</a></p>
 </section>
-
-<style>
-  .static-page {
-    max-width: 48rem;
-  }
-  .static-page h1 {
-    margin-bottom: 1.5rem;
-  }
-  .static-page h2 {
-    margin-top: 2rem;
-    margin-bottom: 0.75rem;
-  }
-  .static-page ol,
-  .static-page ul {
-    margin-bottom: 1rem;
-    padding-left: 1.5rem;
-  }
-  .static-page li {
-    margin-bottom: 0.5rem;
-  }
-  .static-page code {
-    font-family: 'SF Mono', 'Fira Code', monospace;
-    font-size: 0.85rem;
-    background: #f3f4f6;
-    padding: 0.125rem 0.375rem;
-    border-radius: 3px;
-  }
-</style>

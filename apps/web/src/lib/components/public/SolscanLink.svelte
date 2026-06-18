@@ -9,11 +9,8 @@
     label = 'tx',
     class: className = '',
   }: {
-    /** Base58 Solana transaction signature. */
     txSignature: string;
-    /** Solana cluster (default mainnet-beta). */
     cluster?: string;
-    /** Link label (default "tx"). */
     label?: string;
     class?: string;
   } = $props();
@@ -26,21 +23,9 @@
   href={url}
   target="_blank"
   rel="noopener noreferrer"
-  class={cn('solscan-link', className)}
+  class={cn(className)}
+  style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px;"
   title="Открыть в Solscan"
 >
   {label}: {short} ↗
 </a>
-
-<style>
-  .solscan-link {
-    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
-    font-size: 0.8rem;
-    color: var(--color-primary);
-    text-decoration: none;
-    white-space: nowrap;
-  }
-  .solscan-link:hover {
-    text-decoration: underline;
-  }
-</style>

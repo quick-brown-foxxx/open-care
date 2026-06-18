@@ -21,11 +21,11 @@
     correction_recorded: 'Коррекция',
   };
 
-  const eventTypeVariant: Record<string, 'accent' | 'default' | 'muted'> = {
-    donation_confirmed: 'accent',
-    disbursement_recorded: 'default',
-    anchor_published: 'default',
-    correction_recorded: 'muted',
+  const eventTypeVariant: Record<string, 'green' | 'amber' | 'blue' | 'purple' | 'default'> = {
+    donation_confirmed: 'green',
+    disbursement_recorded: 'amber',
+    anchor_published: 'blue',
+    correction_recorded: 'purple',
   };
 
   const label = $derived(eventTypeLabel[event.event_type] ?? event.event_type);
@@ -43,64 +43,24 @@
   });
 </script>
 
-<div class={cn('event-card', className)}>
-  <div class="event-header">
+<div class={cn('standalone-card', className)} style="padding: 12px 16px;">
+  <div
+    style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.375rem;"
+  >
     <Badge {variant}>{label}</Badge>
-    <span class="event-seq">#{event.sequence_no}</span>
+    <span
+      style="font-size: 0.75rem; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;"
+      >#{event.sequence_no}</span
+    >
   </div>
-  <div class="event-body">
+  <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.375rem;">
     {#if payloadAmount}
-      <span class="event-amount">{payloadAmount}</span>
+      <span style="font-weight: 600; font-size: 0.95rem; color: var(--green);">{payloadAmount}</span
+      >
     {/if}
-    <span class="event-time">{formatDate(event.created_at_utc)}</span>
+    <span style="font-size: 0.8rem; color: var(--muted);">{formatDate(event.created_at_utc)}</span>
   </div>
-  <div class="event-footer">
-    <code class="event-hash" title={event.event_hash}>{shortHash}</code>
+  <div>
+    <code title={event.event_hash}>{shortHash}</code>
   </div>
 </div>
-
-<style>
-  .event-card {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    padding: 0.75rem 1rem;
-    transition: background 0.15s;
-  }
-  .event-card:hover {
-    background: #f9fafb;
-  }
-  .event-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.375rem;
-  }
-  .event-seq {
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
-  }
-  .event-body {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.375rem;
-  }
-  .event-amount {
-    font-weight: 600;
-    font-size: 0.95rem;
-    color: var(--color-accent);
-  }
-  .event-time {
-    font-size: 0.8rem;
-    color: var(--color-text-muted);
-  }
-  .event-footer {
-    font-size: 0.75rem;
-  }
-  .event-hash {
-    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
-    color: var(--color-text-muted);
-  }
-</style>

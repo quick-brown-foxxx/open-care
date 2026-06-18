@@ -4,7 +4,6 @@
   import { createFetch } from '$lib/state/api.svelte.js';
   import { formatDate } from '$lib/utils/format-date.js';
   import { formatUsdc } from '$lib/utils/format-usdc.js';
-  import Card from '$lib/components/ui/card/card.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
   import HashDisplay from '$lib/components/public/HashDisplay.svelte';
   import SolscanLink from '$lib/components/public/SolscanLink.svelte';
@@ -30,11 +29,11 @@
     correction_recorded: 'Коррекция',
   };
 
-  const eventTypeVariant: Record<string, 'accent' | 'default' | 'muted'> = {
-    donation_confirmed: 'accent',
-    disbursement_recorded: 'default',
-    anchor_published: 'default',
-    correction_recorded: 'muted',
+  const eventTypeVariant: Record<string, 'green' | 'amber' | 'blue' | 'purple' | 'default'> = {
+    donation_confirmed: 'green',
+    disbursement_recorded: 'amber',
+    anchor_published: 'blue',
+    correction_recorded: 'purple',
   };
 
   function getTxSignature(payloadJson: string): string | null {
@@ -74,33 +73,35 @@
   <p><a href="/ledger">← Назад к реестру</a></p>
 
   {#if !isValidHash}
-    <Card class="error-card">
+    <div class="standalone-card">
       <h1>Неверный хеш</h1>
       <p>Хеш события должен быть 64-значной шестнадцатеричной строкой.</p>
-    </Card>
+    </div>
   {:else if ledger.loading}
-    <p class="muted">Загрузка...</p>
+    <p class="text-muted">Загрузка...</p>
   {:else if ledger.error}
-    <Card class="error-card">
+    <div class="standalone-card">
       <p>
-        Не удалось загрузить реестр. <button onclick={() => ledger.refetch()}>Повторить</button>
+        Не удалось загрузить реестр.
+        <button class="btn btn-sm" onclick={() => ledger.refetch()}>Повторить</button>
       </p>
-    </Card>
+    </div>
   {:else if !event}
-    <Card>
+    <div class="standalone-card">
       <h1>Событие не найдено</h1>
       <p>Событие с хешем <HashDisplay hash={eventHash} full={true} /> не найдено в реестре.</p>
-    </Card>
+    </div>
   {:else}
     <h1>Событие #{event.sequence_no}</h1>
 
-    <Card>
+    <!-- Detail grid -->
+    <div class="standalone-card">
       <dl class="detail-grid">
         <dt>Тип</dt>
         <dd>
-          <Badge variant={eventTypeVariant[event.event_type] ?? 'default'}
-            >{eventTypeLabel[event.event_type] ?? event.event_type}</Badge
-          >
+          <Badge variant={eventTypeVariant[event.event_type] ?? 'default'}>
+            {eventTypeLabel[event.event_type] ?? event.event_type}
+          </Badge>
         </dd>
 
         <dt>Номер</dt>
@@ -125,10 +126,10 @@
           <dd><SolscanLink txSignature={getTxSignature(event.payload_json)!} /></dd>
         {/if}
       </dl>
-    </Card>
+    </div>
 
     <!-- Hash chain context -->
-    <Card class="context-card">
+    <div class="standalone-card">
       <h2>Хеш-цепочка</h2>
       <p>
         Это событие ссылается на предыдущий хеш <HashDisplay hash={event.prev_hash} />. Изменение
@@ -140,13 +141,13 @@
           покрыта следующим якорем.
         </p>
       {/if}
-    </Card>
+    </div>
 
     <!-- Payload -->
-    <Card>
+    <div class="standalone-card">
       <h2>Данные события (payload)</h2>
       <pre class="payload-block"><code>{formatPayload(event.payload_json)}</code></pre>
-    </Card>
+    </div>
   {/if}
 </section>
 
@@ -154,42 +155,44 @@
   .event-detail-page {
     max-width: 48rem;
   }
+
   .detail-grid {
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 0.75rem 1.5rem;
   }
+
   .detail-grid dt {
     font-weight: 600;
-    color: var(--color-text-muted);
+    color: var(--muted);
     font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
+
   .detail-grid dd {
     font-size: 0.95rem;
   }
-  .context-card {
-    background: #fefce8;
-  }
+
   .payload-block {
-    background: #1a1a2e;
-    color: #e5e7eb;
+    background: #1e1e2e;
+    color: #cdd6f4;
     padding: 1rem;
-    border-radius: var(--radius);
+    border-radius: 12px;
     overflow-x: auto;
     font-size: 0.8rem;
     line-height: 1.5;
     max-height: 400px;
     overflow-y: auto;
+    margin: 0;
   }
+
   .payload-block code {
-    font-family: 'SF Mono', 'Fira Code', monospace;
-  }
-  .muted {
-    color: var(--color-text-muted);
-  }
-  .error-card {
-    border-color: var(--color-danger);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
   }
 </style>

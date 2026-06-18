@@ -39,5 +39,4 @@ export { formatUsdc, formatDate, formatSolscanUrl, truncateHash } from './utils/
 
 // UI Components
 export { Button } from './components/ui/button/index.js';
-export type { ButtonProps, ButtonVariant, ButtonSize } from './components/ui/button/index.js';
 export { cn } from './utils/cn.js';

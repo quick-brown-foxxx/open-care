@@ -1,6 +1,5 @@
 <script lang="ts">
   import { clearToken } from '$lib/state/token.svelte.js';
-  import Button from '$lib/components/ui/button/button.svelte';
 
   let {
     active = '',
@@ -19,10 +18,10 @@
 <nav class="admin-nav">
   <div class="nav-links">
     {#each links as link}
-      <a href={link.href} class:active={active === link.key}>{link.label}</a>
+      <a href={link.href} class="btn btn-sm" class:primary={active === link.key}>{link.label}</a>
     {/each}
   </div>
-  <Button variant="ghost" size="sm" onclick={clearToken}>Выйти</Button>
+  <button class="btn btn-sm" onclick={clearToken}>Выйти</button>
 </nav>
 
 <style>
@@ -31,26 +30,11 @@
     align-items: center;
     justify-content: space-between;
     padding: 0.5rem 0;
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--border-soft);
     margin-bottom: 1.5rem;
   }
   .nav-links {
     display: flex;
-    gap: 1rem;
-  }
-  .nav-links a {
-    font-size: 0.9rem;
-    color: var(--color-text-muted);
-    text-decoration: none;
-    font-weight: 500;
-    padding: 0.25rem 0;
-    border-bottom: 2px solid transparent;
-  }
-  .nav-links a:hover {
-    color: var(--color-primary);
-  }
-  .nav-links a.active {
-    color: var(--color-primary);
-    border-bottom-color: var(--color-primary);
+    gap: 0.5rem;
   }
 </style>

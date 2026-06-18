@@ -3,37 +3,14 @@
 </script>
 
 <svelte:head>
-  <title>{page.status ? `Ошибка ${page.status}` : 'Ошибка'} — Open Care</title>
+  <title>{page.status ? `Ошибка ${page.status}` : 'Ошибка'} — Открытый фонд помощи</title>
 </svelte:head>
 
-<div class="error-page">
+<div style="text-align: center; padding: 4rem 0;">
   <h1>{page.status ? `Ошибка ${page.status}` : 'Произошла ошибка'}</h1>
-  <p>Произошла непредвиденная ошибка. Пожалуйста, попробуйте обновить страницу.</p>
-  <div class="error-links">
-    <a href="/">На главную</a>
-    <a href="/contact">Сообщить о проблеме</a>
+  <p class="lead">Произошла непредвиденная ошибка. Пожалуйста, попробуйте обновить страницу.</p>
+  <div class="cta">
+    <a href="/" class="btn primary">На главную</a>
+    <a href="/contact" class="btn">Сообщить о проблеме</a>
   </div>
 </div>
-
-<style>
-  .error-page {
-    text-align: center;
-    padding: 4rem 0;
-  }
-  .error-page h1 {
-    font-size: 2.5rem;
-    color: var(--color-primary);
-    margin-bottom: 0.5rem;
-  }
-  .error-page p {
-    font-size: 1.1rem;
-    color: var(--color-text-muted);
-    margin-bottom: 2rem;
-  }
-  .error-links {
-    display: flex;
-    gap: 1.5rem;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-</style>

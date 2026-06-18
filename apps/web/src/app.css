@@ -1,76 +1,880 @@
+/* ===================================================================
+ * Open Care — Design System
+ * Based on docs/ui-prototypes/landing.html
+ * =================================================================== */
+
 :root {
-  --color-bg: #fafafa;
-  --color-surface: #ffffff;
-  --color-text: #1a1a2e;
-  --color-text-muted: #6b7280;
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-accent: #059669;
-  --color-border: #e5e7eb;
-  --color-danger: #dc2626;
-  --radius: 0.5rem;
-  --max-width: 72rem;
+  --border: rgba(91, 65, 51, 0.16);
+  --border-soft: rgba(91, 65, 51, 0.12);
+  --muted: #795f53;
+  --title: #35251d;
+  --green: #4f9d69;
+  --amber: #d98151;
+  --blue: #6f82d6;
+  --purple: #b982c7;
+  --link: #7c5fcb;
+  --code: #5e493f;
+  --code-bg: rgba(255, 255, 255, 0.72);
+  --card-bg: #fffaf2;
+  --page-bg: #fff7ec;
+  --rail-muted: rgba(91, 65, 51, 0.13);
+  --rail-main: rgba(91, 65, 51, 0.28);
 }
+
+/* -------------------------------------------------------------------
+ * Reset & Base
+ * ------------------------------------------------------------------- */
 
 *,
 *::before,
 *::after {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
-html {
+body {
+  margin: 0;
+  color: var(--title);
+  background:
+    radial-gradient(circle at 18% 16%, rgba(255, 190, 145, 0.46), transparent 28%),
+    radial-gradient(circle at 84% 18%, rgba(136, 198, 153, 0.34), transparent 30%), var(--page-bg);
   font-family:
+    Inter,
+    ui-sans-serif,
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
     'Segoe UI',
-    Roboto,
-    'Helvetica Neue',
-    Arial,
     sans-serif;
-  line-height: 1.6;
-  color: var(--color-text);
-  background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
+/* -------------------------------------------------------------------
+ * Layout Primitives
+ * ------------------------------------------------------------------- */
+
+.page {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
 
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 30px;
+}
+
+/* -------------------------------------------------------------------
+ * Topline / Header
+ * ------------------------------------------------------------------- */
+
+.topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 42px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 760;
+  letter-spacing: -0.04em;
+  text-decoration: none;
+  color: var(--title);
+}
+
+.mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: #f2b184;
+  color: var(--title);
+  font-weight: 760;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.links {
+  display: flex;
+  gap: 18px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.links a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.links a:hover {
+  color: var(--title);
+}
+
+/* -------------------------------------------------------------------
+ * Hero Grid
+ * ------------------------------------------------------------------- */
+
+.hero {
+  display: grid;
+  grid-template-columns: 0.74fr 1.26fr;
+  gap: 36px;
+  align-items: start;
+}
+
+/* -------------------------------------------------------------------
+ * Typography
+ * ------------------------------------------------------------------- */
+
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.kicker::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+h1 {
+  margin: 0 0 18px;
+  color: var(--title);
+  font-size: clamp(44px, 7vw, 82px);
+  line-height: 0.92;
+  letter-spacing: -0.085em;
+}
+
+h2 {
+  margin: 0 0 12px;
+  color: var(--title);
+  font-size: 1.5rem;
+  letter-spacing: -0.03em;
+}
+
+h3 {
+  margin: 0 0 8px;
+  color: var(--title);
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+}
+
+.lead {
+  margin: 0 0 22px;
+  max-width: 560px;
+  color: #73584d;
+  font-size: 18px;
+  line-height: 1.55;
+}
+
+.note {
+  max-width: 540px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* -------------------------------------------------------------------
+ * Buttons
+ * ------------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(91, 65, 51, 0.2);
+  border-radius: 999px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.52);
+  color: var(--title);
+  font: inherit;
+  font-weight: 760;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.btn:hover {
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn.primary {
+  color: var(--page-bg);
+  background: var(--title);
+  border-color: var(--title);
+}
+
+.btn.primary:hover {
+  background: #4a3528;
+  border-color: #4a3528;
+}
+
+.cta {
+  display: flex;
+  gap: 11px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.btn-sm {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.btn-lg {
+  padding: 14px 20px;
+  font-size: 16px;
+}
+
+/* -------------------------------------------------------------------
+ * Metrics
+ * ------------------------------------------------------------------- */
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.metric {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 13px;
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.metric small {
+  display: block;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.metric b {
+  display: block;
+  letter-spacing: -0.03em;
+}
+
+/* -------------------------------------------------------------------
+ * Feed / Timeline Container
+ * ------------------------------------------------------------------- */
+
+.feed {
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: 0 28px 90px rgba(91, 65, 51, 0.12);
+  overflow: hidden;
+}
+
+.feed-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.feed-head strong {
+  letter-spacing: -0.03em;
+}
+
+.feed-head span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* -------------------------------------------------------------------
+ * Rail Labels
+ * ------------------------------------------------------------------- */
+
+.rail-labels {
+  display: grid;
+  grid-template-columns: 70px 104px 1fr;
+  gap: 12px;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.rail-mini {
+  position: relative;
+  height: 18px;
+}
+
+.rail-mini span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+}
+
+.rail-mini .in {
+  left: 18px;
+  color: var(--green);
+}
+.rail-mini .out {
+  left: 38px;
+  color: var(--amber);
+}
+.rail-mini .proof {
+  left: 58px;
+  color: var(--blue);
+}
+.rail-mini .main {
+  left: 78px;
+  color: var(--title);
+}
+
+/* -------------------------------------------------------------------
+ * Event Row
+ * ------------------------------------------------------------------- */
+
+.event {
+  display: grid;
+  grid-template-columns: 70px 104px 1fr;
+  gap: 12px;
+  min-height: 82px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.event:last-child {
+  border-bottom: 0;
+}
+
+.date {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: right;
+  padding-top: 18px;
+}
+
+.date b {
+  display: block;
+  color: var(--title);
+  font-size: 12px;
+}
+
+/* -------------------------------------------------------------------
+ * Rail & Lanes
+ * ------------------------------------------------------------------- */
+
+.rail {
+  --x-main: 78px;
+  --x-in: 18px;
+  --x-out: 38px;
+  --x-proof: 58px;
+  position: relative;
+  min-height: 82px;
+}
+
+.lane {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--rail-muted);
+}
+
+.lane.main {
+  left: var(--x-main);
+  background: var(--rail-main);
+}
+.lane.in {
+  left: var(--x-in);
+}
+.lane.out {
+  left: var(--x-out);
+}
+.lane.proof {
+  left: var(--x-proof);
+}
+
+.rail.in .lane.in {
+  background: color-mix(in srgb, var(--green) 72%, var(--rail-muted));
+}
+.rail.out .lane.out {
+  background: color-mix(in srgb, var(--amber) 72%, var(--rail-muted));
+}
+.rail.anchor .lane.proof {
+  background: color-mix(in srgb, var(--blue) 72%, var(--rail-muted));
+}
+
+/* -------------------------------------------------------------------
+ * Merge Lines
+ * ------------------------------------------------------------------- */
+
+.merge {
+  position: absolute;
+  top: 32px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--rail-main);
+}
+
+.rail.in .merge {
+  left: var(--x-in);
+  width: 60px;
+  background: linear-gradient(to right, var(--green), var(--rail-main));
+}
+
+.rail.out .merge {
+  left: var(--x-out);
+  width: 40px;
+  background: linear-gradient(to right, var(--amber), var(--rail-main));
+}
+
+.rail.anchor .merge {
+  left: var(--x-proof);
+  width: 20px;
+  background: linear-gradient(to right, var(--blue), var(--rail-main));
+}
+
+.rail.system .merge,
+.rail.head .merge {
+  left: var(--x-main);
+  width: 0;
+}
+
+/* -------------------------------------------------------------------
+ * Nodes
+ * ------------------------------------------------------------------- */
+
+.node {
+  position: absolute;
+  top: 22px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  transform: translateX(-10px);
+  display: grid;
+  place-items: center;
+  z-index: 3;
+  background: var(--page-bg);
+  border: 1px solid var(--border);
+  color: var(--node-color);
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: 0 0 0 5px var(--page-bg);
+}
+
+.rail.in .node {
+  left: var(--x-in);
+  --node-color: var(--green);
+}
+.rail.out .node {
+  left: var(--x-out);
+  --node-color: var(--amber);
+}
+.rail.anchor .node {
+  left: var(--x-proof);
+  --node-color: var(--blue);
+  border-radius: 7px;
+}
+.rail.system .node,
+.rail.head .node {
+  left: var(--x-main);
+  --node-color: var(--purple);
+}
+.rail.head .node {
+  --node-color: var(--blue);
+}
+
+/* -------------------------------------------------------------------
+ * Event Card
+ * ------------------------------------------------------------------- */
+
+.card {
+  align-self: center;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--card-bg);
+  box-shadow: 0 10px 28px rgba(91, 65, 51, 0.07);
+  overflow: hidden;
+}
+
+.card-main {
+  padding: 13px;
+}
+
+.row-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: start;
+  margin-bottom: 8px;
+}
+
+.title {
+  color: var(--title);
+  font-weight: 780;
+  letter-spacing: -0.025em;
+}
+
+.amount {
+  font-weight: 850;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.amount.in {
+  color: var(--green);
+}
+.amount.out {
+  color: var(--amber);
+}
+.amount.anchor {
+  color: var(--blue);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.meta span {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.meta code {
+  color: var(--code);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 1px 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+}
+
+.meta a {
+  color: var(--link);
+  text-decoration: none;
+}
+
+.meta a:hover {
+  text-decoration: underline;
+}
+
+/* -------------------------------------------------------------------
+ * Chips
+ * ------------------------------------------------------------------- */
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 7px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+}
+
+/* -------------------------------------------------------------------
+ * Card Extra (notes section)
+ * ------------------------------------------------------------------- */
+
+.card-extra {
+  border-top: 1px solid var(--border-soft);
+  padding: 10px 13px;
+  background: rgba(255, 255, 255, 0.48);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* -------------------------------------------------------------------
+ * Inline Code
+ * ------------------------------------------------------------------- */
+
+code {
+  color: var(--code);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 1px 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+}
+
+/* -------------------------------------------------------------------
+ * Links
+ * ------------------------------------------------------------------- */
+
 a {
-  color: var(--color-primary);
+  color: var(--link);
   text-decoration: none;
 }
 
 a:hover {
-  color: var(--color-primary-hover);
   text-decoration: underline;
 }
 
-h1 {
-  font-size: 2rem;
-  line-height: 1.2;
-  margin-bottom: 0.5em;
+/* -------------------------------------------------------------------
+ * Standalone Card (for pages beyond the feed)
+ * ------------------------------------------------------------------- */
+
+.standalone-card {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--card-bg);
+  box-shadow: 0 10px 28px rgba(91, 65, 51, 0.07);
+  padding: 20px;
 }
 
-h2 {
-  font-size: 1.5rem;
-  line-height: 1.2;
-  margin-bottom: 0.5em;
+/* -------------------------------------------------------------------
+ * Static Page Content
+ * ------------------------------------------------------------------- */
+
+.static-page {
+  max-width: 48rem;
 }
 
-h3 {
+.static-page h1 {
+  font-size: clamp(32px, 5vw, 56px);
+  margin-bottom: 1.5rem;
+}
+
+.static-page h2 {
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
   font-size: 1.25rem;
-  line-height: 1.2;
-  margin-bottom: 0.5em;
 }
 
-p {
+.static-page p {
+  margin-bottom: 0.75rem;
+  color: #73584d;
+  line-height: 1.55;
+}
+
+.static-page ol,
+.static-page ul {
   margin-bottom: 1rem;
+  padding-left: 1.5rem;
+  color: #73584d;
+}
+
+.static-page li {
+  margin-bottom: 0.5rem;
+  line-height: 1.45;
+}
+
+.static-page strong {
+  color: var(--title);
+}
+
+/* -------------------------------------------------------------------
+ * Form Elements
+ * ------------------------------------------------------------------- */
+
+.form-input {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--title);
+  font: inherit;
+  font-size: 14px;
+  transition: border-color 0.15s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--title);
+}
+
+.form-input::placeholder {
+  color: var(--muted);
+}
+
+.form-select {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--title);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.form-label {
+  display: block;
+  font-weight: 650;
+  font-size: 13px;
+  color: var(--title);
+  margin-bottom: 4px;
+}
+
+.form-hint {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+.form-error {
+  color: #c44;
+  font-size: 13px;
+  margin: 6px 0;
+}
+
+/* -------------------------------------------------------------------
+ * Tables
+ * ------------------------------------------------------------------- */
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 8px 12px;
+  color: var(--muted);
+  font-weight: 650;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: middle;
+}
+
+/* -------------------------------------------------------------------
+ * Skeleton Loading
+ * ------------------------------------------------------------------- */
+
+.skeleton {
+  background: rgba(91, 65, 51, 0.08);
+  border-radius: 8px;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* -------------------------------------------------------------------
+ * Utility: muted text
+ * ------------------------------------------------------------------- */
+
+.text-muted {
+  color: var(--muted);
+}
+
+/* -------------------------------------------------------------------
+ * Responsive: 980px
+ * ------------------------------------------------------------------- */
+
+@media (max-width: 980px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+  .links {
+    display: none;
+  }
+}
+
+/* -------------------------------------------------------------------
+ * Responsive: 760px
+ * ------------------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .wrap {
+    padding: 20px;
+  }
+  .topline {
+    align-items: start;
+    flex-direction: column;
+  }
+  .metrics {
+    grid-template-columns: 1fr;
+  }
+  .rail-labels {
+    display: none;
+  }
+  .event {
+    grid-template-columns: 28px 1fr;
+    padding: 10px 14px;
+  }
+  .date {
+    grid-column: 2;
+    text-align: left;
+    padding-top: 0;
+    order: 2;
+  }
+  .rail {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    min-height: auto;
+  }
+  .rail .lane:not(.main),
+  .rail .merge {
+    display: none;
+  }
+  .rail .lane.main {
+    left: 12px;
+  }
+  .node,
+  .rail.in .node,
+  .rail.out .node,
+  .rail.anchor .node,
+  .rail.system .node,
+  .rail.head .node {
+    left: 12px;
+    top: 10px;
+  }
+  .card {
+    grid-column: 2;
+  }
 }

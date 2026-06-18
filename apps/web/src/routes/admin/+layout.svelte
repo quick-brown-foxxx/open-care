@@ -36,27 +36,13 @@
   <title>Администрирование — Open Care</title>
 </svelte:head>
 
-<section class="admin-layout">
+<div class="wrap">
   {#if !authed}
-    <div class="gate-wrapper">
-      <TokenGate />
-    </div>
+    <TokenGate />
   {:else}
     <AdminNav active={activeTab} />
     <main>
       {@render children()}
     </main>
   {/if}
-</section>
-
-<style>
-  .admin-layout {
-    max-width: var(--max-width);
-    margin: 0 auto;
-    padding: 2rem 1.5rem;
-  }
-  .gate-wrapper {
-    max-width: 28rem;
-    margin: 4rem auto;
-  }
-</style>
+</div>

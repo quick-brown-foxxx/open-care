@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import { cn } from '$lib/utils/cn.js';
 
   let {
@@ -6,50 +7,20 @@
     class: className = '',
     children,
   }: {
-    variant?: 'default' | 'accent' | 'danger' | 'muted';
+    variant?: 'default' | 'green' | 'amber' | 'blue' | 'purple';
     class?: string;
-    children: import('svelte').Snippet;
+    children: Snippet;
   } = $props();
 
-  const variantClasses: Record<string, string> = {
-    default: 'badge-default',
-    accent: 'badge-accent',
-    danger: 'badge-danger',
-    muted: 'badge-muted',
+  const variantColors: Record<string, string> = {
+    default: 'var(--muted)',
+    green: '#4f9d69',
+    amber: '#d98151',
+    blue: '#6f82d6',
+    purple: '#b982c7',
   };
 </script>
 
-<span class={cn('badge', variantClasses[variant], className)}>
+<span class={cn('chip', className)} style="color: {variantColors[variant]}">
   {@render children()}
 </span>
-
-<style>
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.125rem 0.5rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    line-height: 1.4;
-    border-radius: 9999px;
-    white-space: nowrap;
-    text-transform: uppercase;
-    letter-spacing: 0.025em;
-  }
-  .badge-default {
-    background: #e5e7eb;
-    color: #374151;
-  }
-  .badge-accent {
-    background: #d1fae5;
-    color: #065f46;
-  }
-  .badge-danger {
-    background: #fee2e2;
-    color: #991b1b;
-  }
-  .badge-muted {
-    background: #f3f4f6;
-    color: #6b7280;
-  }
-</style>

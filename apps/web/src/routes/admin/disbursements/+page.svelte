@@ -4,12 +4,9 @@
     type DisbursementBody,
     type DisbursementResponse,
   } from '$lib/api/operator.js';
-  import Card from '$lib/components/ui/card/card.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
-  import Input from '$lib/components/ui/input/input.svelte';
-  import Select from '$lib/components/ui/select/select.svelte';
-  import Button from '$lib/components/ui/button/button.svelte';
   import HashDisplay from '$lib/components/public/HashDisplay.svelte';
+
   let amount = $state('');
   let giftCardCount = $state(1);
   let service = $state('Alter');
@@ -98,7 +95,7 @@
   <h1>Запись выплаты</h1>
 
   {#if result}
-    <Card class="success-card">
+    <div class="standalone-card" style="background: #f0fdf4; border-color: var(--green);">
       <h2>Выплата записана</h2>
       <dl class="result-grid">
         <dt>Номер</dt>
@@ -114,43 +111,43 @@
       </dl>
       <p><a href="/ledger/{result.event_hash}">Открыть в реестре →</a></p>
       <p>Следующий шаг: <a href="/admin/bot">отправить код через бота →</a></p>
-      <Button variant="outline" onclick={resetForm}>Новая выплата</Button>
-    </Card>
+      <button class="btn" onclick={resetForm}>Новая выплата</button>
+    </div>
   {:else}
-    <Card>
+    <div class="standalone-card">
       <form onsubmit={handleSubmit}>
         <div class="form-grid">
           <label>
-            <span class="field-label">Сумма (USDC)</span>
-            <Input
+            <span class="form-label">Сумма (USDC)</span>
+            <input
+              class="form-input"
               type="text"
               placeholder="50.00"
-              value={amount}
-              oninput={(e) => (amount = (e.target as HTMLInputElement).value)}
+              bind:value={amount}
               disabled={submitting}
             />
-            <span class="field-hint">Например: 50.00 = 50 USDC</span>
+            <span class="form-hint">Например: 50.00 = 50 USDC</span>
           </label>
 
           <label>
-            <span class="field-label">Количество сертификатов</span>
-            <Input
+            <span class="form-label">Количество сертификатов</span>
+            <input
+              class="form-input"
               type="number"
               value={String(giftCardCount)}
               oninput={(e) => (giftCardCount = parseInt((e.target as HTMLInputElement).value) || 1)}
               disabled={submitting}
             />
-            <span class="field-hint">1–1000</span>
+            <span class="form-hint">1–1000</span>
           </label>
 
           <label>
-            <span class="field-label">Сервис</span>
-            <Select
-              value={service}
-              onchange={(e) => {
-                const newService = (e.target as HTMLSelectElement).value;
-                service = newService;
-                if (newService !== 'Other') serviceNote = '';
+            <span class="form-label">Сервис</span>
+            <select
+              class="form-select"
+              bind:value={service}
+              onchange={() => {
+                if (service !== 'Other') serviceNote = '';
               }}
               disabled={submitting}
             >
@@ -158,37 +155,37 @@
               <option value="Yasno">Yasno</option>
               <option value="Zigmund">Zigmund</option>
               <option value="Other">Другой</option>
-            </Select>
+            </select>
           </label>
 
           {#if service === 'Other'}
             <label>
-              <span class="field-label">Примечание (обязательно для «Другой»)</span>
-              <Input
+              <span class="form-label">Примечание (обязательно для «Другой»)</span>
+              <input
+                class="form-input"
                 type="text"
                 placeholder="Название сервиса"
-                value={serviceNote}
-                oninput={(e) => (serviceNote = (e.target as HTMLInputElement).value)}
+                bind:value={serviceNote}
                 disabled={submitting}
               />
-              <span class="field-hint">1–64 символа</span>
+              <span class="form-hint">1–64 символа</span>
             </label>
           {/if}
 
           <label>
-            <span class="field-label">Номер чека</span>
-            <Input
+            <span class="form-label">Номер чека</span>
+            <input
+              class="form-input"
               type="text"
               placeholder="ALTER-2026-06-14-A1B2C3"
-              value={receiptRef}
-              oninput={(e) => (receiptRef = (e.target as HTMLInputElement).value)}
+              bind:value={receiptRef}
               disabled={submitting}
             />
-            <span class="field-hint">4–64 символов (буквы, цифры, дефис)</span>
+            <span class="form-hint">4–64 символов (буквы, цифры, дефис)</span>
           </label>
 
           <fieldset>
-            <legend class="field-label">Публичная ссылка на получателя</legend>
+            <legend class="form-label">Публичная ссылка на получателя</legend>
             <label class="radio-label">
               <input
                 type="radio"
@@ -214,14 +211,14 @@
           </fieldset>
 
           <label>
-            <span class="field-label">Дата и время покупки (UTC)</span>
-            <Input
+            <span class="form-label">Дата и время покупки (UTC)</span>
+            <input
+              class="form-input"
               type="datetime-local"
-              value={purchasedAtUtc}
-              oninput={(e) => (purchasedAtUtc = (e.target as HTMLInputElement).value)}
+              bind:value={purchasedAtUtc}
               disabled={submitting}
             />
-            <span class="field-hint">Оставьте пустым для текущего времени</span>
+            <span class="form-hint">Оставьте пустым для текущего времени</span>
           </label>
         </div>
 
@@ -229,17 +226,17 @@
           <p class="form-error">{error}</p>
         {/if}
 
-        <p class="form-note">
+        <p class="text-muted" style="font-size: 0.8rem; margin: 0.5rem 0; line-height: 1.4;">
           Ошибки исправляются через отдельное корректирующее событие. Не отправляйте форму повторно
           для исправления ошибки. Если доставка кода не удалась, не записывайте выплату заново —
           повторите отправку кода через страницу бота.
         </p>
 
-        <Button type="submit" variant="primary" disabled={submitting}>
+        <button class="btn primary" type="submit" disabled={submitting}>
           {submitting ? 'Отправка...' : 'Записать выплату'}
-        </Button>
+        </button>
       </form>
-    </Card>
+    </div>
   {/if}
 </section>
 
@@ -251,30 +248,6 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
-  }
-  .field-label {
-    display: block;
-    font-weight: 600;
-    font-size: 0.85rem;
-    margin-bottom: 0.25rem;
-    color: var(--color-text);
-  }
-  .field-hint {
-    display: block;
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-    margin-top: 0.125rem;
-  }
-  .form-error {
-    color: var(--color-danger);
-    font-size: 0.85rem;
-    margin: 0.5rem 0;
-  }
-  .form-note {
-    font-size: 0.8rem;
-    color: var(--color-text-muted);
-    margin: 0.5rem 0;
-    line-height: 1.4;
   }
   .radio-label {
     display: flex;
@@ -288,10 +261,6 @@
     border: none;
     padding: 0;
   }
-  .success-card {
-    background: #f0fdf4;
-    border-color: var(--color-accent);
-  }
   .result-grid {
     display: grid;
     grid-template-columns: auto 1fr;
@@ -301,13 +270,6 @@
   .result-grid dt {
     font-weight: 600;
     font-size: 0.85rem;
-    color: var(--color-text-muted);
-  }
-  .result-grid code {
-    font-family: 'SF Mono', 'Fira Code', monospace;
-    font-size: 0.8rem;
-    background: #f3f4f6;
-    padding: 0.125rem 0.375rem;
-    border-radius: 3px;
+    color: var(--muted);
   }
 </style>

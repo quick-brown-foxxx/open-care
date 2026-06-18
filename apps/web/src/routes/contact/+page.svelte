@@ -44,27 +44,3 @@
     issue приватные ключи, seed-фразы, коды сертификатов или личные данные.
   </p>
 </section>
-
-<style>
-  .static-page {
-    max-width: 48rem;
-  }
-  .static-page h1 {
-    margin-bottom: 1.5rem;
-  }
-  .static-page h2 {
-    margin-top: 2rem;
-    margin-bottom: 0.75rem;
-    font-size: 1.25rem;
-  }
-  .static-page p {
-    margin-bottom: 0.75rem;
-  }
-  .static-page ul {
-    margin-bottom: 1rem;
-    padding-left: 1.5rem;
-  }
-  .static-page li {
-    margin-bottom: 0.5rem;
-  }
-</style>
