@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { anchorRuns } from '@open-care/vault-db/schema/vault-db';
 import { appendLedgerEvent } from '@open-care/vault-db';
 import type { VaultDb } from '@open-care/vault-db';
@@ -7,6 +7,21 @@ import type { Cluster } from '@open-care/vault-core';
 import { getTransaction, getBalance } from './solana';
 import type { Connection } from '@solana/web3.js';
 import { PublicKey } from '@solana/web3.js';
+
+async function anchorPublishedEventExists(
+  db: VaultDb,
+  txSignature: string,
+  anchoredHeadHash: string,
+): Promise<boolean> {
+  const rows = await db.all(
+    sql`SELECT 1 FROM ledger_events
+        WHERE event_type = 'anchor_published'
+          AND json_extract(payload_json, '$.tx_signature') = ${txSignature}
+          AND json_extract(payload_json, '$.anchored_head_hash') = ${anchoredHeadHash}
+        LIMIT 1`,
+  );
+  return rows.length > 0;
+}
 
 export async function recoverStaleLock(
   db: VaultDb,
@@ -26,6 +41,53 @@ export async function recoverStaleLock(
       );
       const solBalance = balanceResult.ok ? balanceResult.value : 0;
 
+      const headHash = parseAnchorMemo(staleRow.memo_text);
+      if (!headHash) {
+        throw new Error('Failed to backfill anchor_published event: invalid anchor memo');
+      }
+      if (headHash !== staleRow.anchored_head_hash) {
+        throw new Error('Failed to backfill anchor_published event: memo hash mismatch');
+      }
+
+      const alreadyBackfilled = await anchorPublishedEventExists(
+        db,
+        staleRow.tx_signature,
+        staleRow.anchored_head_hash,
+      );
+
+      if (!alreadyBackfilled) {
+        // Recovered event timestamps must come from the finalized on-chain
+        // transaction block time when creating a new backfill.
+        const blockTime = txResult.value.blockTime;
+        if (blockTime === null || blockTime === undefined) {
+          throw new Error(
+            'Failed to backfill anchor_published event: missing transaction blockTime',
+          );
+        }
+
+        const publishedAtUtc = new Date(blockTime * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+
+        const appendResult = await appendLedgerEvent(db, {
+          event_type: 'anchor_published',
+          payload: {
+            anchor_date: staleRow.anchor_date,
+            anchored_head_sequence_no: staleRow.anchored_head_sequence_no,
+            anchored_head_hash: staleRow.anchored_head_hash,
+            tx_signature: staleRow.tx_signature,
+            anchor_wallet_address: staleRow.anchor_wallet_address,
+            memo_text: staleRow.memo_text,
+            published_at_utc: publishedAtUtc,
+            cluster,
+          },
+          created_at_utc: publishedAtUtc,
+        });
+        if (!appendResult.ok) {
+          throw new Error(
+            `Failed to backfill anchor_published event: ${appendResult.error.message}`,
+          );
+        }
+      }
+
       await db
         .update(anchorRuns)
         .set({
@@ -36,36 +98,6 @@ export async function recoverStaleLock(
           updated_at_utc: utcNow(),
         })
         .where(eq(anchorRuns.id, staleRow.id));
-
-      // Backfill ledger event if not already present
-      // We use the blockTime from the transaction if available
-      const blockTime = txResult.value.blockTime;
-      const publishedAtUtc = blockTime
-        ? new Date(blockTime * 1000).toISOString()
-        : staleRow.created_at_utc;
-
-      const headHash = parseAnchorMemo(staleRow.memo_text);
-      if (headHash) {
-        // Try to append — may fail if already exists (unique constraint on event_hash)
-        try {
-          await appendLedgerEvent(db, {
-            event_type: 'anchor_published',
-            payload: {
-              anchor_date: staleRow.anchor_date,
-              anchored_head_sequence_no: staleRow.anchored_head_sequence_no,
-              anchored_head_hash: staleRow.anchored_head_hash,
-              tx_signature: staleRow.tx_signature,
-              anchor_wallet_address: staleRow.anchor_wallet_address,
-              memo_text: staleRow.memo_text,
-              published_at_utc: publishedAtUtc,
-              cluster,
-            },
-            created_at_utc: publishedAtUtc,
-          });
-        } catch {
-          // Ledger event may already exist — ignore
-        }
-      }
       return;
     }
   }

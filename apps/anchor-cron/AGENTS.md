@@ -65,6 +65,6 @@ rate limit, then forwards).
 
 - **Sole holder of `ANCHOR_WALLET_SECRET`.** The anchor wallet key never leaves this Worker.
 - Lock protocol prevents concurrent anchor attempts (10-minute DB-level mutex)
-- Stale lock recovery: if lock expired, checks Solana for tx before failing
-- On success: appends `anchor_published` to ledger. If ledger append fails, logs error but does NOT fail the anchor — the on-chain record is the source of truth.
+- Stale lock recovery: if lock expired, checks Solana for tx before failing; if a finalized tx exists, backfills `anchor_published` and propagates append failures.
+- New anchor success: appends `anchor_published` to ledger. If this append fails after the Solana tx succeeds, logs error but does NOT fail the anchor — the on-chain record is the source of truth.
 - `last_anchor_wallet_sol_lamports` written to `anchor_runs` for health monitoring by `api-read`

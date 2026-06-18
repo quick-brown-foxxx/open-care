@@ -1,6 +1,7 @@
 import { env, SELF } from 'cloudflare:test';
 import { createVaultDb, getEventsPaginated, getHead } from '@open-care/vault-db';
 import { anchorRuns, ledgerEvents } from '@open-care/vault-db/schema/vault-db';
+import { computeEventHash, isAnchorPayload } from '@open-care/vault-core';
 import { eq } from 'drizzle-orm';
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
@@ -145,8 +146,13 @@ describe('Anchor Cron Worker', () => {
 
   describe('stale lock recovery — with tx_signature', () => {
     it('backfills stale lock to published, then proceeds to publish', async () => {
+      const staleHeadHash = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
       await seedStaleLockWithTx(db);
-      const { hash } = await seedLedgerEvent(db);
+      await db
+        .update(anchorRuns)
+        .set({ memo_text: `ccv-anchor:${staleHeadHash}` })
+        .where(eq(anchorRuns.anchored_head_hash, staleHeadHash));
+      await seedLedgerEvent(db);
 
       const response = await SELF.fetch(postManual());
 
@@ -159,13 +165,22 @@ describe('Anchor Cron Worker', () => {
       // Should have at least 2 published rows: the recovered stale + the new anchor
       expect(publishedRows.length).toBeGreaterThanOrEqual(2);
 
-      const recoveredStale = publishedRows.find(
-        (r) =>
-          r.anchored_head_hash ===
-          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-      );
+      const recoveredStale = publishedRows.find((r) => r.anchored_head_hash === staleHeadHash);
       expect(recoveredStale).toBeDefined();
       expect(recoveredStale!.locked_until_utc).toBeNull();
+
+      const recoveredAnchorEvents = await getEventsPaginated(db, {
+        eventType: 'anchor_published',
+        limit: 10,
+      });
+      const recoveredAnchorEvent = recoveredAnchorEvents.items.find(
+        (event) =>
+          isAnchorPayload(event.payload) && event.payload.anchored_head_hash === staleHeadHash,
+      );
+      expect(recoveredAnchorEvent).toBeDefined();
+      if (!recoveredAnchorEvent) {
+        throw new Error('Expected recovered anchor_published event');
+      }
 
       // The pipeline should then proceed and publish the new head
       expect(response.status).toBe(200);
@@ -174,7 +189,7 @@ describe('Anchor Cron Worker', () => {
         anchored_head_hash: string;
       };
       expect(body.status).toBe('published');
-      expect(body.anchored_head_hash).toBe(hash);
+      expect(body.anchored_head_hash).toBe(recoveredAnchorEvent.event_hash);
     });
   });
 
@@ -317,9 +332,7 @@ describe('Anchor Cron Worker', () => {
   //
   // This test simulates the failure by deleting the ledger event after a
   // successful run, then re-running the pipeline to verify the anchor_runs
-  // row is recovered.  The ledger event backfill is verified separately
-  // because the mock's blockTime produces millisecond-precision timestamps
-  // that fail isValidTimestamp validation in appendLedgerEvent.
+  // row and ledger event are recovered.
   //
   // Note: createKeypair and sendMemoTransaction failure tests cannot be
   // implemented with the current test infrastructure because
@@ -367,7 +380,7 @@ describe('Anchor Cron Worker', () => {
       expect(eventsAfterDelete.items.length).toBe(0);
 
       // Re-seed the donation event (it was deleted too)
-      await seedLedgerEvent(db);
+      const recoveredDonation = await seedLedgerEvent(db);
 
       // Change the anchor_runs row to simulate a stale lock (tx succeeded
       // but ledger append "failed", leaving the row in sending state with
@@ -384,7 +397,7 @@ describe('Anchor Cron Worker', () => {
 
       // Second run: recovery should detect the stale lock, find the tx
       // on-chain (mocked via outboundService), and recover the row
-      const result2 = await runAnchor(db, env, 'operator-manual');
+      await runAnchor(db, env, 'operator-manual');
 
       // The stale lock should be recovered to published
       const recoveredRow = await db
@@ -396,9 +409,43 @@ describe('Anchor Cron Worker', () => {
       expect(recoveredRow[0].status).toBe('published');
       expect(recoveredRow[0].locked_until_utc).toBeNull();
 
-      // The pipeline should then return already_published
-      // (the head is now anchored by the recovered row)
-      expect(result2.status).toBe('already_published');
+      // The recovery backfill should append an anchor_published ledger event
+      // at the on-chain block time, linked after the re-seeded donation event.
+      const recoveredEvents = await getEventsPaginated(db, { limit: 10 });
+      const recoveredDonationEvent = recoveredEvents.items.find(
+        (event) => event.event_hash === recoveredDonation.hash,
+      );
+      if (!recoveredDonationEvent) {
+        throw new Error('Expected recovered donation event');
+      }
+
+      expect(recoveredDonationEvent.event_type).toBe('donation_confirmed');
+      expect(recoveredDonationEvent.event_hash).toBe(recoveredDonation.hash);
+
+      const expectedBlockTimeUtc = '2024-04-05T19:34:38Z';
+      const backfilledAnchorEvent = recoveredEvents.items.find(
+        (event) =>
+          event.event_type === 'anchor_published' &&
+          isAnchorPayload(event.payload) &&
+          event.payload.anchored_head_hash === recoveredDonation.hash &&
+          event.created_at_utc === expectedBlockTimeUtc,
+      );
+      expect(backfilledAnchorEvent).toBeDefined();
+      if (!backfilledAnchorEvent) {
+        throw new Error('Expected recovered anchor_published event');
+      }
+
+      expect(backfilledAnchorEvent.sequence_no).toBe(recoveredDonationEvent.sequence_no + 1);
+      expect(backfilledAnchorEvent.prev_hash).toBe(recoveredDonationEvent.event_hash);
+      expect(backfilledAnchorEvent.created_at_utc).toBe(expectedBlockTimeUtc);
+      expect(backfilledAnchorEvent.event_hash).toMatch(/^[0-9a-f]{64}$/);
+      expect(backfilledAnchorEvent.event_hash).toBe(await computeEventHash(backfilledAnchorEvent));
+      expect(isAnchorPayload(backfilledAnchorEvent.payload)).toBe(true);
+      if (!isAnchorPayload(backfilledAnchorEvent.payload)) {
+        throw new Error('Expected backfilled anchor payload');
+      }
+      expect(backfilledAnchorEvent.payload.anchored_head_hash).toBe(recoveredDonation.hash);
+      expect(backfilledAnchorEvent.payload.published_at_utc).toBe(expectedBlockTimeUtc);
     });
   });
 });
