@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { createVaultDb } from '@open-care/vault-db';
+import { logInfo, logWarn, logError } from '@open-care/vault-core';
 import type { Env } from '../lib/env';
 import { runAnchor } from '../lib/anchor-pipeline';
 import { conflictError, serviceUnavailableError } from '../lib/errors';
@@ -12,6 +13,12 @@ manual.post('/api/anchor/manual', async (c) => {
 
   switch (result.status) {
     case 'published':
+      logInfo('Manual anchor published', {
+        anchored_head_sequence_no: result.anchored_head_sequence_no,
+        tx_signature: result.tx_signature.slice(0, 8) + '...',
+        duration_ms: result.duration_ms,
+        trigger_source: 'operator-manual',
+      });
       return c.json(
         {
           status: result.status,
@@ -25,6 +32,10 @@ manual.post('/api/anchor/manual', async (c) => {
       );
 
     case 'already_published':
+      logInfo('Manual anchor: already published', {
+        anchored_head_sequence_no: result.anchored_head_sequence_no,
+        trigger_source: 'operator-manual',
+      });
       return c.json(
         {
           status: result.status,
@@ -36,6 +47,7 @@ manual.post('/api/anchor/manual', async (c) => {
       );
 
     case 'empty_ledger':
+      logInfo('Manual anchor skipped: empty ledger', { trigger_source: 'operator-manual' });
       return c.json(
         {
           status: result.status,
@@ -45,9 +57,14 @@ manual.post('/api/anchor/manual', async (c) => {
       );
 
     case 'conflict':
+      logWarn('Manual anchor conflict', { trigger_source: 'operator-manual' });
       return conflictError(result.error.message);
 
     case 'failed':
+      logError('Manual anchor failed', {
+        error: result.error.message,
+        trigger_source: 'operator-manual',
+      });
       return serviceUnavailableError(result.error.message);
   }
 });

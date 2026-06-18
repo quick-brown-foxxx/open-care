@@ -2,6 +2,7 @@ import { and, eq, lt, inArray, sql } from 'drizzle-orm';
 import { vaultSchema, appendLedgerEvent } from '@open-care/vault-db';
 import type { VaultDb } from '@open-care/vault-db';
 import type { DonationPayload, Cluster } from '@open-care/vault-core';
+import { logInfo, logError } from '@open-care/vault-core';
 import type { Env } from './env.js';
 import { fetchTransaction, parseSplTransfer } from './solana-rpc.js';
 
@@ -155,6 +156,12 @@ export async function processInbox(
         });
       } else {
         // Non-retryable or exhausted attempts
+        logError('Inbox row failed permanently', {
+          signature: row.signature.slice(0, 8) + '...',
+          source: row.source,
+          reason: rpcError.message,
+          attempt_count: newAttemptCount,
+        });
         await updateInboxStatus(db, row.signature, row.source, {
           status: 'failed',
           reason: rpcError.message,
@@ -230,6 +237,15 @@ export async function processInbox(
       status: 'processed',
     });
     processed++;
+  }
+
+  if (processed > 0 || ignored > 0 || failed > 0) {
+    logInfo('Inbox processing completed', {
+      processed,
+      ignored,
+      failed,
+      total_rows: rows.length,
+    });
   }
 
   return { processed, ignored, failed };

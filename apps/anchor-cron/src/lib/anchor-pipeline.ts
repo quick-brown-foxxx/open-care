@@ -1,6 +1,6 @@
 import { getHead, appendLedgerEvent } from '@open-care/vault-db';
 import type { VaultDb } from '@open-care/vault-db';
-import { buildAnchorMemo } from '@open-care/vault-core';
+import { buildAnchorMemo, logInfo, logError } from '@open-care/vault-core';
 import type { Cluster } from '@open-care/vault-core';
 import { createConnection, createKeypair, sendMemoTransaction, getBalance } from './solana';
 import {
@@ -54,6 +54,8 @@ export async function runAnchor(
   triggerSource: 'cron' | 'operator-manual',
 ): Promise<AnchorRunResult> {
   const startTime = Date.now();
+
+  logInfo('Anchor run started', { trigger_source: triggerSource });
 
   // Step 0: Recover any stale locks first
   const staleLocks = await findStaleLocks(db);
@@ -165,9 +167,10 @@ export async function runAnchor(
 
   if (!appendResult.ok) {
     // Ledger append failed but transaction succeeded — log but don't fail the anchor
-    console.error(
-      `Anchor tx ${txSignature} succeeded but ledger append failed: ${appendResult.error.message}`,
-    );
+    logError('Anchor tx succeeded but ledger append failed', {
+      tx_signature: txSignature.slice(0, 8) + '...',
+      error: appendResult.error.message,
+    });
   }
 
   return {

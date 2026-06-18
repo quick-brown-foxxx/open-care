@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { ZodError } from 'zod';
 import { createVaultDb, appendLedgerEvent } from '@open-care/vault-db';
 import type { VaultDb } from '@open-care/vault-db';
-import { generateBeneficiaryRef } from '@open-care/vault-core';
+import { generateBeneficiaryRef, logInfo, logError } from '@open-care/vault-core';
 import type { DisbursementPayload, LedgerEvent } from '@open-care/vault-core';
 import type { Env } from '../lib/env.js';
 import { generateRequestId } from '../lib/request-id.js';
@@ -24,6 +24,17 @@ import type { DisbursementRequest } from '../lib/schema.js';
  */
 function nowUtc(): string {
   return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
+function categorizeAmount(amountUsdcMinor: string): 'small' | 'medium' | 'large' {
+  try {
+    const n = BigInt(amountUsdcMinor);
+    if (n < 1_000_000n) return 'small';
+    if (n < 100_000_000n) return 'medium';
+    return 'large';
+  } catch {
+    return 'medium';
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -99,10 +110,22 @@ disbursementsRoute.post('/api/disbursements', async (c) => {
 
   // 9. Handle Result
   if (!result.ok) {
+    logError('Disbursement ledger append failed', {
+      error: result.error.message,
+      requestId,
+    });
     return internalErrorResponse(`Ledger append failed: ${result.error.message}`, requestId);
   }
 
   const event: LedgerEvent = result.value;
+
+  logInfo('Disbursement recorded', {
+    sequence_no: event.sequence_no,
+    amount_category: categorizeAmount(data.amount_usdc_minor),
+    gift_card_count: data.gift_card_count,
+    service: data.service,
+    requestId,
+  });
 
   return c.json(
     {

@@ -4,6 +4,7 @@ import { authMiddleware } from '../lib/auth.js';
 import { badRequestResponse } from '../lib/errors.js';
 import { insertIntoInbox, processInbox, nowIso } from '../lib/inbox.js';
 import { createVaultDb } from '@open-care/vault-db';
+import { logInfo } from '@open-care/vault-core';
 
 const webhookRoute = new Hono<HonoEnv>();
 
@@ -49,6 +50,12 @@ webhookRoute.post('/', async (c) => {
 
   // Insert into inbox
   const result = await insertIntoInbox(db, entries);
+
+  logInfo('Webhook received', {
+    event_count: body.length,
+    accepted: result.accepted,
+    duplicates: result.duplicates,
+  });
 
   // Launch async processing after response
   c.executionCtx.waitUntil(processInbox(db, c.env));

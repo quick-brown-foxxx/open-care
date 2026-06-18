@@ -1,4 +1,5 @@
 import { errorResponse } from './errors';
+import { logInfo, logError } from '@open-care/vault-core';
 
 /**
  * Forward a request to a downstream Worker via service binding.
@@ -12,8 +13,16 @@ export async function forwardToService(fetcher: Fetcher, request: Request): Prom
     // than the operator Worker, even over in-process service bindings.
     const forwarded = new Request(request);
     forwarded.headers.delete('Authorization');
-    return await fetcher.fetch(forwarded);
+    const response = await fetcher.fetch(forwarded);
+    logInfo('Service forward succeeded', {
+      status: response.status,
+      path: new URL(request.url).pathname,
+    });
+    return response;
   } catch {
+    logError('Service forward failed', {
+      path: new URL(request.url).pathname,
+    });
     return errorResponse('UNAVAILABLE', 'Downstream service unreachable.', 503);
   }
 }

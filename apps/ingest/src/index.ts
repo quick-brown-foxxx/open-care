@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { HonoEnv } from './lib/env.js';
 import { createVaultDb } from '@open-care/vault-db';
+import { logInfo, logError } from '@open-care/vault-core';
 import { reconcileMissedSignatures } from './lib/reconciliation.js';
 import { processInbox } from './lib/inbox.js';
 import webhookRoute from './routes/webhook.js';
@@ -29,11 +30,14 @@ async function scheduled(
   const result = await reconcileMissedSignatures(db, env);
 
   if (result.ok) {
-    console.log(
-      `[scheduled-reconcile] inserted=${result.value.inserted} skipped=${result.value.skipped}`,
-    );
+    logInfo('Scheduled reconciliation completed', {
+      inserted: result.value.inserted,
+      skipped: result.value.skipped,
+    });
   } else {
-    console.error(`[scheduled-reconcile] error: ${result.error.message}`);
+    logError('Scheduled reconciliation failed', {
+      error: result.error.message,
+    });
   }
 
   // Process any new inbox rows (including those just inserted by reconciliation)

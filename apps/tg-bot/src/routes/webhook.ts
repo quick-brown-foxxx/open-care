@@ -1,5 +1,6 @@
 import type { Context } from 'hono';
 import type { BotDb } from '@open-care/vault-db';
+import { logInfo, logWarn } from '@open-care/vault-core';
 import { verifyWebhookSecret } from '../lib/auth.js';
 import { parseUpdate, extractCommand, sendTelegramMessage } from '../lib/telegram-api.js';
 import { handleStart } from '../commands/start.js';
@@ -39,6 +40,7 @@ export async function webhookHandler(
   // 1. Verify webhook secret
   const headerValue = c.req.header('X-Telegram-Bot-Api-Secret-Token');
   if (!verifyWebhookSecret(headerValue, webhookSecret)) {
+    logWarn('Webhook secret verification failed');
     // Always return ok to Telegram — don't leak that the secret is wrong
     return c.json({ ok: true });
   }
@@ -90,6 +92,11 @@ export async function webhookHandler(
       // Unknown command — ignore
       return c.json({ ok: true });
   }
+
+  logInfo('Bot command received', {
+    command: cmd.command,
+    has_arg: cmd.arg !== '' && cmd.arg !== undefined,
+  });
 
   // 5. Send the reply back to the user
   if (replyText && update.message.chat?.id !== undefined) {

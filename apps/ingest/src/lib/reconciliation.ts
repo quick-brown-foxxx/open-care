@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { vaultSchema } from '@open-care/vault-db';
 import type { VaultDb } from '@open-care/vault-db';
-import { ok, err } from '@open-care/vault-core';
+import { ok, err, logInfo, logError } from '@open-care/vault-core';
 import type { Result } from '@open-care/vault-core';
 import type { Env } from './env.js';
 import { fetchSignaturesForAddress } from './solana-rpc.js';
@@ -49,6 +49,9 @@ export async function reconcileMissedSignatures(
     );
 
     if (!sigsResult.ok) {
+      logError('Reconciliation RPC fetch failed', {
+        error: sigsResult.error.message,
+      });
       return err(new Error(`Reconciliation RPC error: ${sigsResult.error.message}`));
     }
 
@@ -96,6 +99,12 @@ export async function reconcileMissedSignatures(
 
       inserted++;
     }
+
+    logInfo('Reconciliation scan completed', {
+      signatures_fetched: signatures.length,
+      inserted,
+      skipped,
+    });
 
     return ok({ inserted, skipped });
   } catch (error) {

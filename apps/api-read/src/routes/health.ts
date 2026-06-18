@@ -48,6 +48,7 @@ function isAnchorWalletLowSol(
 // ---------------------------------------------------------------------------
 
 app.get('/api/health', async (c) => {
+  const startTime = Date.now();
   const db = createVaultDb(c.env.vault_db);
 
   // Each check defaults to false; set to true when the condition passes.
@@ -106,10 +107,15 @@ app.get('/api/health', async (c) => {
     ingestRecentOrEmpty &&
     heliusInboxBacklogOk;
 
+  const responseTimeMs = Date.now() - startTime;
+  const version = c.env.DEPLOY_VERSION ?? '0.0.0';
+
   withCache(c);
   return c.json(
     {
       status: allOk ? 'ok' : 'degraded',
+      version,
+      response_time_ms: responseTimeMs,
       checks: {
         db_reachable: dbReachable,
         anchor_stale: anchorStale,

@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { createVaultDb } from '@open-care/vault-db';
+import { logInfo, logWarn, logError } from '@open-care/vault-core';
 import type { Env } from './lib/env';
 import { runAnchor } from './lib/anchor-pipeline';
 import health from './routes/health';
@@ -16,17 +17,27 @@ async function scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext
   const result = await runAnchor(db, env, 'cron');
 
   if (result.status === 'published') {
-    console.log(
-      `Anchor published: seq=${result.anchored_head_sequence_no} hash=${result.anchored_head_hash} sig=${result.tx_signature} duration=${result.duration_ms}ms`,
-    );
+    logInfo('Anchor published', {
+      anchored_head_sequence_no: result.anchored_head_sequence_no,
+      anchored_head_hash: result.anchored_head_hash.slice(0, 8) + '...',
+      tx_signature: result.tx_signature.slice(0, 8) + '...',
+      duration_ms: result.duration_ms,
+      trigger_source: 'cron',
+    });
   } else if (result.status === 'already_published') {
-    console.log(`Anchor already published for head seq=${result.anchored_head_sequence_no}`);
+    logInfo('Anchor already published', {
+      anchored_head_sequence_no: result.anchored_head_sequence_no,
+      trigger_source: 'cron',
+    });
   } else if (result.status === 'empty_ledger') {
-    console.log('Ledger empty, nothing to anchor');
+    logInfo('Anchor skipped: empty ledger', { trigger_source: 'cron' });
   } else if (result.status === 'conflict') {
-    console.log('Anchor run conflict: another run in progress');
+    logWarn('Anchor run conflict', { trigger_source: 'cron' });
   } else if (result.status === 'failed') {
-    console.error(`Anchor failed: ${result.error.message}`);
+    logError('Anchor failed', {
+      error: result.error.message,
+      trigger_source: 'cron',
+    });
   }
 
   // Ensure the async work completes

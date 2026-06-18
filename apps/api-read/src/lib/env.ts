@@ -13,4 +13,5 @@ export interface Env {
   VAULT_USDC_ATA: string;
   ANCHOR_WALLET_ADDRESS: string;
   SITE_URL: string;
+  DEPLOY_VERSION?: string;
 }

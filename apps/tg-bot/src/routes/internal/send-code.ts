@@ -1,6 +1,6 @@
 import type { Context } from 'hono';
 import type { BotDb } from '@open-care/vault-db';
-import { isValidBeneficiaryRef } from '@open-care/vault-core';
+import { isValidBeneficiaryRef, logInfo, logError } from '@open-care/vault-core';
 import { deliverCode } from '../../lib/code-delivery.js';
 import type { SendCodeInput } from '../../lib/code-delivery.js';
 import { errorResponse } from '../../lib/errors.js';
@@ -126,6 +126,10 @@ export async function sendCodeHandler(
 
   if (!result.ok) {
     const err = result.error;
+    logError('Code delivery failed', {
+      conversation_id: conversationId,
+      error_code: err.code,
+    });
     switch (err.code) {
       case 'HANDLE_NOT_FOUND':
         return errorResponse(c, 404, err.code, err.message);
@@ -142,6 +146,10 @@ export async function sendCodeHandler(
         return errorResponse(c, 500, 'INTERNAL_ERROR', 'Unexpected error');
     }
   }
+
+  logInfo('Code delivery succeeded', {
+    conversation_id: conversationId,
+  });
 
   return c.json({ delivered_at_utc: result.value.deliveredAtUtc });
 }
