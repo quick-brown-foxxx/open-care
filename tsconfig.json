@@ -12,7 +12,8 @@
     { "path": "apps/operator" },
     { "path": "packages/api-contract" },
     { "path": "apps/web" },
-    { "path": "tools/seed" }
+    { "path": "tools/seed" },
+    { "path": "tools/verify" }
   ],
   "compilerOptions": {
     "target": "ES2022",

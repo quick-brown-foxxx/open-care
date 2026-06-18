@@ -1,10 +1,14 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { SELF } from 'cloudflare:test';
-import { seedTestData } from './seed.js';
+import { seedPublishedAnchor, seedTestData } from './seed.js';
+
+import type { VaultDb } from '@open-care/vault-db';
 
 describe('GET /api/health', () => {
+  let db: VaultDb;
+
   beforeAll(async () => {
-    await seedTestData();
+    db = await seedTestData();
   });
 
   it('returns 200 with db_reachable true', async () => {
@@ -46,5 +50,21 @@ describe('GET /api/health', () => {
     // No anchor data seeded, so anchor_stale should be true
     expect(json.checks.anchor_stale).toBe(true);
     expect(json.status).toBe('degraded');
+  });
+
+  /*
+  Scenario: Anchor-present public read paths expose non-null anchor data
+    Given a published anchor seed exists
+    When `/api/health` is requested
+    Then the endpoint's anchor-related non-null path is exercised according to existing contracts
+  */
+  it('returns non-stale and funded anchor checks when a published anchor exists', async () => {
+    await seedPublishedAnchor(db);
+
+    const response = await SELF.fetch('https://example.com/api/health');
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json.checks.anchor_stale).toBe(false);
+    expect(json.checks.anchor_wallet_low_sol).toBe(false);
   });
 });

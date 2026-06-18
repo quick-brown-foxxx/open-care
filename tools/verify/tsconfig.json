@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["verify-chain.ts"],
+  "references": [{ "path": "../../packages/vault-core" }]
+}

@@ -1,10 +1,14 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { SELF } from 'cloudflare:test';
-import { seedTestData } from './seed.js';
+import { seedPublishedAnchor, seedTestData } from './seed.js';
+
+import type { VaultDb } from '@open-care/vault-db';
 
 describe('GET /api/verify', () => {
+  let db: VaultDb;
+
   beforeAll(async () => {
-    await seedTestData();
+    db = await seedTestData();
   });
 
   it('returns 200 with head info', async () => {
@@ -44,5 +48,36 @@ describe('GET /api/verify', () => {
   it('returns Cache-Control header', async () => {
     const response = await SELF.fetch('https://example.com/api/verify');
     expect(response.headers.get('Cache-Control')).toBe('public, max-age=60');
+  });
+
+  /*
+  Scenario: Verify endpoint reports a published anchor for the pre-anchor head
+    Given the ledger has ordinary events followed by a published anchor seed
+    When `/api/verify` is requested
+    Then `latest_anchor` is non-null
+    And its `memo_text` contains the pre-anchor ledger head hash
+    And the endpoint exposes the expected transaction/signature data
+  */
+  it('returns latest_anchor for the pre-anchor ledger head when a published anchor exists', async () => {
+    const anchorSeed = await seedPublishedAnchor(db);
+
+    const response = await SELF.fetch('https://example.com/api/verify');
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json.latest_anchor).toEqual(
+      expect.objectContaining({
+        anchored_head_sequence_no: anchorSeed.preAnchorHeadSequenceNo,
+        anchored_head_hash: anchorSeed.preAnchorHeadHash,
+        tx_signature: anchorSeed.txSignature,
+        memo_text: anchorSeed.memoText,
+      }),
+    );
+    expect(json.latest_anchor.memo_text).toContain(anchorSeed.preAnchorHeadHash);
+    expect(json.latest_anchor.solscan_url).toContain(anchorSeed.txSignature);
+    expect(json.previous_anchors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ anchored_head_hash: anchorSeed.preAnchorHeadHash }),
+      ]),
+    );
   });
 });

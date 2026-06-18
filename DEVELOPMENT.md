@@ -109,7 +109,12 @@ pnpm exec wrangler d1 migrations apply bot-db
 curl https://staging.open-care.org/api/health
 curl -X POST https://staging.open-care.org/webhook/helius \
   -H "Authorization: Bearer <HELIUS_WEBHOOK_AUTH_HEADER>" -d '{}'
+pnpm run verify:chain -- --base-url https://staging.open-care.org
 ```
+
+`verify:chain` requires an explicit deployment base URL or
+`VERIFY_CHAIN_BASE_URL`; it recomputes `/api/ledger-events` hashes and checks
+published anchor metadata from `/api/verify`.
 
 ## Seed data (local dev)
 

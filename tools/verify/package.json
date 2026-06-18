@@ -1,0 +1,15 @@
+{
+  "name": "@open-care/verify",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "verify-chain": "tsx verify-chain.ts"
+  },
+  "dependencies": {
+    "@open-care/vault-core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.22.4"
+  }
+}

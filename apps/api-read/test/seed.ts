@@ -1,6 +1,21 @@
 import { env } from 'cloudflare:test';
-import { createVaultDb, appendLedgerEvent } from '@open-care/vault-db';
+import { createVaultDb, appendLedgerEvent, getHead } from '@open-care/vault-db';
+import { anchorRuns } from '@open-care/vault-db/schema/vault-db';
+import { buildAnchorMemo, utcNow } from '@open-care/vault-core';
 import type { VaultDb } from '@open-care/vault-db';
+
+const ANCHOR_TX_SIGNATURE =
+  '5Jofwx5DPe1qBwHL7hN3VpFqLxqFj4mJLo5iY7nP8kRt2sT9uVvWxYzAbCdEfGhIjKlMnOpQrStUvWxYz1234';
+
+export interface PublishedAnchorSeed {
+  preAnchorHeadSequenceNo: number;
+  preAnchorHeadHash: string;
+  anchorEventSequenceNo: number;
+  anchorEventHash: string;
+  memoText: string;
+  txSignature: string;
+  publishedAtUtc: string;
+}
 
 /**
  * Seed the test database with sample ledger events.
@@ -53,4 +68,68 @@ export async function seedTestData(): Promise<VaultDb> {
   }
 
   return db;
+}
+
+/**
+ * Seed a published anchor for the current pre-anchor ledger head.
+ *
+ * This mirrors the production anchor shape: `anchor_runs` records the head that
+ * was anchored, then an `anchor_published` ledger event is appended after that
+ * pre-anchor head.
+ */
+export async function seedPublishedAnchor(db: VaultDb): Promise<PublishedAnchorSeed> {
+  const preAnchorHead = await getHead(db);
+  if (!preAnchorHead) {
+    throw new Error('Cannot seed a published anchor without existing ledger events');
+  }
+
+  const publishedAtUtc = utcNow();
+  const anchorDate = publishedAtUtc.slice(0, 10);
+  const memoText = buildAnchorMemo(preAnchorHead.event_hash);
+
+  await db.insert(anchorRuns).values({
+    anchor_date: anchorDate,
+    anchored_head_sequence_no: preAnchorHead.sequence_no,
+    anchored_head_hash: preAnchorHead.event_hash,
+    status: 'published',
+    trigger_source: 'cron',
+    tx_signature: ANCHOR_TX_SIGNATURE,
+    anchor_wallet_address: env.ANCHOR_WALLET_ADDRESS,
+    memo_text: memoText,
+    attempt_count: 1,
+    last_error: null,
+    locked_until_utc: null,
+    last_anchor_wallet_sol_lamports: 1_000_000_000,
+    created_at_utc: publishedAtUtc,
+    updated_at_utc: publishedAtUtc,
+  });
+
+  const anchorEventResult = await appendLedgerEvent(db, {
+    event_type: 'anchor_published',
+    payload: {
+      anchor_date: anchorDate,
+      anchored_head_sequence_no: preAnchorHead.sequence_no,
+      anchored_head_hash: preAnchorHead.event_hash,
+      tx_signature: ANCHOR_TX_SIGNATURE,
+      anchor_wallet_address: env.ANCHOR_WALLET_ADDRESS,
+      memo_text: memoText,
+      published_at_utc: publishedAtUtc,
+      cluster: 'devnet',
+    },
+    created_at_utc: publishedAtUtc,
+  });
+
+  if (!anchorEventResult.ok) {
+    throw new Error(`Failed to seed anchor event: ${anchorEventResult.error.message}`);
+  }
+
+  return {
+    preAnchorHeadSequenceNo: preAnchorHead.sequence_no,
+    preAnchorHeadHash: preAnchorHead.event_hash,
+    anchorEventSequenceNo: anchorEventResult.value.sequence_no,
+    anchorEventHash: anchorEventResult.value.event_hash,
+    memoText,
+    txSignature: ANCHOR_TX_SIGNATURE,
+    publishedAtUtc,
+  };
 }
