@@ -1,5 +1,8 @@
 # OpenCode Agent Notes
 
+For system architecture and feature map, see [`ARCHITECTURE.md`](ARCHITECTURE.md).
+For development workflow, commands, and local setup, see [`DEVELOPMENT.md`](DEVELOPMENT.md).
+
 ## Project shape
 
 - Cloudflare Workers monorepo, pnpm workspace (`apps/*`, `packages/*`, `tools/*`).
