@@ -1,21 +1,6 @@
 import type { Context, Next } from 'hono';
 import type { Env } from './env';
-import { logInfo, logWarn } from '@open-care/vault-core';
-
-/**
- * Constant-time string comparison to prevent timing attacks on token validation.
- * Pads shorter string with null bytes, then XOR-accumulates all character differences.
- */
-export function constantTimeEqual(a: string, b: string): boolean {
-  const maxLen = Math.max(a.length, b.length);
-  const paddedA = a.padEnd(maxLen, '\0');
-  const paddedB = b.padEnd(maxLen, '\0');
-  let result = 0;
-  for (let i = 0; i < maxLen; i++) {
-    result |= paddedA.charCodeAt(i) ^ paddedB.charCodeAt(i);
-  }
-  return result === 0;
-}
+import { logInfo, logWarn, constantTimeEqual } from '@open-care/vault-core';
 
 /**
  * Hono middleware that validates the Authorization Bearer token against
