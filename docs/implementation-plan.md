@@ -290,10 +290,12 @@ See [[./ui-prototypes/]] for UI plans, docs and prototypes.
 **Post-MVP backlog (from Analysis findings):**
 
 Critical:
+
 - Frontend test infrastructure (Playwright + Vitest for apps/web) — zero tests currently
 - `correction_recorded` integration tests through ledger append path
 
 Important:
+
 - Browser-based visual verification (button/metric CSS rendering)
 - Timeline component tests (TimelineEvent, TimelineRail, TimelineCard)
 - Frontend admin tests (TokenGate, AdminNav, disbursement form, anchor panel, bot handoff)
@@ -302,6 +304,7 @@ Important:
 - Version injection at build time (currently hardcoded 0.1.0-dev)
 
 Minor:
+
 - Bivalent API test (payload_json byte-for-byte after correction)
 - Migration directory asymmetry documentation
 - `correction_recorded` write endpoint (I-11)
