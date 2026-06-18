@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import { getHealth, getTotals, getVerify, getLedgerEvents } from '$lib/api/client.js';
   import { createFetch } from '$lib/state/api.svelte.js';
   import { formatDate } from '$lib/utils/format-date.js';
@@ -153,9 +154,9 @@
   <!-- Quick links -->
   <h2>Действия</h2>
   <div class="quick-links">
-    <a href="/admin/disbursements" class="standalone-card btn">Записать выплату →</a>
-    <a href="/admin/anchors" class="standalone-card btn">Управление якорем →</a>
-    <a href="/admin/bot" class="standalone-card btn">Доставка сертификатов →</a>
+    <a href={resolve('/admin/disbursements')} class="standalone-card btn">Записать выплату →</a>
+    <a href={resolve('/admin/anchors')} class="standalone-card btn">Управление якорем →</a>
+    <a href={resolve('/admin/bot')} class="standalone-card btn">Доставка сертификатов →</a>
   </div>
 
   <!-- Recent events -->
@@ -172,7 +173,7 @@
   {:else if recentEvents.data && recentEvents.data.items.length > 0}
     <div class="events-list">
       {#each recentEvents.data.items as event (event.event_hash)}
-        <a href="/ledger/{event.event_hash}" class="standalone-card event-row">
+        <a href={resolve(`/ledger/${event.event_hash}`)} class="standalone-card event-row">
           <Badge variant={event.event_type === 'anchor_published' ? 'green' : 'default'}>
             {event.event_type}
           </Badge>

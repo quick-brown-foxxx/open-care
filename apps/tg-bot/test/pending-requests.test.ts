@@ -240,7 +240,7 @@ describe('GET /tg/internal/pending-requests', () => {
 
     // Second page using cursor
     const page2 = await SELF.fetch(
-      `https://example.com/tg/internal/pending-requests?limit=2&cursor=${encodeURIComponent(p1.next_cursor!)}`,
+      `https://example.com/tg/internal/pending-requests?limit=2&cursor=${encodeURIComponent(p1.next_cursor)}`,
     );
     const p2 = await page2.json<{
       items: { opaque_id: string }[];

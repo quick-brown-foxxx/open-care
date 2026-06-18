@@ -1,3 +1,7 @@
+<script lang="ts">
+  import { resolve } from '$app/paths';
+</script>
+
 <svelte:head>
   <title>Вопросы и ответы — Open Care</title>
 </svelte:head>
@@ -73,7 +77,7 @@
   <h2>Как сообщить о проблеме?</h2>
   <p>
     Если вы заметили несоответствие в реестре, хеш-цепочке или якоре, пожалуйста, сообщите нам через <a
-      href="/contact">страницу контактов</a
+      href={resolve('/contact')}>страницу контактов</a
     >. Укажите:
   </p>
   <ul>

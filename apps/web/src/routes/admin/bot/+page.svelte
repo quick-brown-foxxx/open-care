@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import {
     getPendingRequests,
     postSendCode,
@@ -127,8 +128,8 @@
       </dl>
 
       <p class="text-muted" style="font-size: 0.85rem;">
-        Сначала запишите выплату через <a href="/admin/disbursements">страницу выплат</a>, затем
-        вернитесь сюда для отправки кода.
+        Сначала запишите выплату через <a href={resolve('/admin/disbursements')}>страницу выплат</a
+        >, затем вернитесь сюда для отправки кода.
       </p>
     </div>
 

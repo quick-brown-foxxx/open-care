@@ -1,3 +1,7 @@
+<script lang="ts">
+  import { resolve } from '$app/paths';
+</script>
+
 <svelte:head>
   <title>О проекте — Open Care</title>
 </svelte:head>
@@ -71,6 +75,6 @@
     раскрывается в реестре. Telegram ID, имена и контакты получателей никогда не публикуются.
   </p>
 
-  <p><a href="/verify">Проверить реестр →</a></p>
-  <p><a href="/faq">Частые вопросы →</a></p>
+  <p><a href={resolve('/verify')}>Проверить реестр →</a></p>
+  <p><a href={resolve('/faq')}>Частые вопросы →</a></p>
 </section>

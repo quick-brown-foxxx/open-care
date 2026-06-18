@@ -1,7 +1,6 @@
 import { env } from 'cloudflare:test';
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
-import { createVaultDb } from '@open-care/vault-db';
-import { vaultSchema } from '@open-care/vault-db';
+import { createVaultDb, vaultSchema } from '@open-care/vault-db';
 import { eq, sql } from 'drizzle-orm';
 import { reconcileMissedSignatures } from '../src/lib/reconciliation.js';
 import { insertIntoInbox, processInbox, nowIso } from '../src/lib/inbox.js';

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import { getLedgerEvents } from '$lib/api/client.js';
   import { createFetch } from '$lib/state/api.svelte.js';
@@ -70,7 +71,7 @@
 </svelte:head>
 
 <section class="event-detail-page">
-  <p><a href="/ledger">← Назад к реестру</a></p>
+  <p><a href={resolve('/ledger')}>← Назад к реестру</a></p>
 
   {#if !isValidHash}
     <div class="standalone-card">

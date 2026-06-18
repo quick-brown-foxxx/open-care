@@ -20,7 +20,6 @@
   } = $props();
 </script>
 
-<!-- svelte-ignore a11y_autocomplete_valid -->
 <input
   {type}
   {placeholder}

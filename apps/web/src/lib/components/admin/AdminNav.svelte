@@ -17,7 +17,7 @@
 
 <nav class="admin-nav">
   <div class="nav-links">
-    {#each links as link}
+    {#each links as link (link.key)}
       <a href={link.href} class="btn btn-sm" class:primary={active === link.key}>{link.label}</a>
     {/each}
   </div>

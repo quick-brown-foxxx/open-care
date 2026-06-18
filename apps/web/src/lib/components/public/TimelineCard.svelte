@@ -117,7 +117,7 @@
       </div>
       <div class="meta">
         <span>{p.reason}</span>
-        {#each Object.entries(p.replacement_fields) as [key, value]}
+        {#each Object.entries(p.replacement_fields) as [key, value] (key)}
           <span><code>{key}</code> &rarr; <code>{value}</code></span>
         {/each}
       </div>

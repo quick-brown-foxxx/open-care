@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import CopyButton from '$lib/components/public/CopyButton.svelte';
   import QrCode from '$lib/components/public/QrCode.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
@@ -98,11 +99,16 @@
   <!-- Troubleshooting -->
   <div class="standalone-card">
     <h2>Пожертвование не появилось?</h2>
-    <p>Если прошло более 30 минут, а запись не появилась в <a href="/ledger">реестре</a>:</p>
+    <p>
+      Если прошло более 30 минут, а запись не появилась в <a href={resolve('/ledger')}>реестре</a>:
+    </p>
     <ul>
       <li>Проверьте, что вы отправили SPL USDC (не другой токен) на правильный ATA-адрес.</li>
       <li>Проверьте статус транзакции в Solscan.</li>
-      <li>Свяжитесь с нами через <a href="/contact">контакты</a>, указав signature транзакции.</li>
+      <li>
+        Свяжитесь с нами через <a href={resolve('/contact')}>контакты</a>, указав signature
+        транзакции.
+      </li>
     </ul>
   </div>
 </section>

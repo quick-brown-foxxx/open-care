@@ -309,7 +309,7 @@ export function redact(obj: Record<string, unknown> | null | undefined): Record<
     }
 
     if (CATEGORIZE_AMOUNT_KEYS.has(key)) {
-      result['amount_category'] = categorizeAmount(value);
+      result.amount_category = categorizeAmount(value);
       continue;
     }
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import { getLedgerEvents, getVerify, getBaseUrl } from '$lib/api/client.js';
   import { createFetch } from '$lib/state/api.svelte.js';
   import { formatUsdc } from '$lib/utils/format-usdc.js';
@@ -246,7 +247,7 @@
       </div>
 
       {#each filteredItems as event (event.event_hash)}
-        <a href="/ledger/{event.event_hash}" class="event-link">
+        <a href={resolve(`/ledger/${event.event_hash}`)} class="event-link">
           <div class="event">
             <div class="date">
               <b>{formatTimelineDate(event.created_at_utc).dayMonth}</b>

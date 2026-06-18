@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import { getVerify, getBaseUrl } from '$lib/api/client.js';
   import { createFetch } from '$lib/state/api.svelte.js';
   import { formatDate } from '$lib/utils/format-date.js';
@@ -185,7 +186,7 @@
               </tr>
             </thead>
             <tbody>
-              {#each data.previous_anchors as anchor}
+              {#each data.previous_anchors as anchor (anchor.tx_signature)}
                 <tr>
                   <td class="cell-date">
                     {formatAnchorDate(anchor.anchor_date)}
@@ -256,8 +257,8 @@
         <li>
           <strong>Если хеш не совпадает:</strong>
           свяжитесь с нами через
-          <a href="/contact">форму обратной связи</a>. Опишите, какой именно хеш не совпадает, и
-          приложите ссылку на страницу.
+          <a href={resolve('/contact')}>форму обратной связи</a>. Опишите, какой именно хеш не
+          совпадает, и приложите ссылку на страницу.
         </li>
         <li>
           <strong>Если якорь отсутствует:</strong>

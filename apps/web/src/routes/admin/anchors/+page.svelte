@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import { getTotals, getVerify } from '$lib/api/client.js';
   import { postAnchorManual, type AnchorManualResponse } from '$lib/api/operator.js';
   import { createFetch } from '$lib/state/api.svelte.js';
@@ -124,7 +125,7 @@
           <dt>Длительность</dt>
           <dd>{anchorResult.duration_ms}ms</dd>
         </dl>
-        <p><a href="/verify">Проверить на странице верификации →</a></p>
+        <p><a href={resolve('/verify')}>Проверить на странице верификации →</a></p>
         <button class="btn" onclick={reset}>ОК</button>
       </div>
     {/if}

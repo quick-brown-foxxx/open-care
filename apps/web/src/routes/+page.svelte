@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import { getTotals, getLedgerEvents, getVerify } from '$lib/api/client.js';
   import { createFetch } from '$lib/state/api.svelte.js';
   import { formatUsdcAmount } from '$lib/utils/format-usdc-amount.js';
@@ -23,8 +24,8 @@
       Получатели не раскрывают имён и контактов.
     </p>
     <div class="cta">
-      <a href="/donate" class="btn primary">Помочь оплатить сессии</a>
-      <a href="/ledger" class="btn">Посмотреть историю</a>
+      <a href={resolve('/donate')} class="btn primary">Помочь оплатить сессии</a>
+      <a href={resolve('/ledger')} class="btn">Посмотреть историю</a>
     </div>
 
     <!-- Metrics from API -->

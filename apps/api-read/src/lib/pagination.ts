@@ -71,7 +71,7 @@ export function validateLimit(
  */
 export function validateCursor(
   raw: string | undefined,
-  paramName: string = 'after_sequence_no',
+  paramName = 'after_sequence_no',
 ): number | undefined | Response {
   const result = parsePositiveInt(raw, paramName);
   if (result === undefined) return undefined;

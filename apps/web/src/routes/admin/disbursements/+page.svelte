@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import {
     postDisbursement,
     type DisbursementBody,
@@ -109,8 +110,8 @@
           <dd><code>{result.public_beneficiary_ref}</code></dd>
         {/if}
       </dl>
-      <p><a href="/ledger/{result.event_hash}">Открыть в реестре →</a></p>
-      <p>Следующий шаг: <a href="/admin/bot">отправить код через бота →</a></p>
+      <p><a href={resolve(`/ledger/${result.event_hash}`)}>Открыть в реестре →</a></p>
+      <p>Следующий шаг: <a href={resolve('/admin/bot')}>отправить код через бота →</a></p>
       <button class="btn" onclick={resetForm}>Новая выплата</button>
     </div>
   {:else}

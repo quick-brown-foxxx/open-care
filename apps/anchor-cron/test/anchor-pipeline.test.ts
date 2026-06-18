@@ -12,7 +12,6 @@ import {
   seedStaleLockWithTx,
 } from './seed.js';
 import { runAnchor } from '../src/lib/anchor-pipeline.js';
-import type { Env } from '../src/lib/env.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -275,7 +274,7 @@ describe('Anchor Cron Worker', () => {
       const { hash } = await seedLedgerEvent(db);
 
       // Call runAnchor directly with cron trigger source
-      const result = await runAnchor(db, env as unknown as Env, 'cron');
+      const result = await runAnchor(db, env, 'cron');
 
       expect(result.status).toBe('published');
       if (result.status === 'published') {
@@ -295,7 +294,7 @@ describe('Anchor Cron Worker', () => {
 
     it('handles empty ledger gracefully from cron', async () => {
       // No ledger events seeded — should not throw
-      const result = await runAnchor(db, env as unknown as Env, 'cron');
+      const result = await runAnchor(db, env, 'cron');
 
       expect(result.status).toBe('empty_ledger');
 

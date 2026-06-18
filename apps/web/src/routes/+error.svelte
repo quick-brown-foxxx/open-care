@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
+  import { resolve } from '$app/paths';
 </script>
 
 <svelte:head>
@@ -10,7 +11,7 @@
   <h1>{page.status ? `Ошибка ${page.status}` : 'Произошла ошибка'}</h1>
   <p class="lead">Произошла непредвиденная ошибка. Пожалуйста, попробуйте обновить страницу.</p>
   <div class="cta">
-    <a href="/" class="btn primary">На главную</a>
-    <a href="/contact" class="btn">Сообщить о проблеме</a>
+    <a href={resolve('/')} class="btn primary">На главную</a>
+    <a href={resolve('/contact')} class="btn">Сообщить о проблеме</a>
   </div>
 </div>
