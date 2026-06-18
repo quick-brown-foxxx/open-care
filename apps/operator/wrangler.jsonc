@@ -26,6 +26,10 @@
       "zone_id": "d3ce85436c3b589b4f83814991bf2c78",
     },
     {
+      "pattern": "staging.open-care.org/api/corrections",
+      "zone_id": "d3ce85436c3b589b4f83814991bf2c78",
+    },
+    {
       "pattern": "staging.open-care.org/api/anchor/manual",
       "zone_id": "d3ce85436c3b589b4f83814991bf2c78",
     },

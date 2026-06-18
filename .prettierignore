@@ -4,6 +4,7 @@ build/
 .svelte-kit/
 .wrangler/
 coverage/
+test-results/
 pnpm-lock.yaml
 *.sql
 *.d.ts

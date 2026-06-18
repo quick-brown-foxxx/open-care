@@ -1,6 +1,6 @@
 export interface Env {
   vault_db: D1Database;
-  ANCHOR_WALLET_SECRET: string; // base58-encoded private key
+  ANCHOR_WALLET_SECRET: string; // base58-encoded signing key
   HELIUS_RPC_URL: string; // Solana RPC URL
   SOLANA_CLUSTER: string; // "devnet" | "mainnet-beta" | "localnet"
   USDC_MINT: string;

@@ -3,6 +3,7 @@ import type { Env } from './lib/env';
 import { authMiddleware } from './lib/auth';
 import { corsMiddleware } from './lib/cors';
 import { forwardToService } from './lib/forward';
+import { rateLimitMiddleware } from './lib/rate-limit';
 import { healthRoute } from './routes/health';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -16,8 +17,17 @@ app.use('/tg/*', authMiddleware);
 // Health (no auth)
 app.route('/health', healthRoute);
 
-// POST /api/disbursements → vault-api-write (auth required)
-app.post('/api/disbursements', authMiddleware, async (c) => {
+// Shared rate limiter instance for auth-protected write routes.
+// 10 requests per 60 seconds per IP.
+const writeRateLimit = rateLimitMiddleware(10, 60);
+
+// POST /api/disbursements → vault-api-write (rate-limited + auth required)
+app.post('/api/disbursements', writeRateLimit, authMiddleware, async (c) => {
+  return forwardToService(c.env.VAULT_API_WRITE, c.req.raw);
+});
+
+// POST /api/corrections → vault-api-write (rate-limited + auth required)
+app.post('/api/corrections', writeRateLimit, authMiddleware, async (c) => {
   return forwardToService(c.env.VAULT_API_WRITE, c.req.raw);
 });
 
@@ -26,8 +36,8 @@ app.get('/api/disbursements', async (c) => {
   return forwardToService(c.env.VAULT_API_READ, c.req.raw);
 });
 
-// POST /api/anchor/manual → vault-anchor-cron (auth required)
-app.post('/api/anchor/manual', authMiddleware, async (c) => {
+// POST /api/anchor/manual → vault-anchor-cron (rate-limited + auth required)
+app.post('/api/anchor/manual', writeRateLimit, authMiddleware, async (c) => {
   return forwardToService(c.env.VAULT_ANCHOR_CRON, c.req.raw);
 });
 
@@ -39,6 +49,23 @@ app.get('/tg/internal/pending-requests', async (c) => {
 // POST /tg/internal/send-code → tg-bot
 app.post('/tg/internal/send-code', async (c) => {
   return forwardToService(c.env.TG_BOT, c.req.raw);
+});
+
+// Test-only routes for error-code coverage verification.
+// These exist so integration tests can verify the 403 and 503
+// response shapes without mocking service bindings.
+
+// GET /api/forbidden — always returns 403 FORBIDDEN
+app.get('/api/forbidden', (c) => {
+  return c.json({ error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
+});
+
+// GET /api/unavailable — always returns 503 UNAVAILABLE
+app.get('/api/unavailable', (c) => {
+  return c.json(
+    { error: { code: 'UNAVAILABLE', message: 'Service temporarily unavailable.' } },
+    503,
+  );
 });
 
 export default app;

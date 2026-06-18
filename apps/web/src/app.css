@@ -878,3 +878,28 @@ a:hover {
     grid-column: 2;
   }
 }
+
+/* -------------------------------------------------------------------
+ * Site Footer
+ * ------------------------------------------------------------------- */
+
+.site-footer {
+  text-align: center;
+  padding: 2rem 1rem;
+  border-top: 1px solid var(--border-soft);
+  margin-top: 3rem;
+}
+
+/* -------------------------------------------------------------------
+ * Reduced Motion
+ * ------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

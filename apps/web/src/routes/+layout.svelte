@@ -22,4 +22,7 @@
     </header>
     {@render children()}
   </div>
+  <footer class="site-footer">
+    <p class="text-muted">Open Care v{import.meta.env.DEPLOY_VERSION}</p>
+  </footer>
 </div>

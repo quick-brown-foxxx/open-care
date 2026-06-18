@@ -10,6 +10,7 @@ export { appendLedgerEvent } from './helpers/ledger-append.js';
 export {
   getHead,
   getEventsPaginated,
+  getRawEventsPaginated,
   getTotals,
   getDonations,
   getDisbursements,
@@ -25,4 +26,5 @@ export type {
   Totals,
   DonationView,
   DisbursementView,
+  RawLedgerEventRow,
 } from './helpers/types.js';

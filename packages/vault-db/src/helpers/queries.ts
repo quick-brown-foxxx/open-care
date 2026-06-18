@@ -15,6 +15,7 @@ import type {
   Totals,
   DonationView,
   DisbursementView,
+  RawLedgerEventRow,
 } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -119,6 +120,59 @@ export async function getEventsPaginated(
 
   return {
     items: pageItems.map(rowToLedgerEvent),
+    nextCursor,
+  };
+}
+
+/**
+ * Cursor-based paginated list of all ledger events, returning raw rows
+ * with `payload_json` as the original stored string (not parsed).
+ *
+ * This preserves byte-for-byte fidelity for the ledger-events API endpoint.
+ *
+ * @param options.cursor - Return events with `sequence_no` greater than this
+ *   value (exclusive). Omit to start from the beginning.
+ * @param options.limit  - Page size (default 50, max 100).
+ * @param options.eventType - Optional filter to a single event type.
+ */
+export async function getRawEventsPaginated(
+  db: VaultDb | VaultDbTest,
+  options: PaginationOptions,
+): Promise<PaginatedResult<RawLedgerEventRow>> {
+  const limit = Math.min(options.limit ?? 50, 100);
+
+  const conditions: SQL[] = [];
+  if (options.cursor !== undefined) {
+    conditions.push(gt(ledgerEvents.sequence_no, options.cursor));
+  }
+  if (options.eventType !== undefined) {
+    conditions.push(eq(ledgerEvents.event_type, options.eventType));
+  }
+
+  let base = db.select().from(ledgerEvents);
+  if (conditions.length > 0) {
+    base = base.where(and(...conditions)) as typeof base;
+  }
+
+  const rows = await base
+    .orderBy(ledgerEvents.sequence_no)
+    .limit(limit + 1)
+    .all();
+
+  const hasMore = rows.length > limit;
+  const pageItems = hasMore ? rows.slice(0, limit) : rows;
+  const lastItem = pageItems[pageItems.length - 1];
+  const nextCursor: number | null = hasMore && lastItem ? lastItem.sequence_no : null;
+
+  return {
+    items: pageItems.map((row) => ({
+      sequence_no: row.sequence_no,
+      event_type: row.event_type,
+      payload_json: row.payload_json,
+      prev_hash: row.prev_hash,
+      event_hash: row.event_hash,
+      created_at_utc: row.created_at_utc,
+    })),
     nextCursor,
   };
 }

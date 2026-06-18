@@ -33,7 +33,7 @@ export const ledgerEvents = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
-// wallets — wallet metadata (public configuration, not private key material)
+// wallets — wallet metadata (public configuration, no secret keys stored here)
 // ---------------------------------------------------------------------------
 
 export const wallets = sqliteTable(

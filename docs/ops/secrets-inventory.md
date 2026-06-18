@@ -98,6 +98,82 @@ These are not environment blockers — they are implementation tasks:
 - `open-care.org` production domain setup — deferred until mainnet launch
 - Mainnet treasury/anchor wallet key generation — deferred until mainnet launch
 
+## Production Environment
+
+Production deployment is **manual-only** via `workflow_dispatch` in
+`.github/workflows/deploy-prod.yml`. The workflow has a safety gate:
+`ALLOW_MAINNET_SMOKE` must be set to `"true"` before any production deploy
+proceeds. This is a GitHub Actions **workflow input** (boolean, default
+`false`), not a secret.
+
+### Production Secrets (to be set via `wrangler secret put --env production`)
+
+These are the same secrets as staging but set with `--env production` on each
+Worker. None exist yet — they must be created by a human before the first
+production deploy.
+
+| Secret                       | Workers (production)                | Status     |
+| ---------------------------- | ----------------------------------- | ---------- |
+| `HELIUS_API_KEY`             | `vault-ingest`, `vault-anchor-cron` | 🔲 Not set |
+| `HELIUS_RPC_URL`             | `vault-ingest`, `vault-anchor-cron` | 🔲 Not set |
+| `HELIUS_WEBHOOK_AUTH_HEADER` | `vault-ingest`                      | 🔲 Not set |
+| `OPERATOR_TOKEN`             | `vault-operator` only               | 🔲 Not set |
+| `TG_BOT_TOKEN`               | `tg-bot`                            | 🔲 Not set |
+| `TG_WEBHOOK_SECRET`          | `tg-bot`                            | 🔲 Not set |
+| `TG_ID_HMAC_KEY`             | `tg-bot`                            | 🔲 Not set |
+| `TG_CHAT_ENC_KEY`            | `tg-bot`                            | 🔲 Not set |
+| `ANCHOR_WALLET_SECRET`       | `vault-anchor-cron`                 | 🔲 Not set |
+
+**Important:** `OPERATOR_TOKEN` must only exist on `vault-operator` (same trust
+model as staging). The production `OPERATOR_TOKEN` should be a different value
+from staging.
+
+### Production Wallet Addresses (mainnet)
+
+| Wallet    | Address (mainnet)             | Status |
+| --------- | ----------------------------- | ------ |
+| Treasury  | `TBD_MAINNET_TREASURY_WALLET` | 🔲 TBD |
+| Anchor    | `TBD_MAINNET_ANCHOR_WALLET`   | 🔲 TBD |
+| Vault ATA | `TBD_MAINNET_VAULT_USDC_ATA`  | 🔲 TBD |
+
+### Production Public Config (non-secrets, set in wrangler.jsonc vars)
+
+| Name                      | Production value                               |
+| ------------------------- | ---------------------------------------------- |
+| `SOLANA_CLUSTER`          | `mainnet-beta`                                 |
+| `USDC_MINT`               | `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` |
+| `TREASURY_WALLET_ADDRESS` | `TBD_MAINNET_TREASURY_WALLET`                  |
+| `VAULT_USDC_ATA`          | `TBD_MAINNET_VAULT_USDC_ATA`                   |
+| `ANCHOR_WALLET_ADDRESS`   | `TBD_MAINNET_ANCHOR_WALLET`                    |
+| `SITE_URL`                | `https://open-care.org`                        |
+
+### Production Deploy Workflow
+
+- **Workflow file:** `.github/workflows/deploy-prod.yml`
+- **Trigger:** `workflow_dispatch` only (manual trigger from GitHub Actions UI)
+- **Safety gate:** `ALLOW_MAINNET_SMOKE` workflow input must be `"true"`
+- **Jobs:** `migrate-d1` → `deploy-workers` (matrix, 6 workers) → `deploy-frontend`
+- **All wrangler commands use `--env production`**
+
+### CLI Commands for Production Secrets
+
+```bash
+# Set a production secret (prompts for value — paste it, no echo)
+(cd apps/ingest && pnpm exec wrangler secret put HELIUS_API_KEY --env production)
+(cd apps/ingest && pnpm exec wrangler secret put HELIUS_RPC_URL --env production)
+(cd apps/ingest && pnpm exec wrangler secret put HELIUS_WEBHOOK_AUTH_HEADER --env production)
+(cd apps/anchor-cron && pnpm exec wrangler secret put HELIUS_RPC_URL --env production)
+(cd apps/anchor-cron && pnpm exec wrangler secret put ANCHOR_WALLET_SECRET --env production)
+(cd apps/tg-bot && pnpm exec wrangler secret put TG_BOT_TOKEN --env production)
+(cd apps/tg-bot && pnpm exec wrangler secret put TG_WEBHOOK_SECRET --env production)
+(cd apps/tg-bot && pnpm exec wrangler secret put TG_ID_HMAC_KEY --env production)
+(cd apps/tg-bot && pnpm exec wrangler secret put TG_CHAT_ENC_KEY --env production)
+(cd apps/operator && pnpm exec wrangler secret put OPERATOR_TOKEN --env production)
+
+# List production secrets for a Worker
+(cd apps/ingest && pnpm exec wrangler secret list --env production)
+```
+
 ## How to read this
 
 - **Secret** = must never be committed to git, logged, or exposed in public UI.

@@ -1,0 +1,133 @@
+name: Deploy (Production)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ALLOW_MAINNET_SMOKE:
+        description: 'Set to "true" to allow production deployment. This is a safety gate.'
+        required: true
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-prod-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  safety-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Check ALLOW_MAINNET_SMOKE safety gate
+        run: |
+          if [ "${{ github.event.inputs.ALLOW_MAINNET_SMOKE }}" != "true" ]; then
+            echo "============================================================"
+            echo "  PRODUCTION DEPLOY BLOCKED"
+            echo "============================================================"
+            echo ""
+            echo "  ALLOW_MAINNET_SMOKE is '${{ github.event.inputs.ALLOW_MAINNET_SMOKE }}'."
+            echo "  It must be set to 'true' to deploy to production."
+            echo ""
+            echo "  To proceed: re-run this workflow and set ALLOW_MAINNET_SMOKE"
+            echo "  to 'true' in the workflow dispatch dialog."
+            echo ""
+            echo "============================================================"
+            exit 1
+          fi
+          echo "ALLOW_MAINNET_SMOKE is 'true' — proceeding with production deploy."
+
+  migrate-d1:
+    needs: safety-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply vault-db migrations (production)
+        working-directory: apps/ingest
+        run: pnpm exec wrangler d1 migrations apply vault-db --env production --remote
+
+      - name: Apply bot-db migrations (production)
+        working-directory: apps/tg-bot
+        run: pnpm exec wrangler d1 migrations apply bot-db --env production --remote
+
+  deploy-workers:
+    needs: migrate-d1
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+    strategy:
+      fail-fast: false
+      matrix:
+        worker:
+          - { name: vault-ingest, dir: apps/ingest }
+          - { name: tg-bot, dir: apps/tg-bot }
+          - { name: vault-api-read, dir: apps/api-read }
+          - { name: vault-api-write, dir: apps/api-write }
+          - { name: vault-anchor-cron, dir: apps/anchor-cron }
+          - { name: vault-operator, dir: apps/operator }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Deploy ${{ matrix.worker.name }} (production)
+        working-directory: ${{ matrix.worker.dir }}
+        run: pnpm exec wrangler deploy --env production
+
+  deploy-frontend:
+    needs: deploy-workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        working-directory: apps/web
+        run: pnpm build
+
+      - name: Deploy to Cloudflare Pages (production)
+        working-directory: apps/web
+        run: pnpm exec wrangler pages deploy .svelte-kit/cloudflare --project-name=open-care-web --branch=main

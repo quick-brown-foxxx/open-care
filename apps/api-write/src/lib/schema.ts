@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { isValidTimestamp, isTimestampInPast } from '@open-care/vault-core';
+import {
+  isValidTimestamp,
+  isTimestampInPast,
+  ReplacementFieldsSchema,
+} from '@open-care/vault-core';
 
 /**
  * Zod schema for the POST /api/disbursements request body.
@@ -69,3 +73,27 @@ export const DisbursementRequestSchema = z
   });
 
 export type DisbursementRequest = z.infer<typeof DisbursementRequestSchema>;
+
+/**
+ * Zod schema for the POST /api/corrections request body.
+ *
+ * The request body contains:
+ * - `corrects_sequence_no`: integer, positive (must be < current head, validated at runtime)
+ * - `replacement_fields`: object with ONLY `receipt_ref` (optional string) and
+ *   `service_note` (optional string) — closed whitelist, reject any other keys
+ * - `reason`: required non-empty string, max 256 chars
+ *
+ * Uses `.strict()` to reject unknown fields.
+ */
+export const CorrectionRequestSchema = z
+  .object({
+    corrects_sequence_no: z.number().int().positive('Must be a positive integer'),
+    replacement_fields: ReplacementFieldsSchema,
+    reason: z
+      .string()
+      .min(1, 'Reason is required')
+      .max(256, 'Reason must be at most 256 characters'),
+  })
+  .strict();
+
+export type CorrectionRequest = z.infer<typeof CorrectionRequestSchema>;

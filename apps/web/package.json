@@ -20,8 +20,11 @@
     "valibot": "^1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "@sveltejs/kit": "^2",
     "@sveltejs/vite-plugin-svelte": "^5",
+    "@testing-library/svelte": "^5",
+    "jsdom": "^29.1.1",
     "svelte": "^5",
     "svelte-check": "^4",
     "typescript": "^5.7",

@@ -49,6 +49,19 @@ export interface DonationView {
   cluster: string;
 }
 
+/**
+ * Raw ledger event row with `payload_json` as the original stored string.
+ * Used by the ledger-events endpoint to return byte-for-byte identical JSON.
+ */
+export interface RawLedgerEventRow {
+  sequence_no: number;
+  event_type: string;
+  payload_json: string;
+  prev_hash: string;
+  event_hash: string;
+  created_at_utc: string;
+}
+
 /** Flattened disbursement view for public API. */
 export interface DisbursementView {
   sequence_no: number;

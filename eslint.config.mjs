@@ -133,7 +133,7 @@ export default defineConfig([
   // (cloudflare:test) and SELF global
   // ============================================================
   {
-    files: ['**/test/**', '**/__mocks__/**'],
+    files: ['**/test/**', '**/tests/**', '**/__tests__/**', '**/__mocks__/**'],
     rules: {
       'import-x/no-unresolved': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',

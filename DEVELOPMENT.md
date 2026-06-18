@@ -48,6 +48,39 @@ pnpm exec wrangler d1 migrations apply vault-db --local
 pnpm exec wrangler d1 migrations apply bot-db --local
 ```
 
+### Migration directory location
+
+D1 migration directories live inside specific app directories rather than a
+neutral shared location. This is intentional:
+
+| Database   | Migration directory       | Owner app      |
+| ---------- | ------------------------- | -------------- |
+| `vault-db` | `apps/ingest/migrations/` | `vault-ingest` |
+| `bot-db`   | `apps/tg-bot/migrations/` | `tg-bot`       |
+
+**Why this asymmetry exists:**
+
+- Cloudflare D1 migrations are **per-database**, not per-Worker. A single
+  `wrangler d1 migrations apply vault-db` command applies all pending
+  migrations to the `vault-db` database, regardless of which Worker directory
+  the command is run from.
+- `vault-db` is shared across multiple Workers (`vault-ingest`, `vault-api-read`,
+  `vault-api-write`, `vault-anchor-cron`). The migrations could live in any of
+  these apps, but they must live in exactly one.
+- `vault-ingest` was chosen as the designated "owner" app for `vault-db`
+  migrations because it is the first Worker that writes to the database
+  (ingesting donations from the Helius webhook).
+- `bot-db` migrations live in `apps/tg-bot/migrations/` following the same
+  pattern — `tg-bot` is the sole owner of `bot-db`.
+- Test configurations reference the migration directory explicitly:
+  `apps/api-read/vitest.config.ts` imports migrations from
+  `../../apps/ingest/migrations` via `readD1Migrations()`.
+- The deploy script (`pnpm run deploy`) applies migrations from the
+  canonical locations before deploying Workers.
+
+**Do not move migration directories** without updating all references
+(vitest configs, deploy scripts, CI, and this documentation).
+
 ## Staging
 
 Staging is `staging.open-care.org`. It uses the same Cloudflare infra as
