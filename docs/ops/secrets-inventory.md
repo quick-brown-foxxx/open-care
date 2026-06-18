@@ -43,10 +43,10 @@ No `--env production` secrets exist yet.
 
 ### Webhooks: Configured and Responding
 
-| Webhook  | URL                                                 | Auth mechanism                         | Status    |
-| -------- | --------------------------------------------------- | -------------------------------------- | --------- |
-| Helius   | `POST https://staging.open-care.org/webhook/helius` | `Authorization: Bearer <token>` header | ✅ Live   |
-| Telegram | `POST https://staging.open-care.org/tg/webhook`     | `X-Telegram-Bot-Api-Secret-Token`      | ✅ Live   |
+| Webhook  | URL                                                 | Auth mechanism                         | Status  |
+| -------- | --------------------------------------------------- | -------------------------------------- | ------- |
+| Helius   | `POST https://staging.open-care.org/webhook/helius` | `Authorization: Bearer <token>` header | ✅ Live |
+| Telegram | `POST https://staging.open-care.org/tg/webhook`     | `X-Telegram-Bot-Api-Secret-Token`      | ✅ Live |
 
 Both endpoints are served by real Worker implementations with full auth validation, durable inbox processing, and async transaction handling.
 
@@ -70,14 +70,14 @@ Faucet alternatives when rate-limited: <https://www.devnetfaucet.org/>,
 
 ### Deployed Workers
 
-| Worker              | Status          | Notes                                                                                     |
-| ------------------- | --------------- | ----------------------------------------------------------------------------------------- |
-| `vault-ingest`      | ✅ Deployed     | Route: `staging.open-care.org/webhook/helius`; cron `0 */6 * * *`                         |
-| `tg-bot`            | ✅ Deployed     | Route: `staging.open-care.org/tg/webhook`; 4 commands, HMAC+AES-GCM, redacted operator view |
-| `vault-api-write`   | ✅ Deployed     | No public route (reached via service binding from `vault-operator`); POST /api/disbursements + /api/corrections |
-| `vault-anchor-cron` | ✅ Deployed     | No public route (cron `0 1 * * *` + service binding); `ANCHOR_WALLET_SECRET` set          |
-| `vault-api-read`    | ✅ Deployed     | Route: `staging.open-care.org/api/*`; 6 public endpoints with 60s cache                   |
-| `vault-operator`    | ✅ Deployed     | Routes: `/api/disbursements`, `/api/corrections`, `/api/anchor/manual`, `/tg/internal/*`; service bindings to all 4 downstream Workers; `OPERATOR_TOKEN` sole holder; rate limiter (10 req/60s) |
+| Worker              | Status      | Notes                                                                                                                                                                                           |
+| ------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vault-ingest`      | ✅ Deployed | Route: `staging.open-care.org/webhook/helius`; cron `0 */6 * * *`                                                                                                                               |
+| `tg-bot`            | ✅ Deployed | Route: `staging.open-care.org/tg/webhook`; 4 commands, HMAC+AES-GCM, redacted operator view                                                                                                     |
+| `vault-api-write`   | ✅ Deployed | No public route (reached via service binding from `vault-operator`); POST /api/disbursements + /api/corrections                                                                                 |
+| `vault-anchor-cron` | ✅ Deployed | No public route (cron `0 1 * * *` + service binding); `ANCHOR_WALLET_SECRET` set                                                                                                                |
+| `vault-api-read`    | ✅ Deployed | Route: `staging.open-care.org/api/*`; 6 public endpoints with 60s cache                                                                                                                         |
+| `vault-operator`    | ✅ Deployed | Routes: `/api/disbursements`, `/api/corrections`, `/api/anchor/manual`, `/tg/internal/*`; service bindings to all 4 downstream Workers; `OPERATOR_TOKEN` sole holder; rate limiter (10 req/60s) |
 
 ### Implementation Status (2026-06-18)
 
