@@ -88,17 +88,34 @@
     {@const data = verify.data}
 
     <!-- 1. Current HEAD hash (prominent) -->
-    <div class="standalone-card" style="border-color: var(--title); border-width: 2px">
-      <h2>Текущий HEAD реестра</h2>
-      <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 1rem">
-        HEAD — это последняя запись в реестре. Хеш HEAD вычисляется как SHA-256 от всех предыдущих
-        записей, образуя непрерывную хеш-цепочку. Если хотя бы одна запись будет изменена, хеш HEAD
-        изменится.
-      </p>
-      <div class="head-hash">
-        <HashDisplay hash={data.head_hash} full label={`HEAD #${data.head_sequence_no}`} />
+    {#if data.head_hash}
+      <div class="standalone-card" style="border-color: var(--title); border-width: 2px">
+        <h2>Текущий HEAD реестра</h2>
+        <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 1rem">
+          HEAD — это последняя запись в реестре. Хеш HEAD вычисляется как SHA-256 от всех предыдущих
+          записей, образуя непрерывную хеш-цепочку. Если хотя бы одна запись будет изменена, хеш
+          HEAD изменится.
+        </p>
+        <div class="head-hash">
+          <HashDisplay hash={data.head_hash} full label={`HEAD #${data.head_sequence_no}`} />
+        </div>
       </div>
-    </div>
+    {:else}
+      <div class="standalone-card" style="border-color: var(--title); border-width: 2px">
+        <h2>Текущий HEAD реестра</h2>
+        <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 1rem">
+          HEAD — это последняя запись в реестре. Хеш HEAD вычисляется как SHA-256 от всех предыдущих
+          записей, образуя непрерывную хеш-цепочку. Если хотя бы одна запись будет изменена, хеш
+          HEAD изменится.
+        </p>
+        <div class="empty-state">
+          <p>Реестр пуст.</p>
+          <p class="text-muted" style="font-size: 0.85rem">
+            HEAD появится после первой записи в реестре.
+          </p>
+        </div>
+      </div>
+    {/if}
 
     <!-- 4. Pre-anchor-head explanation (prominent) -->
     <div class="standalone-card" style="background: #fffbeb; border-color: #fcd34d">
@@ -161,7 +178,7 @@
     </div>
 
     <!-- 7. Anchor staleness warning -->
-    {#if data.anchor_stale}
+    {#if data.anchor_stale && data.head_hash !== null}
       <div class="standalone-card" style="border-color: var(--amber)">
         <Badge variant="amber">⚠ Предупреждение</Badge>
         <p style="margin-top: 0.75rem; margin-bottom: 0; color: var(--amber); font-size: 0.95rem">
@@ -240,6 +257,11 @@
         Полный реестр событий доступен для скачивания в формате JSON. Используйте эти данные для
         независимой верификации хеш-цепочки.
       </p>
+      {#if !data.head_hash}
+        <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 0.75rem">
+          Реестр пока пуст — экспорт вернёт пустой массив.
+        </p>
+      {/if}
       <a
         href="{getBaseUrl()}/api/ledger-events"
         class="btn"
@@ -262,7 +284,8 @@
         </li>
         <li>
           <strong>Если якорь отсутствует:</strong>
-          реестр всё ещё можно проверить по хеш-цепочке. Скачайте полный реестр и проверьте, что
+          возможно, реестр ещё пуст — якорь появится после первой записи. Если записи есть, реестр всё
+          ещё можно проверить по хеш-цепочке. Скачайте полный реестр и проверьте, что
           <code>prev_event_hash</code> каждой записи совпадает с хешем предыдущей.
         </li>
         <li>

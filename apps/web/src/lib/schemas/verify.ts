@@ -54,8 +54,8 @@ export type Instructions = v.InferOutput<typeof InstructionsSchema>;
 // ---------------------------------------------------------------------------
 
 export const VerifyResponseSchema = v.object({
-  head_sequence_no: v.pipe(v.number(), v.integer(), v.minValue(0)),
-  head_hash: hex64,
+  head_sequence_no: v.nullable(v.pipe(v.number(), v.integer(), v.minValue(0))),
+  head_hash: v.nullable(hex64),
   latest_anchor: v.nullable(LatestAnchorSchema),
   previous_anchors: v.array(LatestAnchorSchema),
   instructions: InstructionsSchema,

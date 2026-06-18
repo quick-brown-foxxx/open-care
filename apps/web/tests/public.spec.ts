@@ -71,4 +71,42 @@ test.describe('Public pages', () => {
     const cardCount = await page.locator('.standalone-card').count();
     expect(cardCount).toBeGreaterThan(0);
   });
+
+  test('verify page shows no validation error with empty ledger', async ({ page }) => {
+    await page.goto('/verify');
+
+    // Wait for page heading to be visible (page shell loaded)
+    await expect(page.locator('h1')).toBeVisible();
+
+    // Wait for API content to render: either data cards (.head-hash, .empty-state)
+    // or an error card (.form-error). The skeleton should be gone by now.
+    // Use a stable selector that appears in all non-loading states.
+    await expect(page.locator('.standalone-card').first()).toBeVisible();
+
+    // Give the API response time to fully process and render
+    await page.waitForTimeout(3000);
+
+    // Regression: must NOT show the validation error message that the bug caused.
+    // When head_sequence_no/head_hash were null (empty ledger), the old Valibot
+    // schema rejected them and the page showed "Ошибка формата данных".
+    await expect(page.getByText('Ошибка формата данных')).toHaveCount(0);
+
+    // Must show meaningful content — either the HEAD section (ledger has data),
+    // the empty-state message (ledger is empty, no anchor yet), or a network error
+    // (expected in local dev where CORS blocks cross-origin staging API calls).
+    // The key regression guard is above: VALIDATION_ERROR must never appear.
+    const hasHead = await page
+      .getByText('Текущий HEAD реестра')
+      .isVisible()
+      .catch(() => false);
+    const hasEmpty = await page
+      .getByText('Якорь ещё не опубликован')
+      .isVisible()
+      .catch(() => false);
+    const hasNetworkError = await page
+      .getByText('Ошибка сети')
+      .isVisible()
+      .catch(() => false);
+    expect(hasHead || hasEmpty || hasNetworkError).toBe(true);
+  });
 });

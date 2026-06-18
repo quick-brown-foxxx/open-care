@@ -200,10 +200,14 @@
   </p>
 
   <!-- Head info -->
-  {#if headInfo.data}
+  {#if headInfo.data && headInfo.data.head_hash}
     <div class="standalone-card head-info">
       <HashDisplay hash={headInfo.data.head_hash} label="HEAD" full={true} />
       <span class="text-muted head-seq">#{headInfo.data.head_sequence_no}</span>
+    </div>
+  {:else if headInfo.data}
+    <div class="standalone-card head-info">
+      <p class="text-muted">Реестр пуст. HEAD появится после первой записи.</p>
     </div>
   {/if}
 

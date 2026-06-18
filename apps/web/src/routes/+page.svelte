@@ -72,7 +72,7 @@
     {:else if ledgerFeed.data && ledgerFeed.data.items.length > 0}
       <Timeline
         events={ledgerFeed.data.items}
-        headInfo={verify.data
+        headInfo={verify.data && verify.data.head_hash && verify.data.head_sequence_no !== null
           ? { head_hash: verify.data.head_hash, head_sequence_no: verify.data.head_sequence_no }
           : null}
         totals={totals.data ? { balance_usdc_minor: totals.data.balance_usdc_minor } : null}
