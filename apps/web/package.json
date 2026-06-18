@@ -7,7 +7,8 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "deploy": "vite build && wrangler pages deploy .svelte-kit/cloudflare --project-name=open-care-web --branch=main"
   },
   "dependencies": {
     "@sveltejs/adapter-cloudflare": "^5",
