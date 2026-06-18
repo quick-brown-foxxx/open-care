@@ -1,6 +1,6 @@
 # OpenCode Agent Notes
 
-**Status:** Preparation complete; implementation phase begins. All infrastructure (D1, secrets, domains, webhooks, CI vars) is provisioned. All Worker and frontend code is draft/mock and will be overwritten with real implementations. See `docs/ops/secrets-inventory.md` for environment readiness and `DEVELOPMENT.md` for day-to-day commands.
+**Status:** All 6 epics implemented, verified, and deployed to staging. 593 tests pass, CI green (all 5 gates exit 0). Frontend rebuilt to match `docs/ui-prototypes/landing.html`. See `docs/implementation-plan.md` for current backlog.
 
 ## Project shape
 
@@ -10,15 +10,15 @@
 
 ## Apps and entrypoints
 
-| App                | Worker name         | Binding                                                                                                                 | `wrangler.jsonc`                                                                                                                       | Code status                                                               |
-| ------------------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `apps/ingest`      | `vault-ingest`      | `vault_db` (D1: `vault-db`)                                                                                             | has route `staging.open-care.org/webhook/helius`                                                                                       | draft: validates `Authorization`, returns hardcoded response              |
-| `apps/tg-bot`      | `tg-bot`            | `bot_db` (D1: `bot-db`)                                                                                                 | has route `staging.open-care.org/tg/webhook`                                                                                           | draft: validates webhook secret, returns hardcoded response               |
-| `apps/api-read`    | `vault-api-read`    | `vault_db`                                                                                                              | has route `staging.open-care.org/api/*`                                                                                                | draft: stub endpoints returning zeroes/empty arrays                       |
-| `apps/api-write`   | `vault-api-write`   | `vault_db`                                                                                                              | no public route; reached only via service binding from `vault-operator`                                                                | draft: stub write endpoint (no auth middleware — operator handles auth)   |
-| `apps/anchor-cron` | `vault-anchor-cron` | `vault_db`                                                                                                              | no public route, cron `0 1 * * *`; reached via service binding from `vault-operator` for manual triggers                               | draft: scheduled handler logs, manual trigger stub                        |
-| `apps/operator`    | `vault-operator`    | none (no D1 binding); uses service bindings to `vault-api-write`, `vault-anchor-cron`, `tg-bot`; holds `OPERATOR_TOKEN` | has routes `staging.open-care.org/api/disbursements`, `staging.open-care.org/api/anchor/manual`, `staging.open-care.org/tg/internal/*` | draft: auth gateway + service binding forwarding                          |
-| `apps/web`         | (Pages)             | —                                                                                                                       | —                                                                                                                                      | draft: SvelteKit scaffold with hardcoded data, to be rebuilt from scratch |
+| App                | Worker name         | Binding                                                                                                                                   | `wrangler.jsonc`                                                                                                                       | Code status                                                                   |
+| ------------------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `apps/ingest`      | `vault-ingest`      | `vault_db` (D1: `vault-db`)                                                                                                               | has route `staging.open-care.org/webhook/helius`, cron `0 */6 * * *`                                                                   | ✅ Real: Helius webhook + async SPL processing + reconciliation               |
+| `apps/tg-bot`      | `tg-bot`            | `bot_db` (D1: `bot-db`)                                                                                                                   | has route `staging.open-care.org/tg/webhook`                                                                                           | ✅ Real: 4 commands, HMAC+AES-GCM, redacted operator view, code delivery      |
+| `apps/api-read`    | `vault-api-read`    | `vault_db`                                                                                                                                | has route `staging.open-care.org/api/*`                                                                                                | ✅ Real: 6 public endpoints with 60s cache, D1 queries                        |
+| `apps/api-write`   | `vault-api-write`   | `vault_db`                                                                                                                                | no public route; reached only via service binding from `vault-operator`                                                                | ✅ Real: POST /api/disbursements with Zod validation + hash-chained append    |
+| `apps/anchor-cron` | `vault-anchor-cron` | `vault_db`                                                                                                                                | no public route, cron `0 1 * * *`; reached via service binding from `vault-operator` for manual triggers                               | ✅ Real: Solana Memo pipeline, lock protocol, recovery                        |
+| `apps/operator`    | `vault-operator`    | none (no D1 binding); uses service bindings to `vault-api-write`, `vault-anchor-cron`, `tg-bot`, `vault-api-read`; holds `OPERATOR_TOKEN` | has routes `staging.open-care.org/api/disbursements`, `staging.open-care.org/api/anchor/manual`, `staging.open-care.org/tg/internal/*` | ✅ Real: constant-time auth, CORS, per-route auth, service binding forwarding |
+| `apps/web`         | (Pages)             | —                                                                                                                                         | —                                                                                                                                      | ✅ Real: SvelteKit 2 + Svelte 5, 12 routes, prototype-matching design         |
 
 **`vault-operator` is the sole holder of `OPERATOR_TOKEN`.** All operator-authenticated
 endpoints (`/api/disbursements`, `/api/anchor/manual`, `/tg/internal/pending-requests`,
@@ -38,6 +38,14 @@ the write), `/api/ledger-events`, `/api/verify`, `/api/health`). The
 
 All Workers use Hono. Main export is the Hono app from `src/index.ts`.
 
+## Shared packages
+
+| Package                 | Status                                                                                                            |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `@open-care/vault-core` | ✅ RFC 8785 canonical JSON, 4 event schemas (Zod), hash chain, test vector, beneficiary ref, anchor memo, logging |
+| `@open-care/vault-db`   | ✅ Drizzle schemas (6 tables), ledger append helper, query helpers, client factories                              |
+| `@open-care/bot-crypto` | ✅ HMAC-SHA256 user ref derivation, AES-GCM chat ID encryption/decryption, base64url                              |
+
 ## Local dev
 
 - Copy `.env.example` → `.dev.vars` (gitignored). `wrangler dev` reads `.dev.vars`, not `.env`.
@@ -56,14 +64,38 @@ All Workers use Hono. Main export is the Hono app from `src/index.ts`.
   pnpm exec wrangler d1 migrations apply bot-db --local
   ```
 
+## Quality gates (run before commit/PR)
+
+```bash
+pnpm run final-check   # format:check → lint → typecheck → test → build
+```
+
+This runs the exact same sequence as CI. All 5 gates must exit 0. Current: 593 tests pass (38 files), tsc -b clean, lint exit 0, format:check passes, build succeeds.
+
+Individual gates:
+
+```bash
+pnpm run format:check   # prettier --check .
+pnpm run lint           # eslint .
+pnpm run check          # tsc -b
+pnpm run test           # vitest run
+pnpm run build          # tsc -b + SvelteKit build
+```
+
 ## Secrets and config
 
 - Access secrets in code via Hono bindings (`c.env.SECRET_NAME`), **not** `process.env`.
-- Deployed secrets are set with `wrangler secret put` per Worker. See `docs/ops/secrets-inventory.md` for what is already pushed, what each Worker requires, and rotation rules.
+- Deployed secrets are set with `wrangler secret put` per Worker. All 9 Worker secrets are set. See `docs/ops/secrets-inventory.md`.
 - The **treasury private key is never in Workers, CI, repo, or logs** — operator custody only.
 - Public config values (e.g. `USDC_MINT`, treasury/anchor addresses) live in `.env.example` / `wrangler.jsonc` vars, not secrets.
 
 ## Deploy
+
+- All-in-one staging deploy:
+
+  ```bash
+  pnpm run deploy       # migrations → 6 Workers → frontend Pages
+  ```
 
 - Per-app deploy from inside the app directory:
 
@@ -72,19 +104,21 @@ All Workers use Hono. Main export is the Hono app from `src/index.ts`.
   pnpm exec wrangler deploy
   ```
 
+- Frontend only:
+
+  ```bash
+  pnpm run deploy:frontend
+  ```
+
 - Staging is the default environment. No `--env production` setup exists yet.
 - Live logs: `pnpm exec wrangler tail <worker-name>`.
 
-## What must be created (implementation phase)
+## Seed data (local dev)
 
-All `src/` code in Worker apps and the frontend is draft/mock from the preparation
-phase. It must be **overwritten** (not extended) with real implementations.
-Preserve infra-level configs (`wrangler.jsonc`, `package.json` names/dependencies,
-`tsconfig.json` options) only when they match the specs; overwrite everything else.
+```bash
+pnpm run seed   # applies migrations + seed data for both D1 databases
+```
 
-- `packages/vault-core/`, `packages/vault-db/`, `packages/bot-crypto/` — source code (currently empty scaffolds).
-- `apps/web/` — full SvelteKit frontend, rebuilt from scratch (current draft is disposable).
-- Real Worker implementations for ingest, tg-bot, api-read, api-write, anchor-cron, operator.
-- D1 migration SQL files (vault-db and bot-db schema migrations exist; seed data and Drizzle ORM schemas do not).
-- Shared tooling configs: ESLint, Prettier, Vitest, Playwright, GitHub workflows, root lint/typecheck/test scripts.
-- Keep additions incremental and consistent with `DEVELOPMENT.md`.
+## Current backlog
+
+See `docs/implementation-plan.md` for the full backlog. Epics 0-6 are complete. Remaining MVP epics: 7 (Frontend Testing & Hardening) and 8 (Backend Completeness).
