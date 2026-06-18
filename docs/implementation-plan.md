@@ -285,11 +285,26 @@ See [[./ui-prototypes/]] for UI plans, docs and prototypes.
 **Epic 6: ✅ Complete (2026-06-18)**
 
 **All 6 epics complete. All Workers + frontend deployed to staging.**
+**Verification epic complete (2026-06-18):** CI honest (all 5 gates exit 0), Analysis pass (3 critical, 9 important, 14 minor), VTF #1 (routing fix + docs + version), VTF #2 (10 new tests, 593 total).
 
-**Post-MVP backlog:**
+**Post-MVP backlog (from Analysis findings):**
 
+Critical:
+- Frontend test infrastructure (Playwright + Vitest for apps/web) — zero tests currently
+- `correction_recorded` integration tests through ledger append path
+
+Important:
+- Browser-based visual verification (button/metric CSS rendering)
+- Timeline component tests (TimelineEvent, TimelineRail, TimelineCard)
+- Frontend admin tests (TokenGate, AdminNav, disbursement form, anchor panel, bot handoff)
+- Error code coverage for 403, 429, 503
+- Cross-implementation verification test (Python/Rust producing same event_hash)
+- Version injection at build time (currently hardcoded 0.1.0-dev)
+
+Minor:
+- Bivalent API test (payload_json byte-for-byte after correction)
+- Migration directory asymmetry documentation
 - `correction_recorded` write endpoint (I-11)
-- Playwright browser tests for frontend
 - +page.ts load functions (SSR data loading)
 - Content-Security-Policy
 - Design phase (replace disposable frontend layers)
