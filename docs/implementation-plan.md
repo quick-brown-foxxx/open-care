@@ -289,9 +289,11 @@ See [[./ui-prototypes/]] for UI plans, docs and prototypes.
 
 ---
 
-## Epic 7: Frontend Testing & Hardening
+## Epic 7: Frontend Testing & Hardening ✅
 
-**Goal:** Frontend has automated test coverage (Playwright browser + Vitest component). Security hardening (CSP). SSR data loading (+page.ts). Visual verification against prototype.
+**Status:** Complete (2026-06-18)  
+**Goal:** Frontend has automated test coverage (Playwright browser + Vitest component). Security hardening (CSP). SSR data loading (+page.ts). Visual verification against prototype.  
+**Evidence:** 80 new tests (14 Playwright + 66 Vitest). CSP headers deployed. +page.ts SSR load functions for landing/verify/ledger. Version injection at build time. prefers-reduced-motion support. Visual verification screenshot test.
 
 ### Slice 7.1: Playwright Browser Tests
 
@@ -321,9 +323,11 @@ See [[./ui-prototypes/]] for UI plans, docs and prototypes.
 
 ---
 
-## Epic 8: Backend Completeness
+## Epic 8: Backend Completeness ✅
 
-**Goal:** Remaining invariant coverage, missing endpoint, error code tests, cross-implementation verification, production readiness.
+**Status:** Complete (2026-06-18)  
+**Goal:** Remaining invariant coverage, missing endpoint, error code tests, cross-implementation verification, production readiness.  
+**Evidence:** 27 new tests (7 corrections + 4 forbidden + 8 rate-limit + 4 unavailable + 3 bivalent + 1 Python cross-implementation). POST /api/corrections endpoint with whitelist enforcement. Rate limiter on operator. Python test_vector.py confirms fda2610f... Deploy-prod workflow. Smoke test script.
 
 ### Slice 8.1: `correction_recorded` Write Endpoint (I-11)
 
@@ -360,13 +364,12 @@ See [[./ui-prototypes/]] for UI plans, docs and prototypes.
 **Epic 5: ✅ Complete (2026-06-17)**
 **Epic 6: ✅ Complete (2026-06-18)**
 **Verification: ✅ Complete (2026-06-18)**
+**Epic 7: ✅ Complete (2026-06-18)**
+**Epic 8: ✅ Complete (2026-06-18)**
 
-**Next — Epics 7 and 8 can run in parallel:**
+**All 8 epics complete. 620 tests pass (42 files). CI green (all 5 gates exit 0). All Workers + frontend deployed to staging.**
 
-- Epic 7 (frontend) — needs Playwright setup, no backend changes
-- Epic 8 (backend) — needs write endpoint + test additions, no frontend changes
-
-**Final polish:**
+**Remaining (post-MVP / design phase):**
 
 - Design phase (replace disposable frontend layers with production design)
 - Mainnet launch (after production secrets and domain setup)
