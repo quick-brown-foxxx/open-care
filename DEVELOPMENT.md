@@ -225,6 +225,38 @@ webhook, then polls the public read API from a pre-transfer `/api/verify`
 baseline to assert exactly one `donation_confirmed` ledger event for that
 signature.
 
+## Telegram staging E2E (manual/nightly)
+
+The Telegram E2E suite is a manual/nightly live staging check. It is
+intentionally **not** part of PR CI because it uses a real Telegram test account,
+the staging bot token, and the staging operator token.
+
+```bash
+uv run --project tools/e2e-tg pytest --collect-only -q
+uv run --project tools/e2e-tg pytest -q
+ALLOW_TG_E2E=true \
+TELETHON_API_ID=<telegram api id> \
+TELETHON_API_HASH=<telegram api hash> \
+TELETHON_SESSION_STRING=<telethon string session> \
+TG_BOT_TOKEN=<staging bot token> \
+OPERATOR_TOKEN=<staging operator token> \
+uv run --project tools/e2e-tg pytest -v
+```
+
+Optional knobs:
+
+- `TG_E2E_OPERATOR_BASE_URL` — defaults to and must remain
+  `https://staging.open-care.org`.
+- `TG_E2E_BOT_USERNAME` — skips Bot API `getMe` username resolution when set.
+- `TG_E2E_TIMEOUT_SECONDS` — default `20`.
+
+The suite constructs `TelegramClient(..., sequential_updates=True)`, uses
+Telethon's Conversation API for deterministic bot interactions, and sleeps one
+second between tests to reduce rate-limit pressure. The tests fail closed unless
+`ALLOW_TG_E2E=true` is set, skip clearly when required env is missing, and never
+print Telethon session strings, bot/operator tokens, full Telegram identifiers,
+or full gift-card codes.
+
 ## The dev loop
 
 ```text

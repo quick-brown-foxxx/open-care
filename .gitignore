@@ -11,6 +11,8 @@ build/
 *.tsbuildinfo
 dist/
 *.d.ts.map
+__pycache__/
+.venv/
 packages/*/vitest.config.js
 packages/*/vitest.config.d.ts
 packages/*/vitest.config.d.ts.map
