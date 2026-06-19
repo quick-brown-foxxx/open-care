@@ -31,8 +31,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Secret scan (treasury key)
-        run: |
-          grep -r "treasury.*private\|private.*key\|TREASURY_SECRET" apps/ packages/ --include="*.ts" --include="*.json" --include="*.yml" && echo "FAIL: Treasury key reference found!" && exit 1 || echo "PASS: No treasury key references"
+        run: pnpm run final-check:secret-scan
 
       - name: SvelteKit sync (generate .svelte-kit/tsconfig.json)
         working-directory: apps/web

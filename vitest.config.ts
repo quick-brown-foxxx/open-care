@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     reporters: ['default'],
     passWithNoTests: true,
-    projects: ['apps/*/vitest.config.ts', 'packages/*/vitest.config.ts'],
+    projects: ['test/vitest.config.ts', 'apps/*/vitest.config.ts', 'packages/*/vitest.config.ts'],
     globalSetup: ['./vitest.global.ts'],
   },
 });
