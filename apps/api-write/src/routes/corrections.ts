@@ -3,6 +3,7 @@ import { createVaultDb, appendLedgerEvent, getEventsPaginated, getHead } from '@
 import type { VaultDb } from '@open-care/vault-db';
 import { logInfo, logError, generateRequestId, utcNow } from '@open-care/vault-core';
 import type { CorrectionPayload, LedgerEvent } from '@open-care/vault-core';
+import type { CorrectionWriteResponse } from '@open-care/api-contract';
 import type { Env } from '../lib/env.js';
 import {
   errorResponse,
@@ -24,7 +25,7 @@ async function getLedgerEventBySequenceNo(
   const page = await getEventsPaginated(db, { cursor: sequenceNo - 1, limit: 1 });
   const event = page.items[0];
 
-  if (!event || event.sequence_no !== sequenceNo) {
+  if (event?.sequence_no !== sequenceNo) {
     return null;
   }
 
@@ -175,15 +176,14 @@ correctionsRoute.post('/api/corrections', async (c) => {
     requestId,
   });
 
-  return c.json(
-    {
-      sequence_no: event.sequence_no,
-      event_hash: event.event_hash,
-      head_hash: event.event_hash,
-      corrects_sequence_no: data.corrects_sequence_no,
-    },
-    200,
-  );
+  const responseBody: CorrectionWriteResponse = {
+    sequence_no: event.sequence_no,
+    event_hash: event.event_hash,
+    head_hash: event.event_hash,
+    corrects_sequence_no: data.corrects_sequence_no,
+  };
+
+  return c.json(responseBody, 200);
 });
 
 export { correctionsRoute };

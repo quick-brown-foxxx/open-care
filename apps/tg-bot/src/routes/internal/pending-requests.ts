@@ -3,24 +3,9 @@ import { eq, gt, inArray, asc, and } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { botSchema } from '@open-care/vault-db';
 import type { BotDb } from '@open-care/vault-db';
+import type { PendingRequestItem, PendingRequestsResponse } from '@open-care/api-contract';
 
 const { handles, conversations } = botSchema;
-
-/**
- * Shape of a single item in the pending-requests response.
- *
- * Contains only safe, non-sensitive fields. Telegram IDs, chat IDs,
- * user references, encrypted chat routes, code hashes, and code
- * last-4 digits are NEVER included.
- */
-interface PendingRequestItem {
-  opaque_id: string;
-  conversation_id: number;
-  internal_handle: string;
-  request_status: string;
-  created_at_utc: string;
-  updated_at_utc: string;
-}
 
 /**
  * GET /tg/internal/pending-requests
@@ -124,5 +109,7 @@ export async function pendingRequestsHandler(c: Context, db: BotDb): Promise<Res
   const lastItem = pageItems[pageItems.length - 1];
   const nextCursor: string | null = hasMore && lastItem ? lastItem.opaque_id : null;
 
-  return c.json({ items, next_cursor: nextCursor });
+  const responseBody: PendingRequestsResponse = { items, next_cursor: nextCursor };
+
+  return c.json(responseBody);
 }

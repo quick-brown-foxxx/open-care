@@ -67,6 +67,7 @@ ingress setting.
 - `@open-care/vault-core` — `Result`/`ok`/`err`, `isValidHandle`, `isValidBeneficiaryRef`, logging
 - `@open-care/vault-db` — `createBotDb`, `botSchema`, `BotDb` type
 - `@open-care/bot-crypto` — `importHmacKey`, `importAesGcmKey`, `deriveTelegramUserRef`, `encryptChatId`, `decryptChatId`
+- `@open-care/api-contract` — type-only response contracts for internal operator endpoints
 
 ### Connected to
 

@@ -24,10 +24,15 @@ export interface AnchorRunSuccess {
   anchor_runs_id: number;
 }
 
-export interface AnchorRunSkipped {
-  status: 'already_published' | 'empty_ledger';
-  anchored_head_hash?: string;
-  anchored_head_sequence_no?: number;
+export interface AnchorRunAlreadyPublished {
+  status: 'already_published';
+  anchored_head_hash: string;
+  anchored_head_sequence_no: number;
+  duration_ms: number;
+}
+
+export interface AnchorRunEmptyLedger {
+  status: 'empty_ledger';
   duration_ms: number;
 }
 
@@ -43,7 +48,8 @@ export interface AnchorRunFailed {
 
 export type AnchorRunResult =
   | AnchorRunSuccess
-  | AnchorRunSkipped
+  | AnchorRunAlreadyPublished
+  | AnchorRunEmptyLedger
   | AnchorRunConflict
   | AnchorRunFailed;
 

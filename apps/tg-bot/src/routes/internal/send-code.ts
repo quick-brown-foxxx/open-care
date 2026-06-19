@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import type { BotDb } from '@open-care/vault-db';
 import { isValidBeneficiaryRef, logInfo, logError, generateRequestId } from '@open-care/vault-core';
+import type { SendCodeResponse } from '@open-care/api-contract';
 import { deliverCode } from '../../lib/code-delivery.js';
 import type { SendCodeInput } from '../../lib/code-delivery.js';
 import { errorResponse, badRequestResponse, internalErrorResponse } from '../../lib/errors.js';
@@ -139,5 +140,7 @@ export async function sendCodeHandler(
     conversation_id: conversationId,
   });
 
-  return c.json({ delivered_at_utc: result.value.deliveredAtUtc });
+  const responseBody: SendCodeResponse = { delivered_at_utc: result.value.deliveredAtUtc };
+
+  return c.json(responseBody);
 }

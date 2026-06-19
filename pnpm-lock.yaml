@@ -68,6 +68,9 @@ importers:
 
   apps/anchor-cron:
     dependencies:
+      '@open-care/api-contract':
+        specifier: workspace:*
+        version: link:../../packages/api-contract
       '@open-care/vault-core':
         specifier: workspace:*
         version: link:../../packages/vault-core
@@ -115,6 +118,9 @@ importers:
 
   apps/api-write:
     dependencies:
+      '@open-care/api-contract':
+        specifier: workspace:*
+        version: link:../../packages/api-contract
       '@open-care/vault-core':
         specifier: workspace:*
         version: link:../../packages/vault-core
@@ -153,6 +159,9 @@ importers:
 
   apps/operator:
     dependencies:
+      '@open-care/api-contract':
+        specifier: workspace:*
+        version: link:../../packages/api-contract
       '@open-care/vault-core':
         specifier: workspace:*
         version: link:../../packages/vault-core
@@ -166,6 +175,9 @@ importers:
 
   apps/tg-bot:
     dependencies:
+      '@open-care/api-contract':
+        specifier: workspace:*
+        version: link:../../packages/api-contract
       '@open-care/bot-crypto':
         specifier: workspace:*
         version: link:../../packages/bot-crypto

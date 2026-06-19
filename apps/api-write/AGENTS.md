@@ -49,6 +49,7 @@ environment). The top-level Wrangler config and production environment both set
 
 - `@open-care/vault-core` — `generateBeneficiaryRef`, `isValidTimestamp`, `isTimestampInPast`, `ReplacementFieldsSchema`, types (`DisbursementPayload`, `CorrectionPayload`, `LedgerEvent`), logging
 - `@open-care/vault-db` — `createVaultDb`, `appendLedgerEvent`, `getEventsPaginated`, `getHead`
+- `@open-care/api-contract` — type-only response contracts for write endpoints
 
 ### Connected to
 

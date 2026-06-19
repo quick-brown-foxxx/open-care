@@ -1,12 +1,17 @@
 import { unavailableResponse } from './errors';
 import { logInfo, logError, generateRequestId } from '@open-care/vault-core';
 
+export type ForwardedResponse<TBody> = Response & { readonly __contractBody?: TBody };
+
 /**
  * Forward a request to a downstream Worker via service binding.
  * If the fetch itself fails (network error within CF infra), returns 503.
  * Otherwise passes through the downstream response as-is.
  */
-export async function forwardToService(fetcher: Fetcher, request: Request): Promise<Response> {
+export async function forwardToService<TBody = unknown>(
+  fetcher: Fetcher,
+  request: Request,
+): Promise<ForwardedResponse<TBody>> {
   try {
     // Clone and strip Authorization header before forwarding.
     // Defense-in-depth: the OPERATOR_TOKEN should not travel further

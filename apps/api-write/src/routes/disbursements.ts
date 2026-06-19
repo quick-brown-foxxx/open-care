@@ -9,6 +9,7 @@ import {
   utcNow,
 } from '@open-care/vault-core';
 import type { DisbursementPayload, LedgerEvent } from '@open-care/vault-core';
+import type { DisbursementWriteResponse } from '@open-care/api-contract';
 import type { Env } from '../lib/env.js';
 import {
   badRequestResponse,
@@ -123,16 +124,15 @@ disbursementsRoute.post('/api/disbursements', async (c) => {
     requestId,
   });
 
-  return c.json(
-    {
-      sequence_no: event.sequence_no,
-      event_hash: event.event_hash,
-      head_hash: event.event_hash,
-      public_beneficiary_ref: beneficiaryRef,
-      next_action: 'send_code_to_beneficiary_via_bot',
-    },
-    200,
-  );
+  const responseBody: DisbursementWriteResponse = {
+    sequence_no: event.sequence_no,
+    event_hash: event.event_hash,
+    head_hash: event.event_hash,
+    public_beneficiary_ref: beneficiaryRef,
+    next_action: 'send_code_to_beneficiary_via_bot',
+  };
+
+  return c.json(responseBody, 200);
 });
 
 export { disbursementsRoute };

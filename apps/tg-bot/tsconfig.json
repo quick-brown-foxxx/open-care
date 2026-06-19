@@ -8,6 +8,7 @@
   "references": [
     { "path": "../../packages/vault-core" },
     { "path": "../../packages/vault-db" },
-    { "path": "../../packages/bot-crypto" }
+    { "path": "../../packages/bot-crypto" },
+    { "path": "../../packages/api-contract" }
   ]
 }

@@ -52,6 +52,7 @@ set `workers_dev=false` so staging/default and production deploys have no
 
 - `@open-care/vault-core` — `buildAnchorMemo`, `parseAnchorMemo`, `ok`/`err`, `Cluster` type, logging
 - `@open-care/vault-db` — `createVaultDb`, `getHead`, `appendLedgerEvent`, `anchorRuns` schema
+- `@open-care/api-contract` — type-only response contract for manual anchor endpoint
 - `@solana/web3.js` — `Connection`, `Keypair`, `Transaction`, `sendAndConfirmTransaction`
 - `bs58` — base58 decode for anchor wallet secret
 

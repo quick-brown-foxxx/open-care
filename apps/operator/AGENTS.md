@@ -57,6 +57,7 @@ goes through downstream Workers.
 ### Depends on
 
 - `@open-care/vault-core` — logging only (`logInfo`, `logWarn`, `logError`)
+- `@open-care/api-contract` — type-only response contracts for forwarded downstream endpoints
 - `hono` — HTTP framework
 
 **Notably absent:** `@open-care/vault-db` and `@open-care/bot-crypto` are not
