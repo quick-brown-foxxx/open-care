@@ -12,7 +12,7 @@
  * avoid cross-test pollution.
  */
 
-import { ok, err } from '@open-care/vault-core';
+import { ok, err, parseAnchorMemo } from '@open-care/vault-core';
 import type { Result } from '@open-care/vault-core';
 
 // ---------------------------------------------------------------------------
@@ -78,6 +78,8 @@ export interface SolanaMockConfig {
 const DEFAULT_SIGNATURE =
   '5Jofwx5DPe1qBwHL7hN3VpFqLxqFj4mJLo5iY7nP8kRt2sT9uVvWxYzAbCdEfGhIjKlMnOpQrStUvWxYz1234';
 const DEFAULT_BLOCK_TIME = 1_712_345_678;
+const MIN_SOLANA_SIGNATURE_LENGTH = 32;
+const MAX_SOLANA_SIGNATURE_LENGTH = 128;
 
 type SolanaMockGlobal = typeof globalThis & {
   __openCareAnchorCronSolanaMockConfig?: SolanaMockConfig;
@@ -101,6 +103,65 @@ export function resetSolanaMockConfig(): void {
 
 function errorFromMessage(message: string): Error {
   return new Error(message);
+}
+
+function validateRpcUrl(rpcUrl: string): void {
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(rpcUrl);
+  } catch {
+    throw errorFromMessage('Solana mock rpcUrl must be an absolute http(s) URL');
+  }
+
+  if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
+    throw errorFromMessage('Solana mock rpcUrl must be an absolute http(s) URL');
+  }
+}
+
+function validateConnection(connection: FakeConnection): Result<void, Error> {
+  try {
+    validateRpcUrl(connection.rpcEndpoint);
+    return ok(undefined);
+  } catch (e) {
+    return err(e instanceof Error ? e : errorFromMessage(String(e)));
+  }
+}
+
+function validateSignature(signature: string): Result<void, Error> {
+  if (
+    typeof signature !== 'string' ||
+    signature.length < MIN_SOLANA_SIGNATURE_LENGTH ||
+    signature.length > MAX_SOLANA_SIGNATURE_LENGTH ||
+    /\s/.test(signature)
+  ) {
+    return err(
+      errorFromMessage(
+        `Solana mock transaction signature must be a non-empty string between ${MIN_SOLANA_SIGNATURE_LENGTH} and ${MAX_SOLANA_SIGNATURE_LENGTH} characters with no whitespace`,
+      ),
+    );
+  }
+
+  return ok(undefined);
+}
+
+function validateAnchorWalletSecret(base58Secret: string): Result<void, Error> {
+  if (typeof base58Secret !== 'string' || base58Secret.trim().length === 0) {
+    return err(errorFromMessage('Solana mock anchor wallet secret must be a non-empty string'));
+  }
+
+  return ok(undefined);
+}
+
+function validateAnchorMemoText(memoText: string): Result<void, Error> {
+  if (typeof memoText !== 'string' || parseAnchorMemo(memoText) === null) {
+    return err(
+      errorFromMessage(
+        'Solana mock memo text must match ccv-anchor:<64 lowercase hex> before sending',
+      ),
+    );
+  }
+
+  return ok(undefined);
 }
 
 function fakeFinalizedTransaction(blockTime = DEFAULT_BLOCK_TIME): FakeTransactionResponse {
@@ -137,11 +198,16 @@ async function delayIfConfigured(delayMs: number | undefined): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export function createConnection(rpcUrl: string): FakeConnection {
+  validateRpcUrl(rpcUrl);
   return { rpcEndpoint: rpcUrl };
 }
 
-export function createKeypair(_base58Secret: string): Result<FakeKeypair, Error> {
-  void _base58Secret;
+export function createKeypair(base58Secret: string): Result<FakeKeypair, Error> {
+  const secretValidation = validateAnchorWalletSecret(base58Secret);
+  if (!secretValidation.ok) {
+    return secretValidation;
+  }
+
   const behavior = readSolanaMockConfig().createKeypair ?? { kind: 'success' };
   if (behavior.kind === 'throw') {
     throw errorFromMessage(behavior.message);
@@ -162,13 +228,21 @@ export function createKeypair(_base58Secret: string): Result<FakeKeypair, Error>
 }
 
 export function sendMemoTransaction(
-  _connection: FakeConnection,
+  connection: FakeConnection,
   _keypair: FakeKeypair,
-  _memoText: string,
+  memoText: string,
 ): Promise<Result<string, Error>> {
-  void _connection;
   void _keypair;
-  void _memoText;
+  const connectionValidation = validateConnection(connection);
+  if (!connectionValidation.ok) {
+    return Promise.resolve(connectionValidation);
+  }
+
+  const memoValidation = validateAnchorMemoText(memoText);
+  if (!memoValidation.ok) {
+    return Promise.resolve(memoValidation);
+  }
+
   const behavior = readSolanaMockConfig().sendMemoTransaction ?? { kind: 'success' };
 
   return delayIfConfigured(behavior.delay_ms).then(() => {
@@ -178,7 +252,12 @@ export function sendMemoTransaction(
     if (behavior.kind === 'throw') {
       throw errorFromMessage(behavior.message);
     }
-    return ok(behavior.signature ?? DEFAULT_SIGNATURE);
+    const signature = behavior.signature ?? DEFAULT_SIGNATURE;
+    const signatureValidation = validateSignature(signature);
+    if (!signatureValidation.ok) {
+      return signatureValidation;
+    }
+    return ok(signature);
   });
 }
 
@@ -192,11 +271,19 @@ export function getBalance(
 }
 
 export function getTransaction(
-  _connection: FakeConnection,
-  _signature: string,
+  connection: FakeConnection,
+  signature: string,
 ): Promise<Result<FakeTransactionResponse | null, Error>> {
-  void _connection;
-  void _signature;
+  const connectionValidation = validateConnection(connection);
+  if (!connectionValidation.ok) {
+    return Promise.resolve(connectionValidation);
+  }
+
+  const signatureValidation = validateSignature(signature);
+  if (!signatureValidation.ok) {
+    return Promise.resolve(signatureValidation);
+  }
+
   const behavior = readSolanaMockConfig().getTransaction ?? { kind: 'success' };
 
   if (behavior.kind === 'null') {
@@ -221,11 +308,19 @@ export function getTransaction(
 }
 
 export function getSignatureStatus(
-  _connection: FakeConnection,
-  _signature: string,
+  connection: FakeConnection,
+  signature: string,
 ): Promise<Result<FakeSignatureStatus | null, Error>> {
-  void _connection;
-  void _signature;
+  const connectionValidation = validateConnection(connection);
+  if (!connectionValidation.ok) {
+    return Promise.resolve(connectionValidation);
+  }
+
+  const signatureValidation = validateSignature(signature);
+  if (!signatureValidation.ok) {
+    return Promise.resolve(signatureValidation);
+  }
+
   const behavior = readSolanaMockConfig().getSignatureStatus ?? { kind: 'success' };
 
   if (behavior.kind === 'null') {
