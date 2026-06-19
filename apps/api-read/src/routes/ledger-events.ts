@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import { createVaultDb, getRawEventsPaginated } from '@open-care/vault-db';
 import { generateRequestId } from '@open-care/vault-core';
-import type { RawLedgerEventRow } from '@open-care/vault-db';
 import type { Env } from '../lib/env.js';
 import { withCache } from '../lib/cache.js';
 import { internalErrorResponse } from '../lib/errors.js';
 import { validateLimit, validateCursor } from '../lib/pagination.js';
+import type { LedgerEventsResponse } from '@open-care/api-contract';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -22,7 +22,7 @@ app.get('/api/ledger-events', async (c) => {
 
   const db = createVaultDb(c.env.vault_db);
 
-  let result;
+  let result: Awaited<ReturnType<typeof getRawEventsPaginated>>;
   try {
     const options: { limit: number; cursor?: number } = { limit };
     if (cursor !== undefined) options.cursor = cursor;
@@ -34,16 +34,14 @@ app.get('/api/ledger-events', async (c) => {
 
   // Return raw rows directly — payload_json is the original stored string,
   // byte-for-byte identical to what was written to the DB.
-  const items: RawLedgerEventRow[] = result.items;
+  const items: LedgerEventsResponse['items'] = result.items;
 
   withCache(c);
-  return c.json(
-    {
-      items,
-      next_after_sequence_no: result.nextCursor,
-    },
-    200,
-  );
+  const body: LedgerEventsResponse = {
+    items,
+    next_after_sequence_no: result.nextCursor,
+  };
+  return c.json(body, 200);
 });
 
 export default app;

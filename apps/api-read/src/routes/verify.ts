@@ -7,6 +7,7 @@ import { withCache } from '../lib/cache.js';
 import { internalErrorResponse } from '../lib/errors.js';
 import { solscanTxUrl } from '../lib/solscan.js';
 import { VERIFY_INSTRUCTIONS_TS } from '../lib/verify-instructions.js';
+import type { AnchorInfo, VerifyResponse } from '@open-care/api-contract';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -41,18 +42,6 @@ interface AnchorRunRow {
   last_anchor_wallet_sol_lamports: number | null;
   created_at_utc: string;
   updated_at_utc: string;
-}
-
-/** Shape of an anchor object in the API response. */
-interface AnchorInfo {
-  anchor_date: string;
-  anchored_head_sequence_no: number;
-  anchored_head_hash: string;
-  tx_signature: string;
-  anchor_wallet_address: string;
-  memo_text: string;
-  published_at_utc: string;
-  solscan_url: string;
 }
 
 function buildAnchorInfo(row: AnchorRunRow, cluster: string): AnchorInfo {
@@ -116,19 +105,17 @@ app.get('/api/verify', async (c) => {
   }
 
   withCache(c);
-  return c.json(
-    {
-      head_sequence_no: headSequenceNo,
-      head_hash: headHash,
-      latest_anchor: latestAnchor,
-      previous_anchors: previousAnchors,
-      instructions: {
-        typescript: VERIFY_INSTRUCTIONS_TS,
-      },
-      anchor_stale: anchorStale,
+  const body: VerifyResponse = {
+    head_sequence_no: headSequenceNo,
+    head_hash: headHash,
+    latest_anchor: latestAnchor,
+    previous_anchors: previousAnchors,
+    instructions: {
+      typescript: VERIFY_INSTRUCTIONS_TS,
     },
-    200,
-  );
+    anchor_stale: anchorStale,
+  };
+  return c.json(body, 200);
 });
 
 export default app;

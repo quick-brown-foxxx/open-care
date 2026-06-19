@@ -5,6 +5,7 @@ import type { Env } from '../lib/env.js';
 import { withCache } from '../lib/cache.js';
 import { internalErrorResponse } from '../lib/errors.js';
 import { validateLimit, validateCursor } from '../lib/pagination.js';
+import type { DisbursementsResponse } from '@open-care/api-contract';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -21,7 +22,7 @@ app.get('/api/disbursements', async (c) => {
 
   const db = createVaultDb(c.env.vault_db);
 
-  let result;
+  let result: Awaited<ReturnType<typeof getDisbursements>>;
   try {
     const options: { limit: number; cursor?: number } = { limit };
     if (cursor !== undefined) options.cursor = cursor;
@@ -32,13 +33,11 @@ app.get('/api/disbursements', async (c) => {
   }
 
   withCache(c);
-  return c.json(
-    {
-      items: result.items,
-      next_cursor: result.nextCursor,
-    },
-    200,
-  );
+  const body: DisbursementsResponse = {
+    items: result.items,
+    next_cursor: result.nextCursor,
+  };
+  return c.json(body, 200);
 });
 
 export default app;
