@@ -1,17 +1,22 @@
-import { env, createExecutionContext, waitOnExecutionContext, SELF } from 'cloudflare:test';
+import { env, createExecutionContext, waitOnExecutionContext } from 'cloudflare:test';
 import { describe, it, expect, beforeAll } from 'vitest';
+import worker from '../src/index.js';
+import type { Env as IngestEnv } from '../src/lib/env.js';
 
 const VALID_AUTH_TOKEN = 'test-webhook-secret-token-12345';
 const VALID_SIGNATURE = '5xAbC1234mockTestVectorDonationConfirmedExample';
+const ACK_FAST_SIGNATURE = 'ackfast111111111111111111111111111111111111111';
+const ACK_FAST_TIMEOUT_MS = 1_000;
 
 describe('POST /webhook/helius', () => {
   beforeAll(() => {
+    const ingestEnv = env as unknown as IngestEnv;
     // Set the auth secret for testing. The test `env` is mutable.
-    env.HELIUS_WEBHOOK_AUTH_HEADER = VALID_AUTH_TOKEN;
+    ingestEnv.HELIUS_WEBHOOK_AUTH_HEADER = VALID_AUTH_TOKEN;
     // Set a dummy RPC URL so processInbox doesn't throw on undefined URL.
     // The fetch will fail (no real endpoint), but that's fine — the webhook
     // response is already sent before async processing begins.
-    env.HELIUS_RPC_URL = 'http://localhost:1/dummy-rpc';
+    ingestEnv.HELIUS_RPC_URL = 'http://localhost:1/dummy-rpc';
   });
 
   // -----------------------------------------------------------------------
@@ -24,6 +29,7 @@ describe('POST /webhook/helius', () => {
    * ctx.waitUntil() promises to settle.
    */
   async function postWebhook(body: unknown, authToken?: string): Promise<Response> {
+    const ingestEnv = env as unknown as IngestEnv;
     const ctx = createExecutionContext();
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -36,9 +42,96 @@ describe('POST /webhook/helius', () => {
       headers,
       body: JSON.stringify(body),
     });
-    const response = await SELF.fetch(request);
+    const response = await worker.fetch(request, ingestEnv, ctx);
     await waitOnExecutionContext(ctx);
     return response;
+  }
+
+  function validTransferRpcResponse(signature: string): unknown {
+    const ingestEnv = env as unknown as IngestEnv;
+
+    return {
+      jsonrpc: '2.0',
+      result: {
+        slot: 123456789,
+        blockTime: 1718400000,
+        transaction: {
+          message: {
+            accountKeys: [
+              'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+              ingestEnv.VAULT_USDC_ATA,
+              'DonorWalletBase58address111111111111111111111',
+            ],
+            instructions: [
+              {
+                programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+                parsed: {
+                  type: 'transferChecked',
+                  info: {
+                    source: 'SourceATAbase58address11111111111111111111111',
+                    destination: ingestEnv.VAULT_USDC_ATA,
+                    authority: 'DonorWalletBase58address111111111111111111111',
+                    amount: '100000000',
+                    mint: ingestEnv.USDC_MINT,
+                    decimals: 6,
+                  },
+                },
+              },
+            ],
+          },
+          signatures: [signature],
+        },
+        meta: { err: null, innerInstructions: [] },
+      },
+      id: 1,
+    };
+  }
+
+  function createDeferredRpcFetch(responseBody: unknown): {
+    fetch: typeof fetch;
+    release: () => void;
+    requestStarted: Promise<void>;
+  } {
+    let resolveGate: (() => void) | undefined;
+    let resolveRequestStarted: (() => void) | undefined;
+    let released = false;
+    const gate = new Promise<void>((resolve) => {
+      resolveGate = resolve;
+    });
+    const requestStarted = new Promise<void>((resolve) => {
+      resolveRequestStarted = resolve;
+    });
+
+    return {
+      fetch: async (_input, _init) => {
+        resolveRequestStarted?.();
+        await gate;
+        return new Response(JSON.stringify(responseBody), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      },
+      release: () => {
+        if (released) return;
+        released = true;
+        resolveGate?.();
+      },
+      requestStarted,
+    };
+  }
+
+  async function waitForPromiseOrTimeout<T>(
+    promise: Promise<T>,
+    timeoutMs: number,
+  ): Promise<T | 'timed_out'> {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<'timed_out'>((resolve) => {
+      timeoutId = setTimeout(() => resolve('timed_out'), timeoutMs);
+    });
+
+    const result = await Promise.race([promise, timeoutPromise]);
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+    return result;
   }
 
   // -----------------------------------------------------------------------
@@ -61,6 +154,7 @@ describe('POST /webhook/helius', () => {
 
     it('returns 401 when Authorization header does not use Bearer scheme', async () => {
       const ctx = createExecutionContext();
+      const ingestEnv = env as unknown as IngestEnv;
       const request = new Request('https://staging.open-care.org/webhook/helius', {
         method: 'POST',
         headers: {
@@ -69,7 +163,7 @@ describe('POST /webhook/helius', () => {
         },
         body: JSON.stringify([]),
       });
-      const response = await SELF.fetch(request);
+      const response = await worker.fetch(request, ingestEnv, ctx);
       await waitOnExecutionContext(ctx);
       expect(response.status).toBe(401);
       const json = await response.json<{
@@ -114,6 +208,7 @@ describe('POST /webhook/helius', () => {
   describe('payload validation', () => {
     it('returns 400 for invalid JSON body', async () => {
       const ctx = createExecutionContext();
+      const ingestEnv = env as unknown as IngestEnv;
       const request = new Request('https://staging.open-care.org/webhook/helius', {
         method: 'POST',
         headers: {
@@ -122,7 +217,7 @@ describe('POST /webhook/helius', () => {
         },
         body: 'not-json',
       });
-      const response = await SELF.fetch(request);
+      const response = await worker.fetch(request, ingestEnv, ctx);
       await waitOnExecutionContext(ctx);
       expect(response.status).toBe(400);
       const json = await response.json<{
@@ -193,6 +288,100 @@ describe('POST /webhook/helius', () => {
   // -----------------------------------------------------------------------
 
   describe('valid webhook events', () => {
+    /*
+    Scenario: Webhook acknowledges before asynchronous processing completes
+      Given a valid authenticated Helius webhook request whose async processing is deliberately delayed
+      When the webhook is invoked
+      Then the HTTP response is 200 within about one second
+      And async side effects are not required before the response is observed
+      And after waiting for the execution context, the donation ledger side effect is persisted
+    */
+    it('returns 200 quickly before delayed waitUntil processing completes', async () => {
+      const ingestEnv = env as unknown as IngestEnv;
+      await ingestEnv.vault_db.prepare('DELETE FROM helius_inbox').run();
+
+      const originalFetch = globalThis.fetch;
+      const delayedRpc = createDeferredRpcFetch(validTransferRpcResponse(ACK_FAST_SIGNATURE));
+      globalThis.fetch = delayedRpc.fetch;
+
+      const ctx = createExecutionContext();
+      const request = new Request('https://staging.open-care.org/webhook/helius', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${VALID_AUTH_TOKEN}`,
+        },
+        body: JSON.stringify([
+          {
+            signature: ACK_FAST_SIGNATURE,
+            slot: 123456789,
+            timestamp: 1718400000,
+            tokenTransfers: [],
+          },
+        ]),
+      });
+
+      try {
+        const startedAtMs = performance.now();
+        const responsePromise = Promise.resolve(worker.fetch(request, ingestEnv, ctx));
+        const response = await waitForPromiseOrTimeout(responsePromise, ACK_FAST_TIMEOUT_MS);
+        const elapsedMs = performance.now() - startedAtMs;
+
+        expect(response).not.toBe('timed_out');
+        expect(elapsedMs).toBeLessThan(ACK_FAST_TIMEOUT_MS);
+
+        const webhookResponse = response as Response;
+        expect(webhookResponse.status).toBe(200);
+        await expect(webhookResponse.json()).resolves.toEqual({ accepted: 1, duplicates: 0 });
+
+        const rpcRequestStarted = await waitForPromiseOrTimeout(
+          delayedRpc.requestStarted,
+          ACK_FAST_TIMEOUT_MS,
+        );
+        expect(
+          rpcRequestStarted,
+          `Timed out after ${ACK_FAST_TIMEOUT_MS}ms waiting for delayed RPC request to start`,
+        ).not.toBe('timed_out');
+
+        const ledgerRowsBeforeWait = await ingestEnv.vault_db
+          .prepare(
+            `SELECT COUNT(*) AS cnt
+             FROM ledger_events
+             WHERE event_type = 'donation_confirmed'
+               AND json_extract(payload_json, '$.tx_signature') = ?`,
+          )
+          .bind(ACK_FAST_SIGNATURE)
+          .first<{ cnt: number }>();
+
+        expect(ledgerRowsBeforeWait?.cnt).toBe(0);
+
+        delayedRpc.release();
+        await waitOnExecutionContext(ctx);
+
+        const ledgerRowsAfterWait = await ingestEnv.vault_db
+          .prepare(
+            `SELECT COUNT(*) AS cnt
+             FROM ledger_events
+             WHERE event_type = 'donation_confirmed'
+               AND json_extract(payload_json, '$.tx_signature') = ?`,
+          )
+          .bind(ACK_FAST_SIGNATURE)
+          .first<{ cnt: number }>();
+
+        expect(ledgerRowsAfterWait?.cnt).toBe(1);
+
+        const inboxRow = await ingestEnv.vault_db
+          .prepare('SELECT status FROM helius_inbox WHERE signature = ? AND source = ?')
+          .bind(ACK_FAST_SIGNATURE, 'webhook')
+          .first<{ status: string }>();
+
+        expect(inboxRow?.status).toBe('processed');
+      } finally {
+        delayedRpc.release();
+        globalThis.fetch = originalFetch;
+      }
+    });
+
     it('accepts a single valid webhook event', async () => {
       const response = await postWebhook(
         [
@@ -240,17 +429,19 @@ describe('POST /webhook/helius', () => {
       );
 
       // Query the inbox directly via D1 to verify the row was inserted.
-      const result = await env.vault_db
+      const result = await (env as unknown as IngestEnv).vault_db
         .prepare('SELECT signature, source, status FROM helius_inbox WHERE signature = ?')
         .bind(sig)
         .all<{ signature: string; source: string; status: string }>();
 
       expect(result.results).toHaveLength(1);
-      expect(result.results[0].signature).toBe(sig);
-      expect(result.results[0].source).toBe('webhook');
+      const inboxRow = result.results[0];
+      expect(inboxRow).toBeDefined();
+      expect(inboxRow!.signature).toBe(sig);
+      expect(inboxRow!.source).toBe('webhook');
       // Status may be 'failed' after processInbox runs (RPC is unreachable),
       // but the row must exist.
-      expect(result.results[0].status).toBeOneOf(['received', 'processing', 'failed']);
+      expect(inboxRow!.status).toBeOneOf(['received', 'processing', 'failed']);
     });
   });
 
@@ -297,7 +488,7 @@ describe('POST /webhook/helius', () => {
       );
 
       // Verify exactly one row exists (composite PK prevents duplicates)
-      const result = await env.vault_db
+      const result = await (env as unknown as IngestEnv).vault_db
         .prepare('SELECT COUNT(*) as cnt FROM helius_inbox WHERE signature = ?')
         .bind(sig)
         .first<{ cnt: number }>();
@@ -342,7 +533,7 @@ describe('POST /webhook/helius', () => {
     it('returns standard { error: { code, message, request_id } } shape for 401', async () => {
       const response = await postWebhook([], undefined);
       expect(response.status).toBe(401);
-      const json = await response.json();
+      const json = (await response.json()) as Record<string, unknown>;
       // Top-level shape
       expect(json).toHaveProperty('error');
       expect(typeof json.error).toBe('object');
@@ -362,7 +553,7 @@ describe('POST /webhook/helius', () => {
     it('returns standard { error: { code, message, request_id } } shape for 400', async () => {
       const response = await postWebhook({ not: 'an array' }, VALID_AUTH_TOKEN);
       expect(response.status).toBe(400);
-      const json = await response.json();
+      const json = (await response.json()) as Record<string, unknown>;
       expect(json).toHaveProperty('error');
       expect(typeof json.error).toBe('object');
       expect(json.error).not.toBeNull();
