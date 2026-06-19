@@ -153,4 +153,5 @@ vault-db            vault-db              bot-db
 
 - Design phase (replace disposable frontend layers with production design)
 - Mainnet launch (after production secrets and domain setup)
-- Local realistic simulation and Solana interaction testing (localnet orchestration, webhook simulation fixtures, chain-state seeders)
+- Local realistic simulation and Solana interaction testing (blockchain test cases,
+  webhook simulation fixtures, chain-state seeders)

@@ -123,6 +123,31 @@ published anchor metadata from `/api/verify`.
 pnpm run seed   # applies migrations + seed data for both D1 databases
 ```
 
+## Local Solana validator smoke
+
+Use the localnet harness when developing blockchain-facing tests or checking
+fixture setup against a real `solana-test-validator` process:
+
+```bash
+pnpm run blockchain:local-validator
+pnpm run blockchain:local-validator -- --allow-skip
+pnpm run blockchain:local-validator -- --rpc-port 8899 --keep-ledger
+pnpm run blockchain:local-validator -- --test-command "pnpm run test"
+```
+
+The harness preflights `solana-test-validator`, starts an isolated validator with
+`--reset`, creates throwaway localnet keypairs, creates an SPL Token mint, funds a
+donor/source token account, creates a treasury owner and vault ATA, and then runs
+either a built-in SPL transfer + memo smoke or the provided test command. It
+prints public addresses/signatures only; no devnet/mainnet secrets are required
+or read.
+
+Temporary validator ledgers and generated keypairs are removed on normal exit,
+failure, and Ctrl+C. Pass `--keep-ledger` only when you need to inspect the temp
+ledger path printed by the command. On machines without Solana CLI tooling,
+`--allow-skip` exits 0 with a `SKIP` message instead of failing the whole dev
+loop.
+
 ## The dev loop
 
 ```text
@@ -136,9 +161,6 @@ orchestration, no SSH.
 
 ## Future local infra extension
 
-Local realistic simulation and Solana interaction testing are intentionally
-deferred. When the project moves past pure unit/integration tests, research
-and implement proper automated and manual testing tooling — e.g. localnet
-orchestration, webhook simulation fixtures, chain-state seeders — as a
-dedicated architecture/infrastructure task. Do not bolt ad hoc scripts onto the
-main dev loop.
+Webhook simulation fixtures and richer chain-state seeders are still future
+work. Keep additional realistic simulation tooling isolated in dedicated tools
+or test fixtures rather than bolting ad hoc setup onto the main dev loop.

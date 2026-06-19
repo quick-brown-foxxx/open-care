@@ -13,7 +13,8 @@
     { "path": "packages/api-contract" },
     { "path": "apps/web" },
     { "path": "tools/seed" },
-    { "path": "tools/verify" }
+    { "path": "tools/verify" },
+    { "path": "tools/localnet" }
   ],
   "compilerOptions": {
     "target": "ES2022",

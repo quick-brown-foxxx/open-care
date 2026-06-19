@@ -1,0 +1,22 @@
+{
+  "name": "@open-care/localnet",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "blockchain:local-validator": "tsx src/run-local-validator.ts",
+    "check": "tsc -b"
+  },
+  "exports": {
+    ".": "./src/fixtures.ts",
+    "./fixtures": "./src/fixtures.ts",
+    "./validator": "./src/validator.ts"
+  },
+  "dependencies": {
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.98.4"
+  },
+  "devDependencies": {
+    "tsx": "^4.22.4"
+  }
+}
