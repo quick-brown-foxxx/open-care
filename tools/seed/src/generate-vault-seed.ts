@@ -195,13 +195,13 @@ lines.push('');
 // Wallets
 lines.push('-- Wallets');
 lines.push(
-  `INSERT INTO wallets (role, cluster, address, usdc_mint, usdc_ata, label, active, created_at_utc) VALUES`,
+  `INSERT OR IGNORE INTO wallets (role, cluster, address, usdc_mint, usdc_ata, label, active, created_at_utc) VALUES`,
 );
 lines.push(
   `  ('treasury', 'devnet', ${sqlString('8ufYGMkmAWeaYaM4CnANrxLxpQoaESKTGFN1BcgU71tG')}, ${sqlString('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU')}, ${sqlString('52MK6GwPWLvjfZuXm3K9fy9PozZAgUAKridA7ycSQUtG')}, ${sqlString('Treasury (devnet)')}, 1, ${sqlString('2026-06-14T00:00:00Z')});`,
 );
 lines.push(
-  `INSERT INTO wallets (role, cluster, address, usdc_mint, usdc_ata, label, active, created_at_utc) VALUES`,
+  `INSERT OR IGNORE INTO wallets (role, cluster, address, usdc_mint, usdc_ata, label, active, created_at_utc) VALUES`,
 );
 lines.push(
   `  ('anchor', 'devnet', ${sqlString('BhKtkM1oHADwo8ap5P6Lymj7b3iaspiAm37RA9KMn8YG')}, NULL, NULL, ${sqlString('Anchor (devnet)')}, 1, ${sqlString('2026-06-14T00:00:00Z')});`,
@@ -219,7 +219,7 @@ for (let i = 0; i < events.length; i++) {
 
   lines.push(`-- Event ${i + 1}: ${event.event_type} (seq=${event.sequence_no})`);
   lines.push(
-    `INSERT INTO ledger_events (event_type, payload_json, prev_hash, event_hash, created_at_utc) VALUES`,
+    `INSERT OR IGNORE INTO ledger_events (event_type, payload_json, prev_hash, event_hash, created_at_utc) VALUES`,
   );
   lines.push(
     `  (${sqlString(event.event_type)}, ${sqlString(payloadJson)}, ${sqlString(event.prev_hash)}, ${sqlString(hash)}, ${sqlString(event.created_at_utc)});`,
@@ -230,7 +230,7 @@ for (let i = 0; i < events.length; i++) {
 // Anchor runs
 lines.push('-- Anchor runs');
 lines.push(
-  `INSERT INTO anchor_runs (anchor_date, anchored_head_sequence_no, anchored_head_hash, status, trigger_source, tx_signature, anchor_wallet_address, memo_text, attempt_count, last_error, locked_until_utc, last_anchor_wallet_sol_lamports, created_at_utc, updated_at_utc) VALUES`,
+  `INSERT OR IGNORE INTO anchor_runs (anchor_date, anchored_head_sequence_no, anchored_head_hash, status, trigger_source, tx_signature, anchor_wallet_address, memo_text, attempt_count, last_error, locked_until_utc, last_anchor_wallet_sol_lamports, created_at_utc, updated_at_utc) VALUES`,
 );
 lines.push(
   `  ('2026-06-15', 5, ${sqlString(hashes[4]!)}, 'published', 'cron', ${sqlString('7nOpQ3456seedAnchorDevnetExampleTx')}, ${sqlString('BhKtkM1oHADwo8ap5P6Lymj7b3iaspiAm37RA9KMn8YG')}, ${sqlString('open-care.org anchor 2026-06-15 seq=5')}, 1, NULL, NULL, 5000000000, ${sqlString('2026-06-16T01:00:00Z')}, ${sqlString('2026-06-16T01:00:00Z')});`,
