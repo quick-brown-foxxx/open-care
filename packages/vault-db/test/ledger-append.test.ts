@@ -1,8 +1,16 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createTestVaultDb } from './setup.js';
 import { appendLedgerEvent, getEventsPaginated } from '../src/index.js';
-import { ZERO_HASH, computeEventHash, verifyChain } from '@open-care/vault-core';
-import type { DonationPayload, LedgerEventBase } from '@open-care/vault-core';
+import { ZERO_HASH, computeEventHash, isDonationPayload, verifyChain } from '@open-care/vault-core';
+import type {
+  AnchorPayload,
+  CorrectionPayload,
+  DisbursementPayload,
+  DonationPayload,
+  LedgerEvent,
+  LedgerEventBase,
+} from '@open-care/vault-core';
+import type { AppendLedgerEventInput } from '../src/index.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -23,6 +31,72 @@ function makeDonationPayload(overrides?: Partial<DonationPayload>): DonationPayl
     amount_usdc_minor: '1000000', // 1 USDC
     ...overrides,
   };
+}
+
+function makeDisbursementPayload(overrides?: Partial<DisbursementPayload>): DisbursementPayload {
+  return {
+    amount_usdc_minor: '2500000',
+    gift_card_count: 1,
+    service: 'Alter',
+    service_note: null,
+    receipt_ref: 'ALTER-2025-001',
+    public_beneficiary_ref: 'benpub_A2B3C4D5E6F7G2H3',
+    purchased_at_utc: '2025-01-15T10:35:00Z',
+    recorded_at_utc: '2025-01-15T10:36:00Z',
+    recorded_by: 'test-operator',
+    ...overrides,
+  };
+}
+
+function makeAnchorPayload(overrides?: Partial<AnchorPayload>): AnchorPayload {
+  const anchoredHeadHash = overrides?.anchored_head_hash ?? 'a'.repeat(64);
+
+  return {
+    anchor_date: '2025-01-16',
+    anchored_head_sequence_no: 1,
+    anchored_head_hash: anchoredHeadHash,
+    tx_signature:
+      '5Jofwx5DPe1qBwHL7hN3VpFqLxqFj4mJLo5iY7nP8kRt2sT9uVvWxYzAbCdEfGhIjKlMnOpQrStUvWxYz1234',
+    anchor_wallet_address: 'BhKtkM1oHADwo8ap5P6Lymj7b3iaspiAm37RA9KMn8YG',
+    memo_text: `ccv-anchor:${anchoredHeadHash}`,
+    published_at_utc: '2025-01-16T01:00:00Z',
+    cluster: 'devnet',
+    ...overrides,
+  };
+}
+
+function makeCorrectionPayload(overrides?: Partial<CorrectionPayload>): CorrectionPayload {
+  return {
+    corrects_sequence_no: 1,
+    reason: 'Receipt reference corrected after vendor confirmation',
+    replacement_fields: {
+      receipt_ref: 'ALTER-2025-001-CORRECTED',
+    },
+    recorded_at_utc: '2025-01-16T10:00:00Z',
+    recorded_by: 'test-operator',
+    ...overrides,
+  };
+}
+
+async function appendOk(
+  db: ReturnType<typeof createTestVaultDb>['db'],
+  input: AppendLedgerEventInput,
+): Promise<LedgerEvent> {
+  const result = await appendLedgerEvent(db, input);
+  expect(result.ok).toBe(true);
+  if (!result.ok) throw new Error(`expected ok: ${result.error.message}`);
+  return result.value;
+}
+
+async function expectPersistedChainValid(
+  db: ReturnType<typeof createTestVaultDb>['db'],
+  expectedLength: number,
+): Promise<LedgerEvent[]> {
+  const page = await getEventsPaginated(db, { limit: 100 });
+  expect(page.items).toHaveLength(expectedLength);
+  const chainResult = await verifyChain(page.items);
+  expect(chainResult.valid).toBe(true);
+  return page.items;
 }
 
 // ---------------------------------------------------------------------------
@@ -126,6 +200,116 @@ describe('appendLedgerEvent', () => {
     expect(chainResult.valid).toBe(true);
   });
 
+  // Scenario: Append a disbursement_recorded event and verify persisted chain integrity.
+  it('appends a disbursement_recorded event and preserves chain integrity', async () => {
+    const { db } = vault;
+
+    const event = await appendOk(db, {
+      event_type: 'disbursement_recorded',
+      payload: makeDisbursementPayload(),
+      created_at_utc: '2025-01-15T10:36:00Z',
+    });
+
+    expect(event.sequence_no).toBe(1);
+    expect(event.event_type).toBe('disbursement_recorded');
+    expect(event.prev_hash).toBe(ZERO_HASH);
+
+    await expectPersistedChainValid(db, 1);
+  });
+
+  // Scenario: Append an anchor_published event after an anchored head and verify chain integrity.
+  it('appends an anchor_published event and preserves chain integrity', async () => {
+    const { db } = vault;
+
+    const donation = await appendOk(db, {
+      event_type: 'donation_confirmed',
+      payload: makeDonationPayload(),
+      created_at_utc: '2025-01-15T10:30:00Z',
+    });
+
+    const anchor = await appendOk(db, {
+      event_type: 'anchor_published',
+      payload: makeAnchorPayload({
+        anchored_head_sequence_no: donation.sequence_no,
+        anchored_head_hash: donation.event_hash,
+      }),
+      created_at_utc: '2025-01-16T01:00:00Z',
+    });
+
+    expect(anchor.sequence_no).toBe(2);
+    expect(anchor.event_type).toBe('anchor_published');
+    expect(anchor.prev_hash).toBe(donation.event_hash);
+
+    await expectPersistedChainValid(db, 2);
+  });
+
+  // Scenario: Append a correction_recorded event for an existing target and verify chain integrity.
+  it('appends a correction_recorded event and preserves chain integrity', async () => {
+    const { db } = vault;
+
+    const disbursement = await appendOk(db, {
+      event_type: 'disbursement_recorded',
+      payload: makeDisbursementPayload(),
+      created_at_utc: '2025-01-15T10:36:00Z',
+    });
+
+    const correction = await appendOk(db, {
+      event_type: 'correction_recorded',
+      payload: makeCorrectionPayload({ corrects_sequence_no: disbursement.sequence_no }),
+      created_at_utc: '2025-01-16T10:00:00Z',
+    });
+
+    expect(correction.sequence_no).toBe(2);
+    expect(correction.event_type).toBe('correction_recorded');
+    expect(correction.prev_hash).toBe(disbursement.event_hash);
+
+    await expectPersistedChainValid(db, 2);
+  });
+
+  // Scenario: Append all supported event types in one ledger and verify the full chain.
+  it('builds a valid hash chain across all event types', async () => {
+    const { db } = vault;
+
+    const donation = await appendOk(db, {
+      event_type: 'donation_confirmed',
+      payload: makeDonationPayload(),
+      created_at_utc: '2025-01-15T10:30:00Z',
+    });
+
+    const disbursement = await appendOk(db, {
+      event_type: 'disbursement_recorded',
+      payload: makeDisbursementPayload(),
+      created_at_utc: '2025-01-15T10:36:00Z',
+    });
+
+    const anchor = await appendOk(db, {
+      event_type: 'anchor_published',
+      payload: makeAnchorPayload({
+        anchored_head_sequence_no: disbursement.sequence_no,
+        anchored_head_hash: disbursement.event_hash,
+      }),
+      created_at_utc: '2025-01-16T01:00:00Z',
+    });
+
+    const correction = await appendOk(db, {
+      event_type: 'correction_recorded',
+      payload: makeCorrectionPayload({ corrects_sequence_no: disbursement.sequence_no }),
+      created_at_utc: '2025-01-16T10:00:00Z',
+    });
+
+    expect([donation, disbursement, anchor, correction].map((event) => event.sequence_no)).toEqual([
+      1, 2, 3, 4,
+    ]);
+
+    const events = await expectPersistedChainValid(db, 4);
+    expect(events.map((event) => event.event_type)).toEqual([
+      'donation_confirmed',
+      'disbursement_recorded',
+      'anchor_published',
+      'correction_recorded',
+    ]);
+  });
+
   // ------------------------------------------------------------------
   // 3. Hash is deterministic for same preimage
   // ------------------------------------------------------------------
@@ -221,6 +405,7 @@ describe('appendLedgerEvent', () => {
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('expected error');
     expect(result.error.code).toBe('INVALID_INPUT');
+    if (result.error.code !== 'INVALID_INPUT') throw new Error('expected invalid input');
     expect(result.error.message).toBe('Payload validation failed');
     expect(result.error.zodError).toBeDefined();
   });
@@ -370,6 +555,7 @@ describe('appendLedgerEvent', () => {
 
     // Payload is the original typed object, not a JSON string
     expect(typeof event.payload).toBe('object');
+    if (!isDonationPayload(event.payload)) throw new Error('expected donation payload');
     expect(event.payload.cluster).toBe('devnet');
     expect(event.payload.amount_usdc_minor).toBe('1000000');
     expect(event.payload.tx_signature).toBe(payload.tx_signature);
