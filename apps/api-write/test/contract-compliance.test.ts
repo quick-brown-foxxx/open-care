@@ -1,9 +1,6 @@
 import { SELF } from 'cloudflare:test';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import type {
-  CorrectionWriteResponse,
-  DisbursementWriteResponse,
-} from '@open-care/api-contract';
+import type { CorrectionWriteResponse, DisbursementWriteResponse } from '@open-care/api-contract';
 
 function validDisbursementBody(receiptRef: string): Record<string, unknown> {
   return {
@@ -46,7 +43,9 @@ function numberField(record: Record<string, unknown>, field: string): number {
   return record[field] as number;
 }
 
-async function expectDisbursementWriteResponse(response: Response): Promise<DisbursementWriteResponse> {
+async function expectDisbursementWriteResponse(
+  response: Response,
+): Promise<DisbursementWriteResponse> {
   expect(response.status).toBe(200);
   const record = asRecord(await response.json());
   const body = {
