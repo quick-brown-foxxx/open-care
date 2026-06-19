@@ -1,14 +1,89 @@
 import { z } from 'zod';
 
+export interface SolanaParsedTokenAmount {
+  amount: string;
+  [key: string]: unknown;
+}
+
+export interface SolanaParsedTransferInfo {
+  source?: string | undefined;
+  destination?: string | undefined;
+  authority?: string | undefined;
+  amount?: string | undefined;
+  mint?: string | undefined;
+  decimals?: number | undefined;
+  tokenAmount?: SolanaParsedTokenAmount | undefined;
+  [key: string]: unknown;
+}
+
+export interface SolanaParsedInstruction {
+  programId: string;
+  parsed?: {
+    type: string;
+    info: SolanaParsedTransferInfo;
+    [key: string]: unknown;
+  } | undefined;
+  [key: string]: unknown;
+}
+
+export interface SolanaParsedInnerInstruction {
+  index: number;
+  instructions: SolanaParsedInstruction[];
+  [key: string]: unknown;
+}
+
+interface SolanaParsedMessage {
+  accountKeys: unknown[];
+  instructions: SolanaParsedInstruction[];
+  [key: string]: unknown;
+}
+
+interface SolanaTransaction {
+  message: SolanaParsedMessage;
+  signatures: string[];
+  [key: string]: unknown;
+}
+
+interface SolanaTransactionMeta {
+  err?: unknown;
+  fee?: number | undefined;
+  preTokenBalances?: unknown[] | undefined;
+  postTokenBalances?: unknown[] | undefined;
+  innerInstructions?: SolanaParsedInnerInstruction[] | undefined;
+  [key: string]: unknown;
+}
+
+export interface SolanaGetTransactionResult {
+  slot: number;
+  blockTime: number | null;
+  transaction: SolanaTransaction;
+  meta: SolanaTransactionMeta | null;
+  [key: string]: unknown;
+}
+
+export interface SolanaGetTransactionResponse {
+  jsonrpc: '2.0';
+  result: SolanaGetTransactionResult | null;
+  id: number;
+  [key: string]: unknown;
+}
+
 /** A parsed SPL transfer instruction info from JSON-RPC. */
+const SolanaParsedTokenAmountSchema = z
+  .object({
+    amount: z.string(),
+  })
+  .passthrough();
+
 const SolanaParsedTransferInfoSchema = z
   .object({
-    source: z.string(),
-    destination: z.string(),
-    authority: z.string(),
-    amount: z.string(),
+    source: z.string().optional(),
+    destination: z.string().optional(),
+    authority: z.string().optional(),
+    amount: z.string().optional(),
     mint: z.string().optional(),
     decimals: z.number().optional(),
+    tokenAmount: SolanaParsedTokenAmountSchema.optional(),
   })
   .passthrough();
 
@@ -39,7 +114,7 @@ const SolanaParsedInnerInstructionSchema = z
  */
 const SolanaParsedMessageSchema = z
   .object({
-    accountKeys: z.array(z.string()),
+    accountKeys: z.array(z.unknown()),
     instructions: z.array(SolanaParsedInstructionSchema),
   })
   .passthrough();
@@ -89,19 +164,13 @@ const SolanaGetTransactionResultSchema = z
  * result can be null (transaction not found).
  * Uses .passthrough() for forward compatibility with new RPC fields.
  */
-export const SolanaGetTransactionResponseSchema = z
+export const SolanaGetTransactionResponseSchema: z.ZodType<SolanaGetTransactionResponse> = z
   .object({
     jsonrpc: z.literal('2.0'),
     result: SolanaGetTransactionResultSchema.nullable(),
     id: z.number(),
   })
   .passthrough();
-
-/** Inferred TypeScript type for a getTransaction RPC response. */
-export type SolanaGetTransactionResponse = z.infer<typeof SolanaGetTransactionResponseSchema>;
-
-/** Inferred TypeScript type for the non-null result of getTransaction. */
-export type SolanaGetTransactionResult = z.infer<typeof SolanaGetTransactionResultSchema>;
 
 /**
  * Schema for a single signature info item in a getSignaturesForAddress response.
@@ -139,9 +208,3 @@ export type SolanaGetSignaturesForAddressResponse = z.infer<
 
 /** Inferred TypeScript type for a single signature info item. */
 export type SolanaSignatureInfo = z.infer<typeof SolanaSignatureInfoSchema>;
-
-/** Inferred TypeScript type for a parsed instruction. */
-export type SolanaParsedInstruction = z.infer<typeof SolanaParsedInstructionSchema>;
-
-/** Inferred TypeScript type for an inner instruction group. */
-export type SolanaParsedInnerInstruction = z.infer<typeof SolanaParsedInnerInstructionSchema>;

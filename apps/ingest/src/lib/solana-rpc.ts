@@ -316,7 +316,7 @@ function matchInstruction(
 
   // --- transfer ---
   if (parsed.type === 'transfer') {
-    if (parsed.info.destination === vaultAta) {
+    if (parsed.info.destination === vaultAta && typeof parsed.info.amount === 'string') {
       return {
         amount: parsed.info.amount,
         instructionIndex,
@@ -328,9 +328,11 @@ function matchInstruction(
 
   // --- transferChecked ---
   if (parsed.type === 'transferChecked') {
+    const amount = parsed.info.amount ?? parsed.info.tokenAmount?.amount;
     if (parsed.info.mint === usdcMint && parsed.info.destination === vaultAta) {
+      if (typeof amount !== 'string') return null;
       return {
-        amount: parsed.info.amount,
+        amount,
         instructionIndex,
         innerIndex,
       };

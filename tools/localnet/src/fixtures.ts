@@ -4,6 +4,7 @@ import {
   getOrCreateAssociatedTokenAccount,
   mintTo,
   transfer,
+  transferChecked,
 } from '@solana/spl-token';
 import {
   Connection,
@@ -52,6 +53,11 @@ export interface SendSplTokenTransferInput {
   destination: PublicKey;
   owner: Keypair;
   amount: TokenAmount;
+}
+
+export interface SendSplTokenTransferCheckedInput extends SendSplTokenTransferInput {
+  mint: PublicKey;
+  decimals: number;
 }
 
 export interface CreateFundedTokenAccountsOptions {
@@ -185,6 +191,24 @@ export async function sendSplTokenTransfer(
     input.destination,
     input.owner,
     input.amount,
+    [],
+    { commitment: 'confirmed' },
+  );
+}
+
+export async function sendSplTokenTransferChecked(
+  connection: Connection,
+  input: SendSplTokenTransferCheckedInput,
+): Promise<string> {
+  return transferChecked(
+    connection,
+    input.payer,
+    input.source,
+    input.mint,
+    input.destination,
+    input.owner,
+    input.amount,
+    input.decimals,
     [],
     { commitment: 'confirmed' },
   );

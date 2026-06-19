@@ -10,9 +10,10 @@ mainnet, operator, treasury, or deployment secrets.
 
 | File                         | Role                                                                                                                                                        |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/fixtures.ts`            | Reusable Solana localnet helpers for throwaway keypairs, token accounts, SPL transfers, and memo transactions.                                              |
+| `src/fixtures.ts`            | Reusable Solana localnet helpers for throwaway keypairs, token accounts, checked/unchecked SPL transfers, and memo transactions.                             |
 | `src/validator.ts`           | Local `solana-test-validator` preflight, startup, readiness polling, process cleanup, and temp directory handling.                                          |
 | `src/run-local-validator.ts` | CLI harness behind `pnpm run blockchain:local-validator`; starts an isolated validator, creates fixtures, runs a smoke or optional command, and tears down. |
+| `test/blockchain.test.ts`    | Vitest local-validator integration tests for real Memo anchors, SPL Token transfers, ingest filtering/idempotency, and hash-chain verification.             |
 
 ## Connections
 

@@ -53,6 +53,12 @@ Four ledger event types, each with a TypeScript interface and a strict Zod schem
 - `isValidHandle` — Telegram handle format (3-32 chars, alphanumeric+underscore, not starting with `benpub_`)
 - `isValidReceiptRef` — receipt reference format
 
+### External data schemas (`src/schemas/`)
+
+- Solana JSON-RPC response schemas used by ingest/anchor code, including
+  parsed transaction envelopes with both legacy string account keys and
+  `jsonParsed` account-key objects.
+
 ### Result type (`src/result.ts`)
 
 - `Result<T, E>` — discriminated union: `{ ok: true; value: T } | { ok: false; error: E }`
