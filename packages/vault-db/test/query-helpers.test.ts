@@ -3,13 +3,15 @@ import { createTestVaultDb } from './setup.js';
 import {
   getHead,
   getEventsPaginated,
+  getRawEventsPaginated,
   getTotals,
   getDonations,
   getDisbursements,
   getLatestAnchor,
   appendLedgerEvent,
 } from '../src/index.js';
-import type { VaultDbTest } from '../src/index.js';
+import type { VaultDbTest } from '../src/test-utils.js';
+import { canonicalJson } from '@open-care/vault-core';
 import type { DonationPayload, DisbursementPayload, LedgerEvent } from '@open-care/vault-core';
 import type { Database } from 'better-sqlite3';
 
@@ -229,6 +231,108 @@ describe('getEventsPaginated', () => {
     // Limit is clamped to 100
     expect(page.items).toHaveLength(100);
     expect(page.nextCursor).not.toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getRawEventsPaginated
+// ---------------------------------------------------------------------------
+
+describe('getRawEventsPaginated', () => {
+  let ctx: TestContext;
+
+  beforeEach(() => {
+    ctx = createTestVaultDb();
+  });
+
+  /*
+  Scenario: Empty raw ledger page
+    Given the ledger has no events
+    When raw events are requested
+    Then the page has no items
+    And there is no next cursor
+  */
+  it('returns empty result when the ledger is empty', async () => {
+    const page = await getRawEventsPaginated(ctx.db, {});
+    expect(page).toEqual({ items: [], nextCursor: null });
+  });
+
+  /*
+  Scenario: Single raw ledger page
+    Given one valid ledger event was appended
+    When raw events are requested
+    Then the row includes the original raw payload_json string
+  */
+  it('returns a single page with the correct payload_json', async () => {
+    const seeded = await seedDonation(ctx, '1000000');
+
+    const page = await getRawEventsPaginated(ctx.db, { limit: 10 });
+
+    expect(page.nextCursor).toBeNull();
+    expect(page.items).toEqual([
+      {
+        sequence_no: seeded.sequence_no,
+        event_type: seeded.event_type,
+        payload_json: canonicalJson(seeded.payload),
+        prev_hash: seeded.prev_hash,
+        event_hash: seeded.event_hash,
+        created_at_utc: seeded.created_at_utc,
+      },
+    ]);
+  });
+
+  /*
+  Scenario: Multiple raw ledger pages
+    Given three valid ledger events were appended
+    When raw events are requested with a page size of two
+    Then the first page returns two items and a cursor for sequence 2
+    And the second page returns the remaining item with no cursor
+  */
+  it('supports cursor-based pagination and sets nextCursor correctly', async () => {
+    const first = await seedDonation(ctx, '1000000', '2025-01-15T10:30:00Z');
+    const second = await seedDonation(ctx, '2000000', '2025-01-15T10:31:00Z');
+    const third = await seedDonation(ctx, '3000000', '2025-01-15T10:32:00Z');
+
+    const page1 = await getRawEventsPaginated(ctx.db, { limit: 2 });
+    expect(page1.items.map((item) => item.sequence_no)).toEqual([
+      first.sequence_no,
+      second.sequence_no,
+    ]);
+    expect(page1.nextCursor).toBe(second.sequence_no);
+
+    const page2 = await getRawEventsPaginated(ctx.db, {
+      limit: 2,
+      cursor: page1.nextCursor!,
+    });
+    expect(page2.items.map((item) => item.sequence_no)).toEqual([third.sequence_no]);
+    expect(page2.nextCursor).toBeNull();
+  });
+
+  /*
+  Scenario: Raw payload bytes are preserved
+    Given an event payload with intentionally non-canonical insertion order
+    When the event is appended and read through raw pagination
+    Then payload_json exactly matches the original canonical JSON string
+  */
+  it('preserves payload_json byte-for-byte as canonical JSON', async () => {
+    const payload = makeDonationPayload('1234567', {
+      tx_signature: 'rawPayloadBytes1111111111111111111111111111111111111111111111111111',
+      inner_index: 2,
+      instruction_index: 1,
+    });
+    const originalCanonicalPayloadJson = canonicalJson(payload);
+
+    const result = await appendLedgerEvent(ctx.db, {
+      event_type: 'donation_confirmed',
+      payload,
+      created_at_utc: '2025-01-15T10:30:00Z',
+    });
+    if (!result.ok) throw new Error('Seed failed');
+
+    const page = await getRawEventsPaginated(ctx.db, {});
+
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0]!.payload_json).toBe(originalCanonicalPayloadJson);
   });
 });
 
