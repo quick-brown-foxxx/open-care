@@ -712,8 +712,8 @@ systems.
 ## Epic 5: CI/CD Pipeline Completion
 
 The review found significant CI/CD gaps: Playwright not in CI, no
-post-deploy verification, no nightly jobs, no production environments
-block, no rollback mechanism, and 5 orphaned CI secrets.
+post-deploy verification, no nightly jobs, incomplete production
+environment coverage, no rollback mechanism, and 5 orphaned CI secrets.
 
 ### Slice 5.1 — Add Playwright to CI
 
@@ -809,19 +809,20 @@ configured in GitHub Actions but orphaned — no workflow consumes them.
 
 ---
 
-### Slice 5.4 — Add production environments blocks to wrangler.jsonc
+### Slice 5.4 — Complete production environment blocks in wrangler.jsonc
 
-**Problem:** `deploy-prod.yml` uses `--env production` but none of the 7
-`wrangler.jsonc` files contain an `"environments"` block with
-production-specific overrides. The `--env production` flag may have no
-effect. Production needs different D1 database IDs, different routes
-(`open-care.org` not `staging.open-care.org`), and different vars
-(mainnet wallet addresses).
+**Problem:** `deploy-prod.yml` uses `--env production`, so each Worker
+needs a complete `"env.production"` block with production-only overrides.
+Production uses different D1 database IDs, different routes
+(`open-care.org` not `staging.open-care.org`), different vars
+(mainnet wallet addresses), and disabled `workers.dev` ingress. The
+service-binding-only Workers and internal routes must not become publicly
+reachable through `*.workers.dev` when deployed to production.
 
 **Fix:**
-- Add `"environments"` blocks to each Worker's `wrangler.jsonc`:
+- Add `"env.production"` blocks to each Worker's `wrangler.jsonc`:
   ```jsonc
-  "environments": {
+  "env": {
     "production": {
       "vars": {
         "SOLANA_CLUSTER": "mainnet-beta",
@@ -832,7 +833,7 @@ effect. Production needs different D1 database IDs, different routes
         "SITE_URL": "https://open-care.org"
       },
       "routes": [
-        { "pattern": "open-care.org/api/*", "custom_domain": true }
+        { "pattern": "open-care.org/api/*", "zone_id": "..." }
         // ... per-worker routes
       ]
     }
@@ -842,12 +843,16 @@ effect. Production needs different D1 database IDs, different routes
   filled in by a human before production launch).
 - Document that production D1 databases may need separate instances
   (different `database_id` in `d1_databases` binding).
+- Set `"workers_dev": false` in every Worker `env.production` block so
+  production ingress is limited to configured `open-care.org` routes,
+  service bindings, and cron triggers.
 
 **Acceptance criteria:**
-- All 6 Workers have `environments.production` blocks.
+- All 6 Workers have `env.production` blocks.
 - `vars` overrides use correct mainnet values (or documented TBD
   placeholders).
 - `routes` use the production domain.
+- Production Worker envs set `workers_dev=false`.
 - `deploy-prod.yml` can successfully deploy with `--env production`.
 
 ---

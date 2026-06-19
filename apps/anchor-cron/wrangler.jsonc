@@ -28,4 +28,28 @@
   "observability": {
     "enabled": true,
   },
+  "env": {
+    "production": {
+      "name": "vault-anchor-cron-production",
+      "workers_dev": false,
+      "d1_databases": [
+        {
+          "binding": "vault_db",
+          "database_name": "vault-db",
+          "database_id": "TBD_PRODUCTION_VAULT_DB_ID",
+        },
+      ],
+      "vars": {
+        "SOLANA_CLUSTER": "mainnet-beta",
+        "USDC_MINT": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "TREASURY_WALLET_ADDRESS": "TBD_MAINNET_TREASURY_WALLET",
+        "VAULT_USDC_ATA": "TBD_MAINNET_VAULT_USDC_ATA",
+        "ANCHOR_WALLET_ADDRESS": "TBD_MAINNET_ANCHOR_WALLET",
+        "SITE_URL": "https://open-care.org",
+      },
+      "triggers": {
+        "crons": ["0 1 * * *"],
+      },
+    },
+  },
 }

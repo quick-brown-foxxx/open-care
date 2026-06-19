@@ -31,24 +31,30 @@ For development workflow, commands, and local setup, see [`DEVELOPMENT.md`](DEVE
 
 ## Apps and entrypoints
 
-| App                | Worker name         | Binding                                                                                                                                   | `wrangler.jsonc`                                                                                                                       |
-| ------------------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/ingest`      | `vault-ingest`      | `vault_db` (D1: `vault-db`)                                                                                                               | has route `staging.open-care.org/webhook/helius`, cron `0 */6 * * *`                                                                   |
-| `apps/tg-bot`      | `tg-bot`            | `bot_db` (D1: `bot-db`)                                                                                                                   | has route `staging.open-care.org/tg/webhook`                                                                                           |
-| `apps/api-read`    | `vault-api-read`    | `vault_db`                                                                                                                                | has route `staging.open-care.org/api/*`                                                                                                |
-| `apps/api-write`   | `vault-api-write`   | `vault_db`                                                                                                                                | no public route; reached only via service binding from `vault-operator`                                                                |
-| `apps/anchor-cron` | `vault-anchor-cron` | `vault_db`                                                                                                                                | no public route, cron `0 1 * * *`; reached via service binding from `vault-operator` for manual triggers                               |
-| `apps/operator`    | `vault-operator`    | none (no D1 binding); uses service bindings to `vault-api-write`, `vault-anchor-cron`, `tg-bot`, `vault-api-read`; holds `OPERATOR_TOKEN` | has routes `staging.open-care.org/api/disbursements`, `staging.open-care.org/api/anchor/manual`, `staging.open-care.org/tg/internal/*` |
-| `apps/web`         | (Pages)             | —                                                                                                                                         | —                                                                                                                                      |
+| App                | Worker name         | Binding                                                                                                                                   | `wrangler.jsonc`                                                                                                                                             |
+| ------------------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apps/ingest`      | `vault-ingest`      | `vault_db` (D1: `vault-db`)                                                                                                               | has route `staging.open-care.org/webhook/helius` (production: `open-care.org/webhook/helius`), cron `0 */6 * * *`                                            |
+| `apps/tg-bot`      | `tg-bot`            | `bot_db` (D1: `bot-db`)                                                                                                                   | has route `staging.open-care.org/tg/webhook` (production: `open-care.org/tg/webhook`)                                                                        |
+| `apps/api-read`    | `vault-api-read`    | `vault_db`                                                                                                                                | has route `staging.open-care.org/api/*` (production: `open-care.org/api/*`)                                                                                  |
+| `apps/api-write`   | `vault-api-write`   | `vault_db`                                                                                                                                | no public route; reached only via service binding from `vault-operator`                                                                                      |
+| `apps/anchor-cron` | `vault-anchor-cron` | `vault_db`                                                                                                                                | no public route, cron `0 1 * * *`; reached via service binding from `vault-operator` for manual triggers                                                     |
+| `apps/operator`    | `vault-operator`    | none (no D1 binding); uses service bindings to `vault-api-write`, `vault-anchor-cron`, `tg-bot`, `vault-api-read`; holds `OPERATOR_TOKEN` | has routes `staging.open-care.org/api/disbursements`, `/api/corrections`, `/api/anchor/manual`, `/tg/internal/*` (production: same paths on `open-care.org`) |
+| `apps/web`         | (Pages)             | —                                                                                                                                         | —                                                                                                                                                            |
 
 **`vault-operator` is the sole holder of `OPERATOR_TOKEN`.** All operator-authenticated
-endpoints (`/api/disbursements`, `/api/anchor/manual`, `/tg/internal/pending-requests`,
-`/tg/internal/send-code`) flow through it; the token is never in
+endpoints (`/api/disbursements`, `/api/corrections`, `/api/anchor/manual`,
+`/tg/internal/pending-requests`, `/tg/internal/send-code`) flow through it; the token is never in
 `vault-api-write` or `tg-bot`. Service bindings are in-process and
 not-publicly-routable, so the downstream Workers are not exposed to the
 public internet for these routes. See
 [`docs/specs/01-architecture.md`](docs/specs/01-architecture.md) §"Operator
 Worker trust model" for the full design.
+
+Each Worker `wrangler.jsonc` has an `env.production` block. Production Worker
+names use the `<worker-name>-production` form, and production operator service
+bindings target those production Worker names. Production Worker env blocks set
+`workers_dev=false`, keeping production ingress on configured `open-care.org`
+routes, service bindings, and cron triggers rather than `*.workers.dev`.
 
 **`vault-api-read`** exposes the public, no-auth surface
 (`/api/totals`, `/api/donations`, `/api/disbursements` (the public list, not

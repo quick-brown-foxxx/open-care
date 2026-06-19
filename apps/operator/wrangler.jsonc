@@ -47,4 +47,38 @@
   "observability": {
     "enabled": true,
   },
+  "env": {
+    "production": {
+      "name": "vault-operator-production",
+      "workers_dev": false,
+      "vars": {
+        "SOLANA_CLUSTER": "mainnet-beta",
+        "SITE_URL": "https://open-care.org",
+      },
+      "routes": [
+        {
+          "pattern": "open-care.org/api/disbursements",
+          "zone_id": "d3ce85436c3b589b4f83814991bf2c78",
+        },
+        {
+          "pattern": "open-care.org/api/corrections",
+          "zone_id": "d3ce85436c3b589b4f83814991bf2c78",
+        },
+        {
+          "pattern": "open-care.org/api/anchor/manual",
+          "zone_id": "d3ce85436c3b589b4f83814991bf2c78",
+        },
+        {
+          "pattern": "open-care.org/tg/internal/*",
+          "zone_id": "d3ce85436c3b589b4f83814991bf2c78",
+        },
+      ],
+      "services": [
+        { "binding": "VAULT_API_WRITE", "service": "vault-api-write-production" },
+        { "binding": "VAULT_API_READ", "service": "vault-api-read-production" },
+        { "binding": "VAULT_ANCHOR_CRON", "service": "vault-anchor-cron-production" },
+        { "binding": "TG_BOT", "service": "tg-bot-production" },
+      ],
+    },
+  },
 }

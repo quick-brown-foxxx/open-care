@@ -21,6 +21,9 @@ operator via service binding.
 `/api/anchor/manual` is **not publicly routable** on this Worker. It is reached
 only via `vault-operator`'s service binding (operator validates token, applies
 rate limit, then forwards).
+The production Wrangler environment preserves the same daily cron and still has
+no public route. It also sets `workers_dev=false` so production has no
+`*.workers.dev` ingress.
 
 ## Bindings
 

@@ -25,4 +25,25 @@
   "observability": {
     "enabled": true,
   },
+  "env": {
+    "production": {
+      "name": "tg-bot-production",
+      "workers_dev": false,
+      "d1_databases": [
+        {
+          "binding": "bot_db",
+          "database_name": "bot-db",
+          "database_id": "TBD_PRODUCTION_BOT_DB_ID",
+          "migrations_dir": "migrations",
+        },
+      ],
+      "vars": {},
+      "routes": [
+        {
+          "pattern": "open-care.org/tg/webhook",
+          "zone_id": "d3ce85436c3b589b4f83814991bf2c78",
+        },
+      ],
+    },
+  },
 }

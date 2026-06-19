@@ -19,6 +19,9 @@ reconciliation every 6 hours to catch missed transactions.
 
 Only `/webhook/helius` is publicly routable. `/health` and `/internal/reconcile`
 are reachable only internally (e.g. via service binding from `vault-operator`).
+The default deployment route is `staging.open-care.org/webhook/helius`; the
+production Wrangler environment routes `open-care.org/webhook/helius` and sets
+`workers_dev=false`.
 
 ## Bindings
 

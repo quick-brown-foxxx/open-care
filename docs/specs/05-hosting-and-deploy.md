@@ -68,6 +68,11 @@ for the internal endpoints. Cloudflare account admins can still access
 account resources, so this is not a state-adversary-grade isolation
 boundary. The binding allowlist is checked in CI per invariant I-7.
 
+Production Worker environment blocks set `workers_dev=false`. Production
+ingress is limited to configured `open-care.org` routes, Cloudflare Cron
+triggers, and in-process service bindings; service-binding-only Workers do not
+publish `*.workers.dev` endpoints in production.
+
 ## Secrets and environment variables
 
 | Name                         | Location                          | Required for PR CI?                | Purpose                                                                                                                                                                                                                                    |

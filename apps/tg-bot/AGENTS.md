@@ -17,6 +17,10 @@ Operates on its own `bot-db` D1 database, separate from the vault database.
 | ------ | ------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | POST   | `/tg/webhook` | Telegram webhook secret (constant-time) | Receives Telegram updates, dispatches commands (`/start`, `/whoami`, `/card`, `/help`), sends replies via Bot API. Always returns `{ ok: true }`. |
 
+The default deployment route is `staging.open-care.org/tg/webhook`; the
+production Wrangler environment routes `open-care.org/tg/webhook` and sets
+`workers_dev=false`.
+
 ### Internal routes (service binding only, not publicly routable)
 
 | Method | Path                            | Purpose                                                                                                     |
@@ -26,14 +30,17 @@ Operates on its own `bot-db` D1 database, separate from the vault database.
 
 ## Bindings
 
-| Binding                                                                                                         | Type          | Purpose                                                                  |
-| --------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------ |
-| `bot_db`                                                                                                        | D1 (`bot-db`) | Bot database — `handles` and `conversations` tables                      |
-| `TG_BOT_TOKEN`                                                                                                  | Secret        | Telegram Bot API token                                                   |
-| `TG_WEBHOOK_SECRET`                                                                                             | Secret        | Shared secret for `X-Telegram-Bot-Api-Secret-Token` header verification  |
-| `TG_ID_HMAC_KEY`                                                                                                | Secret (hex)  | Raw bytes for HMAC-SHA256 key — derives pseudonymous `telegram_user_ref` |
-| `TG_CHAT_ENC_KEY`                                                                                               | Secret (hex)  | Raw bytes for AES-GCM-256 key — encrypts/decrypts chat IDs               |
-| `SOLANA_CLUSTER`, `USDC_MINT`, `TREASURY_WALLET_ADDRESS`, `VAULT_USDC_ATA`, `ANCHOR_WALLET_ADDRESS`, `SITE_URL` | Vars          | Public config values                                                     |
+| Binding             | Type          | Purpose                                                                  |
+| ------------------- | ------------- | ------------------------------------------------------------------------ |
+| `bot_db`            | D1 (`bot-db`) | Bot database — `handles` and `conversations` tables                      |
+| `TG_BOT_TOKEN`      | Secret        | Telegram Bot API token                                                   |
+| `TG_WEBHOOK_SECRET` | Secret        | Shared secret for `X-Telegram-Bot-Api-Secret-Token` header verification  |
+| `TG_ID_HMAC_KEY`    | Secret (hex)  | Raw bytes for HMAC-SHA256 key — derives pseudonymous `telegram_user_ref` |
+| `TG_CHAT_ENC_KEY`   | Secret (hex)  | Raw bytes for AES-GCM-256 key — encrypts/decrypts chat IDs               |
+
+This Worker has no public config vars; its production environment only changes
+the D1 database ID placeholder, public webhook route, and `workers_dev=false`
+ingress setting.
 
 ## Key source files
 

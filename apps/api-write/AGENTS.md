@@ -13,13 +13,15 @@ operator.
 
 ## Routes
 
-| Method | Path                 | Purpose                                                                                                                                                            |
-| ------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| POST   | `/api/disbursements` | Record a gift-card disbursement. Validates body, generates `benpub_` ref if omitted, appends `disbursement_recorded` to ledger.                                    |
+| Method | Path                 | Purpose                                                                                                                                                                                                                                                                     |
+| ------ | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/api/disbursements` | Record a gift-card disbursement. Validates body, generates `benpub_` ref if omitted, appends `disbursement_recorded` to ledger.                                                                                                                                             |
 | POST   | `/api/corrections`   | Record a correction to a previous disbursement event. Validates body, requires the target to be `disbursement_recorded`, requires at least one replacement field, enforces replacement field whitelist (`receipt_ref`, `service_note` only), appends `correction_recorded`. |
-| GET    | `/health`            | Liveness check.                                                                                                                                                    |
+| GET    | `/health`            | Liveness check.                                                                                                                                                                                                                                                             |
 
-All routes are internal-only (no public route in `wrangler.jsonc`).
+All routes are internal-only (no public route in any `wrangler.jsonc`
+environment). The production Wrangler environment also sets `workers_dev=false`
+so production has no `*.workers.dev` ingress.
 
 ## Bindings
 

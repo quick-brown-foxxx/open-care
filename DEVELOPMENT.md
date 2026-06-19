@@ -96,8 +96,36 @@ pnpm run final-check:ledger-guard # reject ledger_events UPDATE/DELETE in produc
   pnpm run deploy:frontend
   ```
 
-- Staging is the default environment. No `--env production` setup exists yet.
+- Staging is the default Worker environment. Worker configs also define
+  `env.production` for mainnet/public-domain deployment.
+- Production D1 bindings use placeholder database IDs until a human creates or
+  selects production D1 databases. Replace `TBD_PRODUCTION_VAULT_DB_ID` and
+  `TBD_PRODUCTION_BOT_DB_ID` before production migrations or deploys. If the
+  production D1 database names differ from `vault-db` / `bot-db`, update the
+  production migration commands and GitHub workflow targets at the same time.
 - Live logs: `pnpm exec wrangler tail <worker-name>`.
+
+### Production deploy caveats
+
+Production deploys use the `production` Wrangler environment and publish Workers
+with `-production` names (for example, `vault-api-read-production`). Production
+service bindings in `apps/operator/wrangler.jsonc` target those names.
+
+```bash
+cd apps/<name>
+pnpm exec wrangler deploy --env production
+```
+
+Production migrations must run only after the production D1 placeholders in the
+Worker configs have been replaced with real database IDs:
+
+```bash
+cd apps/ingest
+pnpm exec wrangler d1 migrations apply vault-db --env production --remote
+
+cd ../tg-bot
+pnpm exec wrangler d1 migrations apply bot-db --env production --remote
+```
 
 ### Apply D1 migrations (staging)
 

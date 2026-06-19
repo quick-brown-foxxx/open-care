@@ -82,10 +82,12 @@ An attacker gets `OPERATOR_TOKEN`.
   append-only ledger makes fake writes visible. The token is held
   **only** by the `vault-operator` Worker; the downstream Workers
   (`vault-api-write`, `vault-anchor-cron`, `tg-bot`) do not hold it
-  and are not publicly routable for the operator routes. A leak
-  surface in any other Worker (a debug log, a misconfigured CORS
-  rule, a worker-to-worker public proxy) cannot expose
-  `OPERATOR_TOKEN` because the secret is not present.
+  and are not publicly routable for the operator routes. Production Worker
+  environments set `workers_dev=false`, so production ingress is limited to
+  configured `open-care.org` routes, service bindings, and cron triggers. A
+  leak surface in any other Worker (a debug log, a misconfigured CORS rule, a
+  worker-to-worker public proxy) cannot expose `OPERATOR_TOKEN` because the
+  secret is not present.
 - **Blast radius:** attacker can append false disbursement events
   AND false `anchor_published` events AND send arbitrary gift-card
   codes to beneficiaries until the token is rotated. They cannot

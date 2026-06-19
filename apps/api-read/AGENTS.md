@@ -17,7 +17,8 @@ return JSON with 60s `Cache-Control` headers.
 | GET    | `/api/ledger-events` | Raw hash-chained ledger events (byte-for-byte `payload_json`). Cursor: `after_sequence_no`, limit: 500 (max 1000).                               |
 | GET    | `/api/verify`        | Head hash/sequence_no, latest anchor, up to 30 previous anchors, TypeScript verification instructions, anchor_stale flag.                        |
 
-All routes mounted at `staging.open-care.org/api/*`.
+The default deployment route is `staging.open-care.org/api/*`; the production
+Wrangler environment routes `open-care.org/api/*` and sets `workers_dev=false`.
 
 ## Bindings
 

@@ -24,16 +24,20 @@ even though service bindings are in-process and not publicly routable.
 | GET    | `/tg/internal/pending-requests` | Yes  | No            | `TG_BOT`            | List pending beneficiary requests  |
 | POST   | `/tg/internal/send-code`        | Yes  | No            | `TG_BOT`            | Send gift-card code to beneficiary |
 
+The default deployment routes are on `staging.open-care.org`; the production
+Wrangler environment uses the same paths on `open-care.org` and sets
+`workers_dev=false`.
+
 ## Bindings
 
-| Binding                      | Type            | Purpose                                              |
-| ---------------------------- | --------------- | ---------------------------------------------------- |
-| `OPERATOR_TOKEN`             | Secret          | Bearer token for all operator-authenticated requests |
-| `VAULT_API_WRITE`            | Service binding | Forwards to `vault-api-write`                        |
-| `VAULT_API_READ`             | Service binding | Forwards to `vault-api-read`                         |
-| `VAULT_ANCHOR_CRON`          | Service binding | Forwards to `vault-anchor-cron`                      |
-| `TG_BOT`                     | Service binding | Forwards to `tg-bot`                                 |
-| `SOLANA_CLUSTER`, `SITE_URL` | Vars            | Public config values                                 |
+| Binding                      | Type            | Purpose                                                                        |
+| ---------------------------- | --------------- | ------------------------------------------------------------------------------ |
+| `OPERATOR_TOKEN`             | Secret          | Bearer token for all operator-authenticated requests                           |
+| `VAULT_API_WRITE`            | Service binding | Forwards to `vault-api-write` (`vault-api-write-production` in production)     |
+| `VAULT_API_READ`             | Service binding | Forwards to `vault-api-read` (`vault-api-read-production` in production)       |
+| `VAULT_ANCHOR_CRON`          | Service binding | Forwards to `vault-anchor-cron` (`vault-anchor-cron-production` in production) |
+| `TG_BOT`                     | Service binding | Forwards to `tg-bot` (`tg-bot-production` in production)                       |
+| `SOLANA_CLUSTER`, `SITE_URL` | Vars            | Public config values                                                           |
 
 **No D1 binding.** This Worker has no direct database access — all persistence
 goes through downstream Workers.
