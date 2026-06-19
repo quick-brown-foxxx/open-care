@@ -1,0 +1,229 @@
+name: Nightly Live Smoke
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  devnet-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    env:
+      ALLOW_DEVNET_SMOKE: ${{ vars.ALLOW_DEVNET_SMOKE }}
+      SOLANA_CLUSTER: devnet
+      ANCHOR_WALLET_ADDRESS: ${{ vars.ANCHOR_WALLET_ADDRESS }}
+      TREASURY_WALLET_ADDRESS: ${{ vars.TREASURY_WALLET_ADDRESS }}
+      VAULT_USDC_ATA: ${{ vars.VAULT_USDC_ATA }}
+      USDC_MINT: ${{ vars.USDC_MINT }}
+      DONOR_USDC_ATA: ${{ vars.DONOR_USDC_ATA }}
+      DEVNET_SMOKE_USDC_MINOR_AMOUNT: ${{ vars.DEVNET_SMOKE_USDC_MINOR_AMOUNT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate devnet smoke environment
+        shell: bash
+        env:
+          HELIUS_RPC_URL: ${{ secrets.HELIUS_RPC_URL }}
+          ANCHOR_WALLET_SECRET: ${{ secrets.ANCHOR_WALLET_SECRET }}
+          DONOR_WALLET_SECRET: ${{ secrets.DONOR_WALLET_SECRET }}
+        run: |
+          missing=()
+          for name in \
+            ALLOW_DEVNET_SMOKE \
+            SOLANA_CLUSTER \
+            HELIUS_RPC_URL \
+            ANCHOR_WALLET_SECRET \
+            ANCHOR_WALLET_ADDRESS \
+            DONOR_WALLET_SECRET \
+            TREASURY_WALLET_ADDRESS \
+            VAULT_USDC_ATA \
+            USDC_MINT; do
+            if [ -z "${!name}" ]; then
+              missing+=("$name")
+            fi
+          done
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf 'Missing required environment variables: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
+          if [ "$ALLOW_DEVNET_SMOKE" != "true" ]; then
+            echo "ALLOW_DEVNET_SMOKE must be set to true for nightly devnet smoke." >&2
+            exit 1
+          fi
+
+          if [ "$SOLANA_CLUSTER" != "devnet" ]; then
+            echo "SOLANA_CLUSTER must be devnet for nightly devnet smoke." >&2
+            exit 1
+          fi
+
+          echo "Devnet smoke preflight passed."
+
+      - name: Run devnet smoke
+        env:
+          HELIUS_RPC_URL: ${{ secrets.HELIUS_RPC_URL }}
+          ANCHOR_WALLET_SECRET: ${{ secrets.ANCHOR_WALLET_SECRET }}
+          DONOR_WALLET_SECRET: ${{ secrets.DONOR_WALLET_SECRET }}
+        run: pnpm run smoke:devnet
+
+  helius-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    env:
+      ALLOW_HELIUS_CONTRACT_SMOKE: ${{ vars.ALLOW_HELIUS_CONTRACT_SMOKE }}
+      SOLANA_CLUSTER: devnet
+      TREASURY_WALLET_ADDRESS: ${{ vars.TREASURY_WALLET_ADDRESS }}
+      VAULT_USDC_ATA: ${{ vars.VAULT_USDC_ATA }}
+      USDC_MINT: ${{ vars.USDC_MINT }}
+      WEBHOOK_URL: ${{ vars.WEBHOOK_URL }}
+      API_BASE_URL: ${{ vars.API_BASE_URL }}
+      DONOR_USDC_ATA: ${{ vars.DONOR_USDC_ATA }}
+      HELIUS_CONTRACT_USDC_MINOR_AMOUNT: ${{ vars.HELIUS_CONTRACT_USDC_MINOR_AMOUNT }}
+      HELIUS_CONTRACT_ACK_MAX_MS: ${{ vars.HELIUS_CONTRACT_ACK_MAX_MS }}
+      HELIUS_CONTRACT_POLL_TIMEOUT_MS: ${{ vars.HELIUS_CONTRACT_POLL_TIMEOUT_MS }}
+      HELIUS_CONTRACT_POLL_INTERVAL_MS: ${{ vars.HELIUS_CONTRACT_POLL_INTERVAL_MS }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate Helius contract smoke environment
+        shell: bash
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+          HELIUS_WEBHOOK_AUTH_HEADER: ${{ secrets.HELIUS_WEBHOOK_AUTH_HEADER }}
+          HELIUS_RPC_URL: ${{ secrets.HELIUS_RPC_URL }}
+          DONOR_WALLET_SECRET: ${{ secrets.DONOR_WALLET_SECRET }}
+        run: |
+          missing=()
+          for name in \
+            ALLOW_HELIUS_CONTRACT_SMOKE \
+            HELIUS_API_KEY \
+            HELIUS_WEBHOOK_AUTH_HEADER \
+            SOLANA_CLUSTER \
+            HELIUS_RPC_URL \
+            DONOR_WALLET_SECRET \
+            TREASURY_WALLET_ADDRESS \
+            VAULT_USDC_ATA \
+            USDC_MINT; do
+            if [ -z "${!name}" ]; then
+              missing+=("$name")
+            fi
+          done
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf 'Missing required environment variables: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
+          if [ "$ALLOW_HELIUS_CONTRACT_SMOKE" != "true" ]; then
+            echo "ALLOW_HELIUS_CONTRACT_SMOKE must be set to true for nightly Helius contract smoke." >&2
+            exit 1
+          fi
+
+          if [ "$SOLANA_CLUSTER" != "devnet" ]; then
+            echo "SOLANA_CLUSTER must be devnet for nightly Helius contract smoke." >&2
+            exit 1
+          fi
+
+          echo "Helius contract smoke preflight passed."
+
+      - name: Run Helius contract smoke
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+          HELIUS_WEBHOOK_AUTH_HEADER: ${{ secrets.HELIUS_WEBHOOK_AUTH_HEADER }}
+          HELIUS_RPC_URL: ${{ secrets.HELIUS_RPC_URL }}
+          DONOR_WALLET_SECRET: ${{ secrets.DONOR_WALLET_SECRET }}
+        run: pnpm run smoke:helius-contract
+
+  tg-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    env:
+      ALLOW_TG_E2E: ${{ vars.ALLOW_TG_E2E }}
+      TG_E2E_OPERATOR_BASE_URL: ${{ vars.TG_E2E_OPERATOR_BASE_URL }}
+      TG_E2E_BOT_USERNAME: ${{ vars.TG_E2E_BOT_USERNAME }}
+      TG_E2E_TIMEOUT_SECONDS: ${{ vars.TG_E2E_TIMEOUT_SECONDS }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Validate Telegram E2E environment
+        shell: bash
+        env:
+          TELETHON_API_ID: ${{ vars.TELETHON_API_ID || secrets.TELETHON_API_ID }}
+          TELETHON_API_HASH: ${{ secrets.TELETHON_API_HASH }}
+          TELETHON_SESSION_STRING: ${{ secrets.TELETHON_SESSION_STRING }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          OPERATOR_TOKEN: ${{ secrets.OPERATOR_TOKEN }}
+        run: |
+          missing=()
+          for name in \
+            ALLOW_TG_E2E \
+            TELETHON_API_ID \
+            TELETHON_API_HASH \
+            TELETHON_SESSION_STRING \
+            TG_BOT_TOKEN \
+            OPERATOR_TOKEN; do
+            if [ -z "${!name}" ]; then
+              missing+=("$name")
+            fi
+          done
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf 'Missing required environment variables: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
+          if [ "$ALLOW_TG_E2E" != "true" ]; then
+            echo "ALLOW_TG_E2E must be set to true for nightly Telegram E2E." >&2
+            exit 1
+          fi
+
+          echo "Telegram E2E preflight passed."
+
+      - name: Run Telegram E2E tests
+        env:
+          TELETHON_API_ID: ${{ vars.TELETHON_API_ID || secrets.TELETHON_API_ID }}
+          TELETHON_API_HASH: ${{ secrets.TELETHON_API_HASH }}
+          TELETHON_SESSION_STRING: ${{ secrets.TELETHON_SESSION_STRING }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          OPERATOR_TOKEN: ${{ secrets.OPERATOR_TOKEN }}
+        run: uv run --project tools/e2e-tg pytest tools/e2e-tg/tests/ -v
