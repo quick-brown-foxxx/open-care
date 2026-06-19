@@ -5,5 +5,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["devnet-smoke.ts"]
+  "include": ["devnet-smoke.ts", "helius-contract.ts"]
 }

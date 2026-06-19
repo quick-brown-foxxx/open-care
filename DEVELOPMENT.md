@@ -184,6 +184,47 @@ token account owner is the treasury address, sends a real `ccv-anchor:<64hex>`
 Memo transaction, fetches finalized parsed transactions with null-before-finality
 retry handling, and verifies the tiny USDC transfer lands in `VAULT_USDC_ATA`.
 
+## Staging Helius webhook contract smoke
+
+The Helius contract smoke is a manual-only staging check. It is intentionally
+**not** part of PR CI because it sends real staging webhook requests and spends
+devnet SOL fees plus a tiny amount of devnet USDC. Use throwaway/faucet-funded
+devnet wallets only; never use mainnet or treasury private keys.
+
+```bash
+pnpm run smoke:helius-contract -- --help
+ALLOW_HELIUS_CONTRACT_SMOKE=true \
+HELIUS_WEBHOOK_AUTH_HEADER=<staging webhook token without Bearer prefix> \
+SOLANA_CLUSTER=devnet \
+HELIUS_RPC_URL=<devnet RPC URL> \
+DONOR_WALLET_SECRET=<base58 devnet donor keypair secret> \
+TREASURY_WALLET_ADDRESS=<devnet treasury owner public key> \
+VAULT_USDC_ATA=<devnet vault USDC token account> \
+USDC_MINT=4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU \
+pnpm run smoke:helius-contract
+```
+
+Optional knobs:
+
+- `WEBHOOK_URL` — defaults to `https://staging.open-care.org/webhook/helius` and
+  must remain on the staging host.
+- `API_BASE_URL` — defaults to `https://staging.open-care.org` and must remain on
+  the staging host.
+- `DONOR_USDC_ATA` — source token account; defaults to the donor wallet's
+  associated token account for `USDC_MINT`.
+- `HELIUS_CONTRACT_USDC_MINOR_AMOUNT` — raw minor-unit transfer amount, default
+  `1` and capped at `10000`.
+- `HELIUS_CONTRACT_ACK_MAX_MS` — maximum webhook ACK duration, default `1000`.
+- `HELIUS_CONTRACT_POLL_TIMEOUT_MS` / `HELIUS_CONTRACT_POLL_INTERVAL_MS` — public
+  ledger polling controls, default `120000` / `3000`.
+
+The script verifies wrong-token `401`, malformed-JSON `400 BAD_REQUEST`,
+correct-token `200`, ACK-fast timing, and duplicate replay. Duplicate replay uses
+one real finalized devnet USDC transfer signature, posts it twice to the staging
+webhook, then polls the public read API from a pre-transfer `/api/verify`
+baseline to assert exactly one `donation_confirmed` ledger event for that
+signature.
+
 ## The dev loop
 
 ```text

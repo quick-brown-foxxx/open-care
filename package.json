@@ -20,6 +20,7 @@
     "blockchain:local-validator": "pnpm --filter @open-care/localnet run blockchain:local-validator",
     "verify:chain": "pnpm --filter @open-care/verify run verify-chain",
     "smoke:devnet": "pnpm --filter @open-care/smoke run smoke:devnet",
+    "smoke:helius-contract": "pnpm --filter @open-care/smoke run smoke:helius-contract",
     "deploy": "pnpm run deploy:migrations && pnpm run deploy:workers && pnpm run deploy:frontend",
     "deploy:workers": "pnpm -r --filter './apps/*' --filter '!open-care-web' deploy",
     "deploy:frontend": "pnpm --filter open-care-web deploy",

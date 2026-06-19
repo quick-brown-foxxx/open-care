@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "smoke:devnet": "tsx devnet-smoke.ts",
+    "smoke:helius-contract": "tsx helius-contract.ts",
     "check": "tsc -b"
   },
   "dependencies": {
