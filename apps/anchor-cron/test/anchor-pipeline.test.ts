@@ -515,6 +515,50 @@ describe('Anchor Cron Worker', () => {
       expect(anchorEvent?.prev_hash).toBe(hash);
       expect(anchorEvent?.event_hash).toMatch(/^[0-9a-f]{64}$/);
     });
+
+    it('returns conflict when lock creation hits an anchor_runs same-date/head unique collision', async () => {
+      /*
+      Scenario: Operator manual trigger loses the DB lock-creation race
+        Given the ledger has an unanchored event
+        And an anchor_runs row for the same date/head appears after the active-lock precheck
+        When the manual trigger attempts to create its lock row
+        Then the same-head/date unique collision is reported as ANCHOR_RUN_IN_PROGRESS
+        And no anchor_published ledger event is appended by the losing run
+      */
+      const { hash, seq } = await seedLedgerEvent(db);
+      const now = new Date().toISOString();
+      await db.insert(anchorRuns).values({
+        anchor_date: new Date().toISOString().slice(0, 10),
+        anchored_head_sequence_no: seq,
+        anchored_head_hash: hash,
+        status: 'pending',
+        trigger_source: 'cron',
+        anchor_wallet_address: 'BhKtkM1oHADwo8ap5P6Lymj7b3iaspiAm37RA9KMn8YG',
+        memo_text: `ccv-anchor:${hash}`,
+        attempt_count: 0,
+        locked_until_utc: null,
+        created_at_utc: now,
+        updated_at_utc: now,
+      });
+
+      const manualResponse = await SELF.fetch(postManual());
+
+      expect(manualResponse.status).toBe(409);
+      const manualBody = (await manualResponse.json()) as {
+        error: { code: string; message: string };
+      };
+      expect(manualBody.error.code).toBe('ANCHOR_RUN_IN_PROGRESS');
+
+      const runRows = await db.select().from(anchorRuns).all();
+      expect(runRows).toHaveLength(1);
+      expect(runRows[0]?.status).toBe('pending');
+
+      const anchorEvents = await getEventsPaginated(db, {
+        eventType: 'anchor_published',
+        limit: 10,
+      });
+      expect(anchorEvents.items).toHaveLength(0);
+    });
   });
 
   // ---------------------------------------------------------------------------

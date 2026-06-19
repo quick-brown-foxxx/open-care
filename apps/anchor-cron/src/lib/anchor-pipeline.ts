@@ -47,6 +47,54 @@ export type AnchorRunResult =
   | AnchorRunConflict
   | AnchorRunFailed;
 
+function anchorRunInProgressConflict(): AnchorRunConflict {
+  return {
+    status: 'conflict',
+    error: {
+      code: 'ANCHOR_RUN_IN_PROGRESS',
+      message: 'Another anchor run is in progress',
+    },
+  };
+}
+
+function errorCause(error: unknown): unknown {
+  if (typeof error !== 'object' || error === null || !('cause' in error)) {
+    return undefined;
+  }
+  return (error as { cause?: unknown }).cause;
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
+function isAnchorRunDateHeadUniqueCollision(error: unknown): boolean {
+  const seen = new Set<unknown>();
+  let current: unknown = error;
+
+  while (current !== undefined && !seen.has(current)) {
+    seen.add(current);
+    const message = errorMessage(current).toLowerCase();
+    const namesDateHeadIndex = message.includes('idx_anchor_runs_date_head');
+    const namesDateHeadColumns =
+      message.includes('anchor_runs.anchor_date') &&
+      message.includes('anchor_runs.anchored_head_hash');
+    const isUniqueFailure =
+      message.includes('unique constraint failed') || message.includes('constraint failed');
+
+    if (namesDateHeadIndex || (isUniqueFailure && namesDateHeadColumns)) {
+      return true;
+    }
+
+    current = errorCause(current);
+  }
+
+  return false;
+}
+
 export async function runAnchor(
   db: VaultDb,
   env: Env,
@@ -66,13 +114,7 @@ export async function runAnchor(
   // Step 1: Check for active lock (genuine concurrent run)
   const activeLock = await findActiveLock(db);
   if (activeLock) {
-    return {
-      status: 'conflict',
-      error: {
-        code: 'ANCHOR_RUN_IN_PROGRESS',
-        message: 'Another anchor run is in progress',
-      },
-    };
+    return anchorRunInProgressConflict();
   }
 
   // Step 2: Get current ledger head
@@ -108,6 +150,10 @@ export async function runAnchor(
       memo_text: memoText,
     });
   } catch (e) {
+    if (isAnchorRunDateHeadUniqueCollision(e)) {
+      return anchorRunInProgressConflict();
+    }
+
     return {
       status: 'failed',
       error: {
