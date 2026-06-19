@@ -1,121 +1,29 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { env, SELF } from 'cloudflare:test';
-import { createBotDb, botSchema } from '@open-care/vault-db';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { SELF } from 'cloudflare:test';
+import { botSchema } from '@open-care/vault-db';
 import { eq } from 'drizzle-orm';
-import { deriveTelegramUserRef, importHmacKey } from '@open-care/bot-crypto';
+import {
+  createCardRequestConversation,
+  createTelegramApiMock,
+  createTestBotDb,
+  registerUser,
+} from './helpers';
 
-const { handles, conversations } = botSchema;
-const WEBHOOK_SECRET = 'test-webhook-secret-abc123';
-
-// ---------------------------------------------------------------------------
-// Crypto helpers
-// ---------------------------------------------------------------------------
-
-function hexToBytes(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
-  }
-  return bytes;
-}
-
-const HMAC_KEY_HEX = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2';
-const hmacKey = await importHmacKey(hexToBytes(HMAC_KEY_HEX));
+const { conversations } = botSchema;
 
 // ---------------------------------------------------------------------------
 // Telegram API mock (needed for /start registration)
 // ---------------------------------------------------------------------------
 
-const originalFetch = globalThis.fetch;
+const telegramApi = createTelegramApiMock();
 
 beforeEach(() => {
-  globalThis.fetch = vi
-    .fn()
-    .mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      if (url.includes('api.telegram.org')) {
-        return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      return originalFetch(input, init);
-    }) as typeof globalThis.fetch;
+  telegramApi.setupSuccess();
 });
 
 afterEach(() => {
-  globalThis.fetch = originalFetch;
+  telegramApi.restore();
 });
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function webhookHeaders(): Record<string, string> {
-  return {
-    'Content-Type': 'application/json',
-    'X-Telegram-Bot-Api-Secret-Token': WEBHOOK_SECRET,
-  };
-}
-
-async function registerUser(userId: number, handle: string): Promise<string> {
-  await SELF.fetch('https://example.com/tg/webhook', {
-    method: 'POST',
-    headers: webhookHeaders(),
-    body: JSON.stringify({
-      update_id: userId,
-      message: {
-        message_id: userId,
-        from: { id: userId, first_name: 'User' },
-        chat: { id: userId },
-        text: `/start ${handle}`,
-      },
-    }),
-  });
-
-  const db = createBotDb(env.bot_db);
-  const telegramUserRef = await deriveTelegramUserRef(hmacKey, userId);
-  const row = await db
-    .select()
-    .from(handles)
-    .where(eq(handles.telegram_user_ref, telegramUserRef))
-    .get();
-  if (!row) throw new Error(`Failed to register user ${userId}`);
-  return row.opaque_id;
-}
-
-async function createConversation(userId: number): Promise<number> {
-  await SELF.fetch('https://example.com/tg/webhook', {
-    method: 'POST',
-    headers: webhookHeaders(),
-    body: JSON.stringify({
-      update_id: userId + 1000,
-      message: {
-        message_id: userId + 1000,
-        from: { id: userId, first_name: 'User' },
-        chat: { id: userId },
-        text: '/card',
-      },
-    }),
-  });
-
-  const db = createBotDb(env.bot_db);
-  const telegramUserRef = await deriveTelegramUserRef(hmacKey, userId);
-  const handleRow = await db
-    .select()
-    .from(handles)
-    .where(eq(handles.telegram_user_ref, telegramUserRef))
-    .get();
-  if (!handleRow) throw new Error('Handle not found');
-
-  const convRow = await db
-    .select()
-    .from(conversations)
-    .where(eq(conversations.opaque_id, handleRow.opaque_id))
-    .get();
-  if (!convRow) throw new Error('Conversation not found');
-  return convRow.id;
-}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -134,7 +42,7 @@ describe('GET /tg/internal/pending-requests', () => {
   it('returns a single pending request with correct fields', async () => {
     const userId = 300001;
     const opaqueId = await registerUser(userId, 'pending_user');
-    const convId = await createConversation(userId);
+    const convId = await createCardRequestConversation(userId);
 
     const response = await SELF.fetch('https://example.com/tg/internal/pending-requests');
     expect(response.status).toBe(200);
@@ -163,7 +71,7 @@ describe('GET /tg/internal/pending-requests', () => {
   it('redacts sensitive fields from response', async () => {
     const userId = 300002;
     const opaqueId = await registerUser(userId, 'redact_test');
-    await createConversation(userId);
+    await createCardRequestConversation(userId);
 
     const response = await SELF.fetch('https://example.com/tg/internal/pending-requests');
     const json = await response.json<{ items: Record<string, unknown>[] }>();
@@ -200,9 +108,9 @@ describe('GET /tg/internal/pending-requests', () => {
     await registerUser(user1, 'page_user_1');
     await registerUser(user2, 'page_user_2');
     await registerUser(user3, 'page_user_3');
-    await createConversation(user1);
-    await createConversation(user2);
-    await createConversation(user3);
+    await createCardRequestConversation(user1);
+    await createCardRequestConversation(user2);
+    await createCardRequestConversation(user3);
 
     // Query with limit=2
     const response = await SELF.fetch('https://example.com/tg/internal/pending-requests?limit=2');
@@ -225,9 +133,9 @@ describe('GET /tg/internal/pending-requests', () => {
     await registerUser(user1, 'cursor_user_1');
     await registerUser(user2, 'cursor_user_2');
     await registerUser(user3, 'cursor_user_3');
-    await createConversation(user1);
-    await createConversation(user2);
-    await createConversation(user3);
+    await createCardRequestConversation(user1);
+    await createCardRequestConversation(user2);
+    await createCardRequestConversation(user3);
 
     // First page
     const page1 = await SELF.fetch('https://example.com/tg/internal/pending-requests?limit=2');
@@ -237,6 +145,7 @@ describe('GET /tg/internal/pending-requests', () => {
     }>();
     expect(p1.items.length).toBe(2);
     expect(p1.next_cursor).not.toBeNull();
+    if (p1.next_cursor === null) throw new Error('Expected a next cursor for page 1');
 
     // Second page using cursor
     const page2 = await SELF.fetch(
@@ -260,10 +169,10 @@ describe('GET /tg/internal/pending-requests', () => {
   it('filters to only pending, in_flight, and failed statuses', async () => {
     const userId = 300009;
     const opaqueId = await registerUser(userId, 'status_filter');
-    const convId = await createConversation(userId);
+    const convId = await createCardRequestConversation(userId);
 
     // Manually update conversation to 'delivered' (should not appear)
-    const db = createBotDb(env.bot_db);
+    const db = createTestBotDb();
     await db.update(conversations).set({ status: 'delivered' }).where(eq(conversations.id, convId));
 
     const response = await SELF.fetch('https://example.com/tg/internal/pending-requests');
@@ -301,7 +210,7 @@ describe('GET /tg/internal/pending-requests', () => {
   it('returns internal_handle as the actual handle string', async () => {
     const userId = 300010;
     const opaqueId = await registerUser(userId, 'handle_lookup_test');
-    await createConversation(userId);
+    await createCardRequestConversation(userId);
 
     const response = await SELF.fetch('https://example.com/tg/internal/pending-requests');
     const json = await response.json<{
@@ -316,10 +225,10 @@ describe('GET /tg/internal/pending-requests', () => {
   it('includes in_flight conversations', async () => {
     const userId = 300011;
     const opaqueId = await registerUser(userId, 'inflight_test');
-    const convId = await createConversation(userId);
+    const convId = await createCardRequestConversation(userId);
 
     // Update to in_flight
-    const db = createBotDb(env.bot_db);
+    const db = createTestBotDb();
     await db.update(conversations).set({ status: 'in_flight' }).where(eq(conversations.id, convId));
 
     const response = await SELF.fetch('https://example.com/tg/internal/pending-requests');
@@ -335,10 +244,10 @@ describe('GET /tg/internal/pending-requests', () => {
   it('includes failed conversations', async () => {
     const userId = 300012;
     const opaqueId = await registerUser(userId, 'failed_test');
-    const convId = await createConversation(userId);
+    const convId = await createCardRequestConversation(userId);
 
     // Update to failed
-    const db = createBotDb(env.bot_db);
+    const db = createTestBotDb();
     await db.update(conversations).set({ status: 'failed' }).where(eq(conversations.id, convId));
 
     const response = await SELF.fetch('https://example.com/tg/internal/pending-requests');

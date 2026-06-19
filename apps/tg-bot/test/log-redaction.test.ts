@@ -1,26 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { env, SELF } from 'cloudflare:test';
-import { createBotDb, botSchema } from '@open-care/vault-db';
-import { eq } from 'drizzle-orm';
-import { deriveTelegramUserRef, importHmacKey } from '@open-care/bot-crypto';
-
-const { handles, conversations } = botSchema;
-const WEBHOOK_SECRET = 'test-webhook-secret-abc123';
-
-// ---------------------------------------------------------------------------
-// Crypto helpers
-// ---------------------------------------------------------------------------
-
-function hexToBytes(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
-  }
-  return bytes;
-}
-
-const HMAC_KEY_HEX = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2';
-const hmacKey = await importHmacKey(hexToBytes(HMAC_KEY_HEX));
+import { SELF } from 'cloudflare:test';
+import {
+  createCardRequestConversation,
+  createTelegramApiMock,
+  registerUser,
+  webhookHeaders,
+} from './helpers';
 
 // ---------------------------------------------------------------------------
 // Log capture helpers
@@ -107,92 +92,7 @@ function deepContainsForbidden(
 // Telegram API mock
 // ---------------------------------------------------------------------------
 
-const originalFetch = globalThis.fetch;
-
-function setupTelegramMock(): void {
-  globalThis.fetch = vi
-    .fn()
-    .mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      if (url.includes('api.telegram.org')) {
-        return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      return originalFetch(input, init);
-    }) as typeof globalThis.fetch;
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function webhookHeaders(): Record<string, string> {
-  return {
-    'Content-Type': 'application/json',
-    'X-Telegram-Bot-Api-Secret-Token': WEBHOOK_SECRET,
-  };
-}
-
-async function registerUser(userId: number, handle: string): Promise<string> {
-  await SELF.fetch('https://example.com/tg/webhook', {
-    method: 'POST',
-    headers: webhookHeaders(),
-    body: JSON.stringify({
-      update_id: userId,
-      message: {
-        message_id: userId,
-        from: { id: userId, first_name: 'User' },
-        chat: { id: userId },
-        text: `/start ${handle}`,
-      },
-    }),
-  });
-
-  const db = createBotDb(env.bot_db);
-  const telegramUserRef = await deriveTelegramUserRef(hmacKey, userId);
-  const row = await db
-    .select()
-    .from(handles)
-    .where(eq(handles.telegram_user_ref, telegramUserRef))
-    .get();
-  if (!row) throw new Error(`Failed to register user ${userId}`);
-  return row.opaque_id;
-}
-
-async function createConversation(userId: number): Promise<number> {
-  await SELF.fetch('https://example.com/tg/webhook', {
-    method: 'POST',
-    headers: webhookHeaders(),
-    body: JSON.stringify({
-      update_id: userId + 1000,
-      message: {
-        message_id: userId + 1000,
-        from: { id: userId, first_name: 'User' },
-        chat: { id: userId },
-        text: '/card',
-      },
-    }),
-  });
-
-  const db = createBotDb(env.bot_db);
-  const telegramUserRef = await deriveTelegramUserRef(hmacKey, userId);
-  const handleRow = await db
-    .select()
-    .from(handles)
-    .where(eq(handles.telegram_user_ref, telegramUserRef))
-    .get();
-  if (!handleRow) throw new Error('Handle not found');
-
-  const convRow = await db
-    .select()
-    .from(conversations)
-    .where(eq(conversations.opaque_id, handleRow.opaque_id))
-    .get();
-  if (!convRow) throw new Error('Conversation not found');
-  return convRow.id;
-}
+const telegramApi = createTelegramApiMock();
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -204,14 +104,14 @@ describe('Log redaction', () => {
   let errorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    setupTelegramMock();
+    telegramApi.setupSuccess();
     infoSpy = vi.spyOn(console, 'info');
     warnSpy = vi.spyOn(console, 'warn');
     errorSpy = vi.spyOn(console, 'error');
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    telegramApi.restore();
     infoSpy.mockRestore();
     warnSpy.mockRestore();
     errorSpy.mockRestore();
@@ -427,7 +327,7 @@ describe('Log redaction', () => {
     it('contain no plaintext gift card codes on successful delivery', async () => {
       const userId = 500007;
       const opaqueId = await registerUser(userId, 'sendlog_user');
-      const convId = await createConversation(userId);
+      const convId = await createCardRequestConversation(userId);
 
       // Clear spies to isolate send-code logs
       infoSpy.mockClear();
@@ -461,7 +361,7 @@ describe('Log redaction', () => {
     it('contain no plaintext gift card codes on failed delivery', async () => {
       const userId = 500008;
       const opaqueId = await registerUser(userId, 'faillog_user');
-      const convId = await createConversation(userId);
+      const convId = await createCardRequestConversation(userId);
 
       // First deliver successfully
       await SELF.fetch('https://example.com/tg/internal/send-code', {
@@ -505,7 +405,7 @@ describe('Log redaction', () => {
     it('contain no plaintext identifiers in send-code error logs', async () => {
       const userId = 500009;
       const opaqueId = await registerUser(userId, 'iderrlog_user');
-      const convId = await createConversation(userId);
+      const convId = await createCardRequestConversation(userId);
 
       // First deliver successfully
       await SELF.fetch('https://example.com/tg/internal/send-code', {

@@ -1,26 +1,17 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { env, SELF } from 'cloudflare:test';
-import { createBotDb, botSchema } from '@open-care/vault-db';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { SELF } from 'cloudflare:test';
+import { botSchema } from '@open-care/vault-db';
 import { eq } from 'drizzle-orm';
-import { deriveTelegramUserRef, importHmacKey } from '@open-care/bot-crypto';
+import {
+  createCardRequestConversation,
+  createTelegramApiMock,
+  createTestBotDb,
+  getHandleRow,
+  registerUser,
+  sendCodeRequest,
+} from './helpers';
 
-const { handles, conversations } = botSchema;
-const WEBHOOK_SECRET = 'test-webhook-secret-abc123';
-
-// ---------------------------------------------------------------------------
-// Crypto helpers
-// ---------------------------------------------------------------------------
-
-function hexToBytes(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
-  }
-  return bytes;
-}
-
-const HMAC_KEY_HEX = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2';
-const hmacKey = await importHmacKey(hexToBytes(HMAC_KEY_HEX));
+const { conversations } = botSchema;
 
 async function sha256Hex(input: string): Promise<string> {
   const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
@@ -36,123 +27,15 @@ async function sha256Hex(input: string): Promise<string> {
 // Telegram API mock (default: success)
 // ---------------------------------------------------------------------------
 
-const originalFetch = globalThis.fetch;
-
-function setupSuccessMock(): void {
-  globalThis.fetch = vi
-    .fn()
-    .mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      if (url.includes('api.telegram.org')) {
-        return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      return originalFetch(input, init);
-    }) as typeof globalThis.fetch;
-}
-
-function setupFailureMock(): void {
-  globalThis.fetch = vi
-    .fn()
-    .mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      if (url.includes('api.telegram.org')) {
-        return new Response('Internal Server Error', {
-          status: 500,
-          headers: { 'Content-Type': 'text/plain' },
-        });
-      }
-      return originalFetch(input, init);
-    }) as typeof globalThis.fetch;
-}
+const telegramApi = createTelegramApiMock();
 
 beforeEach(() => {
-  setupSuccessMock();
+  telegramApi.setupSuccess();
 });
 
 afterEach(() => {
-  globalThis.fetch = originalFetch;
+  telegramApi.restore();
 });
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function webhookHeaders(): Record<string, string> {
-  return {
-    'Content-Type': 'application/json',
-    'X-Telegram-Bot-Api-Secret-Token': WEBHOOK_SECRET,
-  };
-}
-
-async function registerUser(userId: number, handle: string): Promise<string> {
-  await SELF.fetch('https://example.com/tg/webhook', {
-    method: 'POST',
-    headers: webhookHeaders(),
-    body: JSON.stringify({
-      update_id: userId,
-      message: {
-        message_id: userId,
-        from: { id: userId, first_name: 'User' },
-        chat: { id: userId },
-        text: `/start ${handle}`,
-      },
-    }),
-  });
-
-  const db = createBotDb(env.bot_db);
-  const telegramUserRef = await deriveTelegramUserRef(hmacKey, userId);
-  const row = await db
-    .select()
-    .from(handles)
-    .where(eq(handles.telegram_user_ref, telegramUserRef))
-    .get();
-  if (!row) throw new Error(`Failed to register user ${userId}`);
-  return row.opaque_id;
-}
-
-async function createConversation(userId: number): Promise<number> {
-  await SELF.fetch('https://example.com/tg/webhook', {
-    method: 'POST',
-    headers: webhookHeaders(),
-    body: JSON.stringify({
-      update_id: userId + 1000,
-      message: {
-        message_id: userId + 1000,
-        from: { id: userId, first_name: 'User' },
-        chat: { id: userId },
-        text: '/card',
-      },
-    }),
-  });
-
-  const db = createBotDb(env.bot_db);
-  const telegramUserRef = await deriveTelegramUserRef(hmacKey, userId);
-  const handleRow = await db
-    .select()
-    .from(handles)
-    .where(eq(handles.telegram_user_ref, telegramUserRef))
-    .get();
-  if (!handleRow) throw new Error('Handle not found');
-
-  const convRow = await db
-    .select()
-    .from(conversations)
-    .where(eq(conversations.opaque_id, handleRow.opaque_id))
-    .get();
-  if (!convRow) throw new Error('Conversation not found');
-  return convRow.id;
-}
-
-function sendCode(body: Record<string, unknown>): Promise<Response> {
-  return SELF.fetch('https://example.com/tg/internal/send-code', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -164,10 +47,10 @@ describe('POST /tg/internal/send-code', () => {
   it('delivers code successfully and updates conversation', async () => {
     const userId = 400001;
     const opaqueId = await registerUser(userId, 'delivery_user');
-    const convId = await createConversation(userId);
+    const convId = await createCardRequestConversation(userId);
 
     const code = 'GIFT-1234-5678-9012';
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       opaque_id: opaqueId,
       code,
       conversation_id: convId,
@@ -180,7 +63,7 @@ describe('POST /tg/internal/send-code', () => {
     expect(json.delivered_at_utc).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
 
     // Verify conversation updated
-    const db = createBotDb(env.bot_db);
+    const db = createTestBotDb();
     const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
     expect(convRow!.status).toBe('delivered');
@@ -193,16 +76,16 @@ describe('POST /tg/internal/send-code', () => {
   it('stores correct code hash (SHA-256)', async () => {
     const userId = 400002;
     const opaqueId = await registerUser(userId, 'hash_user');
-    const convId = await createConversation(userId);
+    const convId = await createCardRequestConversation(userId);
 
     const code = 'GIFT-ABCD-EFGH-IJKL';
-    await sendCode({
+    await sendCodeRequest({
       opaque_id: opaqueId,
       code,
       conversation_id: convId,
     });
 
-    const db = createBotDb(env.bot_db);
+    const db = createTestBotDb();
     const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
 
@@ -213,16 +96,16 @@ describe('POST /tg/internal/send-code', () => {
   it('stores correct code last4', async () => {
     const userId = 400003;
     const opaqueId = await registerUser(userId, 'last4_user');
-    const convId = await createConversation(userId);
+    const convId = await createCardRequestConversation(userId);
 
     const code = 'GIFT-MNOP-QRST-UVWX';
-    await sendCode({
+    await sendCodeRequest({
       opaque_id: opaqueId,
       code,
       conversation_id: convId,
     });
 
-    const db = createBotDb(env.bot_db);
+    const db = createTestBotDb();
     const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
     expect(convRow!.delivery_code_last4).toBe('UVWX');
@@ -237,10 +120,10 @@ describe('POST /tg/internal/send-code', () => {
     // stays in its previous state.
     const userId = 400004;
     const opaqueId = await registerUser(userId, 'ref_user_test');
-    const convId = await createConversation(userId);
+    const convId = await createCardRequestConversation(userId);
 
     const benpubRef = 'benpub_AAAAAAAAAAAAAAAA';
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       opaque_id: opaqueId,
       code: 'CODE-TEST-1234',
       conversation_id: convId,
@@ -252,7 +135,7 @@ describe('POST /tg/internal/send-code', () => {
     expect(response.status).toBe(500);
 
     // Verify conversation was NOT updated (stays pending, no benpub ref)
-    const db = createBotDb(env.bot_db);
+    const db = createTestBotDb();
     const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
     expect(convRow!.status).toBe('pending');
@@ -262,16 +145,16 @@ describe('POST /tg/internal/send-code', () => {
   it('stores null public_beneficiary_ref when omitted', async () => {
     const userId = 400005;
     const opaqueId = await registerUser(userId, 'null_benpub');
-    const convId = await createConversation(userId);
+    const convId = await createCardRequestConversation(userId);
 
-    await sendCode({
+    await sendCodeRequest({
       opaque_id: opaqueId,
       code: 'CODE-TEST-5678',
       conversation_id: convId,
       // public_beneficiary_ref omitted
     });
 
-    const db = createBotDb(env.bot_db);
+    const db = createTestBotDb();
     const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
     expect(convRow!.public_beneficiary_ref).toBeNull();
@@ -280,16 +163,16 @@ describe('POST /tg/internal/send-code', () => {
   it('stores null public_beneficiary_ref when explicitly null', async () => {
     const userId = 400006;
     const opaqueId = await registerUser(userId, 'explicit_null');
-    const convId = await createConversation(userId);
+    const convId = await createCardRequestConversation(userId);
 
-    await sendCode({
+    await sendCodeRequest({
       opaque_id: opaqueId,
       code: 'CODE-TEST-9012',
       conversation_id: convId,
       public_beneficiary_ref: null,
     });
 
-    const db = createBotDb(env.bot_db);
+    const db = createTestBotDb();
     const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
     expect(convRow!.public_beneficiary_ref).toBeNull();
@@ -298,7 +181,7 @@ describe('POST /tg/internal/send-code', () => {
   // -- Error: handle not found -----------------------------------------------
 
   it('returns 404 when handle not found', async () => {
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       opaque_id: 'non-existent-opaque-id',
       code: 'CODE-1234',
       conversation_id: 1,
@@ -322,23 +205,17 @@ describe('POST /tg/internal/send-code', () => {
 
     await registerUser(userA, 'owner_a');
     await registerUser(userB, 'owner_b');
-    const convIdA = await createConversation(userA);
+    const convIdA = await createCardRequestConversation(userA);
 
     // Try to deliver to convIdA using userB's opaque_id
     // (First attempt with userA's opaque_id would succeed — skip it and go
     // straight to the cross-owner test with userB's opaque_id.)
 
     // Get userB's opaque_id
-    const db = createBotDb(env.bot_db);
-    const telegramUserRefB = await deriveTelegramUserRef(hmacKey, userB);
-    const handleB = await db
-      .select()
-      .from(handles)
-      .where(eq(handles.telegram_user_ref, telegramUserRefB))
-      .get();
+    const handleB = await getHandleRow(userB);
     expect(handleB).toBeDefined();
 
-    const response2 = await sendCode({
+    const response2 = await sendCodeRequest({
       opaque_id: handleB!.opaque_id,
       code: 'CODE-1234',
       conversation_id: convIdA,
@@ -358,17 +235,17 @@ describe('POST /tg/internal/send-code', () => {
   it('returns 409 when conversation already delivered', async () => {
     const userId = 400009;
     const opaqueId = await registerUser(userId, 'already_delivered');
-    const convId = await createConversation(userId);
+    const convId = await createCardRequestConversation(userId);
 
     // First delivery
-    await sendCode({
+    await sendCodeRequest({
       opaque_id: opaqueId,
       code: 'CODE-FIRST-1111',
       conversation_id: convId,
     });
 
     // Second delivery attempt
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       opaque_id: opaqueId,
       code: 'CODE-SECOND-2222',
       conversation_id: convId,
@@ -388,12 +265,12 @@ describe('POST /tg/internal/send-code', () => {
   it('returns 503 when Telegram API fails', async () => {
     const userId = 400010;
     const opaqueId = await registerUser(userId, 'fail_delivery');
-    const convId = await createConversation(userId);
+    const convId = await createCardRequestConversation(userId);
 
     // Override mock to return failure
-    setupFailureMock();
+    telegramApi.setupFailure();
 
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       opaque_id: opaqueId,
       code: 'CODE-FAIL-3333',
       conversation_id: convId,
@@ -408,7 +285,7 @@ describe('POST /tg/internal/send-code', () => {
     expect(typeof json.error.request_id).toBe('string');
 
     // Verify conversation was marked as failed with TTL blob
-    const db = createBotDb(env.bot_db);
+    const db = createTestBotDb();
     const conv = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(conv).not.toBeNull();
     expect(conv!.status).toBe('failed');
@@ -416,13 +293,13 @@ describe('POST /tg/internal/send-code', () => {
     expect(conv!.encrypted_code_expires_at_utc).not.toBeNull();
 
     // Restore success mock for subsequent tests
-    setupSuccessMock();
+    telegramApi.setupSuccess();
   });
 
   // -- Validation: bad request ----------------------------------------------
 
   it('returns 400 when opaque_id is missing', async () => {
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       code: 'CODE-1234',
       conversation_id: 1,
     });
@@ -438,7 +315,7 @@ describe('POST /tg/internal/send-code', () => {
   });
 
   it('returns 400 when opaque_id is empty string', async () => {
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       opaque_id: '',
       code: 'CODE-1234',
       conversation_id: 1,
@@ -455,7 +332,7 @@ describe('POST /tg/internal/send-code', () => {
   });
 
   it('returns 400 when code is missing', async () => {
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       opaque_id: 'some-id',
       conversation_id: 1,
     });
@@ -471,7 +348,7 @@ describe('POST /tg/internal/send-code', () => {
   });
 
   it('returns 400 when code is empty string', async () => {
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       opaque_id: 'some-id',
       code: '',
       conversation_id: 1,
@@ -488,7 +365,7 @@ describe('POST /tg/internal/send-code', () => {
   });
 
   it('returns 400 when conversation_id is missing', async () => {
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       opaque_id: 'some-id',
       code: 'CODE-1234',
     });
@@ -504,7 +381,7 @@ describe('POST /tg/internal/send-code', () => {
   });
 
   it('returns 400 when conversation_id is not an integer', async () => {
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       opaque_id: 'some-id',
       code: 'CODE-1234',
       conversation_id: 1.5,
@@ -521,7 +398,7 @@ describe('POST /tg/internal/send-code', () => {
   });
 
   it('returns 400 when conversation_id is zero', async () => {
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       opaque_id: 'some-id',
       code: 'CODE-1234',
       conversation_id: 0,
@@ -538,7 +415,7 @@ describe('POST /tg/internal/send-code', () => {
   });
 
   it('returns 400 when conversation_id is negative', async () => {
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       opaque_id: 'some-id',
       code: 'CODE-1234',
       conversation_id: -1,
@@ -555,7 +432,7 @@ describe('POST /tg/internal/send-code', () => {
   });
 
   it('returns 400 when conversation_id is a string', async () => {
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       opaque_id: 'some-id',
       code: 'CODE-1234',
       conversation_id: 'not-a-number',
@@ -572,7 +449,7 @@ describe('POST /tg/internal/send-code', () => {
   });
 
   it('returns 400 when public_beneficiary_ref is invalid format', async () => {
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       opaque_id: 'some-id',
       code: 'CODE-1234',
       conversation_id: 1,
@@ -590,7 +467,7 @@ describe('POST /tg/internal/send-code', () => {
   });
 
   it('returns 400 when public_beneficiary_ref is a number', async () => {
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       opaque_id: 'some-id',
       code: 'CODE-1234',
       conversation_id: 1,
@@ -646,10 +523,10 @@ describe('POST /tg/internal/send-code', () => {
   it('delivers code with special characters', async () => {
     const userId = 400011;
     const opaqueId = await registerUser(userId, 'special_code');
-    const convId = await createConversation(userId);
+    const convId = await createCardRequestConversation(userId);
 
     const code = 'CODE-!@#$%^&*()_+';
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       opaque_id: opaqueId,
       code,
       conversation_id: convId,
@@ -657,7 +534,7 @@ describe('POST /tg/internal/send-code', () => {
 
     expect(response.status).toBe(200);
 
-    const db = createBotDb(env.bot_db);
+    const db = createTestBotDb();
     const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
     expect(convRow!.delivery_code_last4).toBe('()_+');
@@ -666,10 +543,10 @@ describe('POST /tg/internal/send-code', () => {
   it('delivers very long code', async () => {
     const userId = 400012;
     const opaqueId = await registerUser(userId, 'long_code');
-    const convId = await createConversation(userId);
+    const convId = await createCardRequestConversation(userId);
 
     const code = 'A'.repeat(1000);
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       opaque_id: opaqueId,
       code,
       conversation_id: convId,
@@ -677,7 +554,7 @@ describe('POST /tg/internal/send-code', () => {
 
     expect(response.status).toBe(200);
 
-    const db = createBotDb(env.bot_db);
+    const db = createTestBotDb();
     const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
     expect(convRow!.delivery_code_last4).toBe('AAAA');
@@ -686,10 +563,10 @@ describe('POST /tg/internal/send-code', () => {
   it('delivers single character code', async () => {
     const userId = 400013;
     const opaqueId = await registerUser(userId, 'short_code');
-    const convId = await createConversation(userId);
+    const convId = await createCardRequestConversation(userId);
 
     const code = 'X';
-    const response = await sendCode({
+    const response = await sendCodeRequest({
       opaque_id: opaqueId,
       code,
       conversation_id: convId,
@@ -697,7 +574,7 @@ describe('POST /tg/internal/send-code', () => {
 
     expect(response.status).toBe(200);
 
-    const db = createBotDb(env.bot_db);
+    const db = createTestBotDb();
     const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
     expect(convRow!.delivery_code_last4).toBe('X');

@@ -1,71 +1,33 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { env, SELF } from 'cloudflare:test';
-import { createBotDb, botSchema } from '@open-care/vault-db';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { SELF } from 'cloudflare:test';
+import { botSchema } from '@open-care/vault-db';
 import { eq } from 'drizzle-orm';
-import { deriveTelegramUserRef, importHmacKey } from '@open-care/bot-crypto';
+import {
+  createTelegramApiMock,
+  createTestBotDb,
+  getHandleRow,
+  webhookHeaders,
+} from './helpers';
 
-const { handles, conversations } = botSchema;
-const WEBHOOK_SECRET = 'test-webhook-secret-abc123';
-
-// ---------------------------------------------------------------------------
-// Crypto helpers
-// ---------------------------------------------------------------------------
-
-function hexToBytes(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
-  }
-  return bytes;
-}
-
-const HMAC_KEY_HEX = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2';
-const hmacKey = await importHmacKey(hexToBytes(HMAC_KEY_HEX));
+const { conversations } = botSchema;
 
 // ---------------------------------------------------------------------------
 // Telegram API mock
 // ---------------------------------------------------------------------------
 
-interface SentMessage {
-  chat_id: number;
-  text: string;
-}
-
-const sentMessages: SentMessage[] = [];
-const originalFetch = globalThis.fetch;
+const telegramApi = createTelegramApiMock();
 
 beforeEach(() => {
-  sentMessages.length = 0;
-  globalThis.fetch = vi
-    .fn()
-    .mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      if (url.includes('api.telegram.org')) {
-        const body = JSON.parse((init?.body ?? '{}') as string);
-        sentMessages.push({ chat_id: body.chat_id as number, text: body.text as string });
-        return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      return originalFetch(input, init);
-    }) as typeof globalThis.fetch;
+  telegramApi.setupSuccess();
 });
 
 afterEach(() => {
-  globalThis.fetch = originalFetch;
+  telegramApi.restore();
 });
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function webhookHeaders(): Record<string, string> {
-  return {
-    'Content-Type': 'application/json',
-    'X-Telegram-Bot-Api-Secret-Token': WEBHOOK_SECRET,
-  };
-}
 
 function makeUpdateBody(overrides: Record<string, unknown> = {}): string {
   return JSON.stringify({
@@ -110,8 +72,8 @@ describe('POST /tg/webhook', () => {
     expect(response.status).toBe(200);
     const json = await response.json<{ ok: boolean }>();
     expect(json.ok).toBe(true);
-    // No Telegram message should have been sent
-    expect(sentMessages.length).toBe(0);
+    // No outbound Telegram API attempt should have been made.
+    expect(telegramApi.telegramApiAttempts.length).toBe(0);
   });
 
   it('returns { ok: true } when webhook secret header is missing', async () => {
@@ -123,7 +85,7 @@ describe('POST /tg/webhook', () => {
     expect(response.status).toBe(200);
     const json = await response.json<{ ok: boolean }>();
     expect(json.ok).toBe(true);
-    expect(sentMessages.length).toBe(0);
+    expect(telegramApi.telegramApiAttempts.length).toBe(0);
   });
 
   // -- Body parsing ----------------------------------------------------------
@@ -170,7 +132,7 @@ describe('POST /tg/webhook', () => {
     expect(response.status).toBe(200);
     const json = await response.json<{ ok: boolean }>();
     expect(json.ok).toBe(true);
-    expect(sentMessages.length).toBe(0);
+    expect(telegramApi.telegramApiAttempts.length).toBe(0);
   });
 
   // -- /start command --------------------------------------------------------
@@ -195,20 +157,14 @@ describe('POST /tg/webhook', () => {
     expect(json.ok).toBe(true);
 
     // Verify DB state
-    const db = createBotDb(env.bot_db);
-    const telegramUserRef = await deriveTelegramUserRef(hmacKey, userId);
-    const row = await db
-      .select()
-      .from(handles)
-      .where(eq(handles.telegram_user_ref, telegramUserRef))
-      .get();
+    const row = await getHandleRow(userId);
     expect(row).toBeDefined();
     expect(row!.handle).toBe('alice_care');
     expect(row!.is_active).toBe(1);
 
     // Verify reply was sent
-    expect(sentMessages.length).toBe(1);
-    expect(sentMessages[0]!.text).toContain('Registered as @alice_care');
+    expect(telegramApi.sentMessages.length).toBe(1);
+    expect(telegramApi.sentMessages[0]!.text).toContain('Registered as @alice_care');
   });
 
   it('processes /start without handle and sends prompt', async () => {
@@ -231,19 +187,13 @@ describe('POST /tg/webhook', () => {
     expect(json.ok).toBe(true);
 
     // No DB entry should be created
-    const db = createBotDb(env.bot_db);
-    const telegramUserRef = await deriveTelegramUserRef(hmacKey, userId);
-    const row = await db
-      .select()
-      .from(handles)
-      .where(eq(handles.telegram_user_ref, telegramUserRef))
-      .get();
+    const row = await getHandleRow(userId);
     expect(row).toBeUndefined();
 
     // Prompt reply was sent
-    expect(sentMessages.length).toBe(1);
-    expect(sentMessages[0]!.text).toContain('Welcome!');
-    expect(sentMessages[0]!.text).toContain('/start');
+    expect(telegramApi.sentMessages.length).toBe(1);
+    expect(telegramApi.sentMessages[0]!.text).toContain('Welcome!');
+    expect(telegramApi.sentMessages[0]!.text).toContain('/start');
   });
 
   it('processes /start@botname with handle', async () => {
@@ -265,13 +215,7 @@ describe('POST /tg/webhook', () => {
     const json = await response.json<{ ok: boolean }>();
     expect(json.ok).toBe(true);
 
-    const db = createBotDb(env.bot_db);
-    const telegramUserRef = await deriveTelegramUserRef(hmacKey, userId);
-    const row = await db
-      .select()
-      .from(handles)
-      .where(eq(handles.telegram_user_ref, telegramUserRef))
-      .get();
+    const row = await getHandleRow(userId);
     expect(row).toBeDefined();
     expect(row!.handle).toBe('carol_care');
   });
@@ -294,7 +238,7 @@ describe('POST /tg/webhook', () => {
         },
       }),
     });
-    sentMessages.length = 0; // Reset for next check
+    telegramApi.clearSentMessages(); // Reset for next check
 
     // Now /whoami
     const response = await SELF.fetch('https://example.com/tg/webhook', {
@@ -311,8 +255,8 @@ describe('POST /tg/webhook', () => {
       }),
     });
     expect(response.status).toBe(200);
-    expect(sentMessages.length).toBe(1);
-    expect(sentMessages[0]!.text).toContain('registered as @dave_care');
+    expect(telegramApi.sentMessages.length).toBe(1);
+    expect(telegramApi.sentMessages[0]!.text).toContain('registered as @dave_care');
   });
 
   it('processes /whoami for unregistered user', async () => {
@@ -331,8 +275,8 @@ describe('POST /tg/webhook', () => {
       }),
     });
     expect(response.status).toBe(200);
-    expect(sentMessages.length).toBe(1);
-    expect(sentMessages[0]!.text).toContain('not registered');
+    expect(telegramApi.sentMessages.length).toBe(1);
+    expect(telegramApi.sentMessages[0]!.text).toContain('not registered');
   });
 
   // -- /card command ---------------------------------------------------------
@@ -353,7 +297,7 @@ describe('POST /tg/webhook', () => {
         },
       }),
     });
-    sentMessages.length = 0;
+    telegramApi.clearSentMessages();
 
     // Request card
     const response = await SELF.fetch('https://example.com/tg/webhook', {
@@ -372,13 +316,8 @@ describe('POST /tg/webhook', () => {
     expect(response.status).toBe(200);
 
     // Verify conversation created
-    const db = createBotDb(env.bot_db);
-    const telegramUserRef = await deriveTelegramUserRef(hmacKey, userId);
-    const handleRow = await db
-      .select()
-      .from(handles)
-      .where(eq(handles.telegram_user_ref, telegramUserRef))
-      .get();
+    const db = createTestBotDb();
+    const handleRow = await getHandleRow(userId);
     expect(handleRow).toBeDefined();
 
     const convRows = await db
@@ -391,8 +330,8 @@ describe('POST /tg/webhook', () => {
     expect(convRows[0]!.status).toBe('pending');
 
     // Reply was sent
-    expect(sentMessages.length).toBe(1);
-    expect(sentMessages[0]!.text).toContain('request has been sent');
+    expect(telegramApi.sentMessages.length).toBe(1);
+    expect(telegramApi.sentMessages[0]!.text).toContain('request has been sent');
   });
 
   it('processes /card for unregistered user with error reply', async () => {
@@ -411,8 +350,8 @@ describe('POST /tg/webhook', () => {
       }),
     });
     expect(response.status).toBe(200);
-    expect(sentMessages.length).toBe(1);
-    expect(sentMessages[0]!.text).toContain('Register first');
+    expect(telegramApi.sentMessages.length).toBe(1);
+    expect(telegramApi.sentMessages[0]!.text).toContain('Register first');
   });
 
   // -- /help command ---------------------------------------------------------
@@ -432,12 +371,12 @@ describe('POST /tg/webhook', () => {
       }),
     });
     expect(response.status).toBe(200);
-    expect(sentMessages.length).toBe(1);
-    expect(sentMessages[0]!.text).toContain('Available commands');
-    expect(sentMessages[0]!.text).toContain('/start');
-    expect(sentMessages[0]!.text).toContain('/whoami');
-    expect(sentMessages[0]!.text).toContain('/card');
-    expect(sentMessages[0]!.text).toContain('/help');
+    expect(telegramApi.sentMessages.length).toBe(1);
+    expect(telegramApi.sentMessages[0]!.text).toContain('Available commands');
+    expect(telegramApi.sentMessages[0]!.text).toContain('/start');
+    expect(telegramApi.sentMessages[0]!.text).toContain('/whoami');
+    expect(telegramApi.sentMessages[0]!.text).toContain('/card');
+    expect(telegramApi.sentMessages[0]!.text).toContain('/help');
   });
 
   // -- Unknown command -------------------------------------------------------
@@ -459,7 +398,7 @@ describe('POST /tg/webhook', () => {
     expect(response.status).toBe(200);
     const json = await response.json<{ ok: boolean }>();
     expect(json.ok).toBe(true);
-    expect(sentMessages.length).toBe(0);
+    expect(telegramApi.telegramApiAttempts.length).toBe(0);
   });
 
   // -- Edge cases ------------------------------------------------------------

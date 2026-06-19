@@ -1,93 +1,20 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { env, SELF } from 'cloudflare:test';
-import { createBotDb, botSchema } from '@open-care/vault-db';
-import { eq } from 'drizzle-orm';
-import { deriveTelegramUserRef, importHmacKey } from '@open-care/bot-crypto';
-
-const { handles } = botSchema;
-const WEBHOOK_SECRET = 'test-webhook-secret-abc123';
-
-// ---------------------------------------------------------------------------
-// Crypto helpers
-// ---------------------------------------------------------------------------
-
-function hexToBytes(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
-  }
-  return bytes;
-}
-
-const HMAC_KEY_HEX = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2';
-const hmacKey = await importHmacKey(hexToBytes(HMAC_KEY_HEX));
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { SELF } from 'cloudflare:test';
+import { createTelegramApiMock, getHandleRow, sendStart, webhookHeaders } from './helpers';
 
 // ---------------------------------------------------------------------------
 // Telegram API mock
 // ---------------------------------------------------------------------------
 
-interface SentMessage {
-  chat_id: number;
-  text: string;
-}
-
-const sentMessages: SentMessage[] = [];
-const originalFetch = globalThis.fetch;
+const telegramApi = createTelegramApiMock();
 
 beforeEach(() => {
-  sentMessages.length = 0;
-  globalThis.fetch = vi
-    .fn()
-    .mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      if (url.includes('api.telegram.org')) {
-        const body = JSON.parse((init?.body ?? '{}') as string);
-        sentMessages.push({ chat_id: body.chat_id as number, text: body.text as string });
-        return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      return originalFetch(input, init);
-    }) as typeof globalThis.fetch;
+  telegramApi.setupSuccess();
 });
 
 afterEach(() => {
-  globalThis.fetch = originalFetch;
+  telegramApi.restore();
 });
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function webhookHeaders(): Record<string, string> {
-  return {
-    'Content-Type': 'application/json',
-    'X-Telegram-Bot-Api-Secret-Token': WEBHOOK_SECRET,
-  };
-}
-
-async function sendStart(userId: number, handle: string): Promise<void> {
-  await SELF.fetch('https://example.com/tg/webhook', {
-    method: 'POST',
-    headers: webhookHeaders(),
-    body: JSON.stringify({
-      update_id: userId,
-      message: {
-        message_id: userId,
-        from: { id: userId, first_name: 'User' },
-        chat: { id: userId },
-        text: `/start ${handle}`,
-      },
-    }),
-  });
-}
-
-async function getHandleRow(userId: number) {
-  const db = createBotDb(env.bot_db);
-  const telegramUserRef = await deriveTelegramUserRef(hmacKey, userId);
-  return db.select().from(handles).where(eq(handles.telegram_user_ref, telegramUserRef)).get();
-}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -111,8 +38,8 @@ describe('/start command', () => {
     expect(row!.last_seen_utc).toBeDefined();
 
     // Reply text
-    expect(sentMessages.length).toBe(1);
-    expect(sentMessages[0]!.text).toContain('Registered as @alice_care');
+    expect(telegramApi.sentMessages.length).toBe(1);
+    expect(telegramApi.sentMessages[0]!.text).toContain('Registered as @alice_care');
   });
 
   it('re-registers same user with new handle and new opaque_id', async () => {
@@ -121,7 +48,7 @@ describe('/start command', () => {
     const firstRow = await getHandleRow(userId);
     expect(firstRow).toBeDefined();
     const firstOpaqueId = firstRow!.opaque_id;
-    sentMessages.length = 0;
+    telegramApi.clearSentMessages();
 
     // Re-register with new handle
     await sendStart(userId, 'bob_new');
@@ -132,8 +59,8 @@ describe('/start command', () => {
     expect(secondRow!.opaque_id).toBe(firstOpaqueId);
 
     // Reply text
-    expect(sentMessages.length).toBe(1);
-    expect(sentMessages[0]!.text).toContain('Re-registered as @bob_new');
+    expect(telegramApi.sentMessages.length).toBe(1);
+    expect(telegramApi.sentMessages[0]!.text).toContain('Re-registered as @bob_new');
   });
 
   it('rejects handle already taken by different user', async () => {
@@ -142,14 +69,14 @@ describe('/start command', () => {
 
     // User A registers
     await sendStart(userA, 'shared_handle');
-    sentMessages.length = 0;
+    telegramApi.clearSentMessages();
 
     // User B tries same handle
     await sendStart(userB, 'shared_handle');
 
     // User B should get error reply
-    expect(sentMessages.length).toBe(1);
-    expect(sentMessages[0]!.text).toContain('already taken');
+    expect(telegramApi.sentMessages.length).toBe(1);
+    expect(telegramApi.sentMessages[0]!.text).toContain('already taken');
 
     // User B should NOT have a DB entry
     const rowB = await getHandleRow(userB);
@@ -172,8 +99,8 @@ describe('/start command', () => {
       }),
     });
 
-    expect(sentMessages.length).toBe(1);
-    expect(sentMessages[0]!.text).toContain('Invalid handle');
+    expect(telegramApi.sentMessages.length).toBe(1);
+    expect(telegramApi.sentMessages[0]!.text).toContain('Invalid handle');
 
     const row = await getHandleRow(userId);
     expect(row).toBeUndefined();
@@ -195,8 +122,8 @@ describe('/start command', () => {
       }),
     });
 
-    expect(sentMessages.length).toBe(1);
-    expect(sentMessages[0]!.text).toContain('Invalid handle');
+    expect(telegramApi.sentMessages.length).toBe(1);
+    expect(telegramApi.sentMessages[0]!.text).toContain('Invalid handle');
 
     const row = await getHandleRow(userId);
     expect(row).toBeUndefined();
@@ -218,8 +145,8 @@ describe('/start command', () => {
       }),
     });
 
-    expect(sentMessages.length).toBe(1);
-    expect(sentMessages[0]!.text).toContain('Invalid handle');
+    expect(telegramApi.sentMessages.length).toBe(1);
+    expect(telegramApi.sentMessages[0]!.text).toContain('Invalid handle');
 
     const row = await getHandleRow(userId);
     expect(row).toBeUndefined();
@@ -248,8 +175,8 @@ describe('/start command', () => {
     // The regex is: /^\/([a-zA-Z0-9_]+)(?:@[a-zA-Z0-9_]+)?(?:\s+(.*))?$/
     // So arg = "hello world" (everything after the first space)
     // isValidHandle("hello world") → false (has space)
-    expect(sentMessages.length).toBe(1);
-    expect(sentMessages[0]!.text).toContain('Invalid handle');
+    expect(telegramApi.sentMessages.length).toBe(1);
+    expect(telegramApi.sentMessages[0]!.text).toContain('Invalid handle');
   });
 
   it('rejects handle longer than 32 chars', async () => {
@@ -269,8 +196,8 @@ describe('/start command', () => {
       }),
     });
 
-    expect(sentMessages.length).toBe(1);
-    expect(sentMessages[0]!.text).toContain('Invalid handle');
+    expect(telegramApi.sentMessages.length).toBe(1);
+    expect(telegramApi.sentMessages[0]!.text).toContain('Invalid handle');
   });
 
   it('returns error when update has no user ID', async () => {
@@ -287,8 +214,8 @@ describe('/start command', () => {
       }),
     });
 
-    expect(sentMessages.length).toBe(1);
-    expect(sentMessages[0]!.text).toContain('Could not identify your Telegram account');
+    expect(telegramApi.sentMessages.length).toBe(1);
+    expect(telegramApi.sentMessages[0]!.text).toContain('Could not identify your Telegram account');
   });
 
   it('returns error when update has no chat ID', async () => {
@@ -308,7 +235,7 @@ describe('/start command', () => {
     // The webhook handler cannot send a reply without chat.id,
     // so no Telegram message is sent even though the command handler
     // returns an error text.
-    expect(sentMessages.length).toBe(0);
+    expect(telegramApi.telegramApiAttempts.length).toBe(0);
   });
 
   it('accepts handle with underscores and numbers', async () => {
@@ -318,7 +245,7 @@ describe('/start command', () => {
     const row = await getHandleRow(userId);
     expect(row).toBeDefined();
     expect(row!.handle).toBe('user_123_test');
-    expect(sentMessages[0]!.text).toContain('Registered as @user_123_test');
+    expect(telegramApi.sentMessages[0]!.text).toContain('Registered as @user_123_test');
   });
 
   it('accepts handle exactly 3 chars', async () => {
@@ -346,7 +273,7 @@ describe('/start command', () => {
     const firstRow = await getHandleRow(userId);
     expect(firstRow).toBeDefined();
     const firstOpaqueId = firstRow!.opaque_id;
-    sentMessages.length = 0;
+    telegramApi.clearSentMessages();
 
     // Re-register with same handle
     await sendStart(userId, 'same_handle');
@@ -355,6 +282,6 @@ describe('/start command', () => {
     expect(secondRow!.handle).toBe('same_handle');
     // opaque_id is preserved on re-registration to avoid FK violations
     expect(secondRow!.opaque_id).toBe(firstOpaqueId);
-    expect(sentMessages[0]!.text).toContain('Re-registered as @same_handle');
+    expect(telegramApi.sentMessages[0]!.text).toContain('Re-registered as @same_handle');
   });
 });
