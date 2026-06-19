@@ -1,4 +1,45 @@
 import { test, expect } from '@playwright/test';
+import type { Page, Request, Route } from '@playwright/test';
+
+const OPERATOR_HOST = 'staging.open-care.org';
+const TEST_OPERATOR_TOKEN = 'valid-test-token';
+
+async function fulfillCorsPreflight(route: Route): Promise<void> {
+  await route.fulfill({
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
+async function fulfillJson(route: Route, body: unknown, status = 200): Promise<void> {
+  await route.fulfill({
+    status,
+    contentType: 'application/json',
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+function expectOperatorAuth(request: Request): void {
+  expect(request.headers().authorization).toBe(`Bearer ${TEST_OPERATOR_TOKEN}`);
+}
+
+function expectJsonObject(request: Request): Record<string, unknown> {
+  const body = request.postDataJSON() as unknown;
+  expect(body).toEqual(expect.any(Object));
+  return body as Record<string, unknown>;
+}
+
+async function loginAsOperator(page: Page): Promise<void> {
+  await page.getByPlaceholder(/токен оператора/i).fill(TEST_OPERATOR_TOKEN);
+  await page.getByRole('button', { name: /Войти/i }).click();
+}
 
 test.describe('Admin pages', () => {
   test('admin page shows token gate when unauthenticated', async ({ page }) => {
@@ -201,5 +242,165 @@ test.describe('Admin pages', () => {
 
     // Dashboard heading should NOT be visible
     await expect(page.getByRole('heading', { name: 'Дашборд' })).not.toBeVisible();
+  });
+
+  /*
+  Scenario: Admin creates a disbursement
+    Given the admin disbursement page is open
+    When the form is completed and submitted
+    Then the UI reports the created ledger sequence number
+    And the UI reports the event hash returned by the admin API
+  */
+  test('/admin/disbursements renders form and reports created ledger event', async ({ page }) => {
+    const eventHash = 'c'.repeat(64);
+    const headHash = 'd'.repeat(64);
+    let disbursementWasPosted = false;
+
+    await page.route(
+      (url) => url.hostname === OPERATOR_HOST,
+      async (route) => {
+        const request = route.request();
+        const url = new URL(request.url());
+
+        if (request.method() === 'OPTIONS') {
+          await fulfillCorsPreflight(route);
+          return;
+        }
+
+        if (url.pathname === '/tg/internal/pending-requests' && request.method() === 'GET') {
+          expectOperatorAuth(request);
+          await fulfillJson(route, { items: [], next_cursor: null });
+          return;
+        }
+
+        if (url.pathname === '/api/disbursements' && request.method() === 'POST') {
+          expectOperatorAuth(request);
+          const body = expectJsonObject(request);
+          expect(body).toMatchObject({
+            amount_usdc_minor: '50000000',
+            gift_card_count: 2,
+            service: 'Yasno',
+            receipt_ref: 'YASNO-2026-A1B2',
+          });
+          expect(body.public_beneficiary_ref).toBeUndefined();
+          expect(body.purchased_at_utc).toEqual(expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/));
+
+          disbursementWasPosted = true;
+          await fulfillJson(route, {
+            sequence_no: 42,
+            event_hash: eventHash,
+            head_hash: headHash,
+            public_beneficiary_ref: 'benpub_ABCDEFGH12345678',
+            next_action: 'send_code',
+          });
+          return;
+        }
+
+        await fulfillJson(route, { error: { code: 'UNHANDLED_TEST_ROUTE' } }, 404);
+      },
+    );
+
+    await page.goto('/admin/disbursements');
+    await loginAsOperator(page);
+
+    await expect(page.getByRole('heading', { name: 'Запись выплаты' })).toBeVisible();
+    await expect(page.getByLabel('Сумма (USDC)')).toBeVisible();
+    await expect(page.getByLabel('Количество сертификатов')).toBeVisible();
+    await expect(page.getByLabel('Сервис')).toBeVisible();
+    await expect(page.getByLabel('Номер чека')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Записать выплату' })).toBeVisible();
+
+    await page.getByLabel('Сумма (USDC)').fill('50.00');
+    await page.getByLabel('Количество сертификатов').fill('2');
+    await page.getByLabel('Сервис').selectOption('Yasno');
+    await page.getByLabel('Номер чека').fill('YASNO-2026-A1B2');
+    await page.getByRole('button', { name: 'Записать выплату' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Выплата записана' })).toBeVisible();
+    await expect(page.getByText('#42')).toBeVisible();
+    await expect(page.getByText(eventHash)).toBeVisible();
+    expect(disbursementWasPosted).toBe(true);
+  });
+
+  /*
+  Scenario: Admin sends a Telegram bot verification code
+    Given the admin bot page shows pending requests
+    When the admin sends the pending request's code
+    Then the UI reports successful delivery
+    And the full plaintext code is no longer visible in the page
+  */
+  test('/admin/bot shows pending request and clears plaintext code after delivery', async ({
+    page,
+  }) => {
+    const pendingRequest = {
+      opaque_id: 'opaque_test_request_1',
+      conversation_id: 'conversation_test_1',
+      internal_handle: 'beneficiary-telegram',
+      request_status: 'pending',
+      created_at_utc: '2026-06-19T10:00:00Z',
+      updated_at_utc: '2026-06-19T10:05:00Z',
+    };
+    const plaintextCode = 'PLAIN-CODE-1234';
+    let sendCodeWasPosted = false;
+
+    await page.route(
+      (url) => url.hostname === OPERATOR_HOST,
+      async (route) => {
+        const request = route.request();
+        const url = new URL(request.url());
+
+        if (request.method() === 'OPTIONS') {
+          await fulfillCorsPreflight(route);
+          return;
+        }
+
+        if (url.pathname === '/tg/internal/pending-requests' && request.method() === 'GET') {
+          expectOperatorAuth(request);
+          await fulfillJson(route, { items: [pendingRequest], next_cursor: null });
+          return;
+        }
+
+        if (url.pathname === '/tg/internal/send-code' && request.method() === 'POST') {
+          expectOperatorAuth(request);
+          const body = expectJsonObject(request);
+          expect(body).toEqual({
+            opaque_id: pendingRequest.opaque_id,
+            conversation_id: pendingRequest.conversation_id,
+            code: plaintextCode,
+          });
+
+          sendCodeWasPosted = true;
+          await fulfillJson(route, { delivered_at_utc: '2026-06-19T10:10:00Z' });
+          return;
+        }
+
+        await fulfillJson(route, { error: { code: 'UNHANDLED_TEST_ROUTE' } }, 404);
+      },
+    );
+
+    await page.goto('/admin/bot');
+    await loginAsOperator(page);
+
+    await expect(page.getByRole('heading', { name: 'Доставка сертификатов' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Запросы на доставку' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /beneficiary-telegram/ })).toBeVisible();
+    await expect(page.getByText('Ожидает')).toBeVisible();
+
+    await page.getByRole('button', { name: /beneficiary-telegram/ }).click();
+    await expect(page.getByText('opaque_test_request_1')).toBeVisible();
+    await expect(page.getByLabel('Код сертификата')).toBeVisible();
+
+    await page.getByLabel('Код сертификата').fill(plaintextCode);
+    await expect(page.getByLabel('Код сертификата')).toHaveValue(plaintextCode);
+    await page.getByRole('button', { name: 'Отправить код' }).click();
+
+    await expect(page.getByText(/Код доставлен:/)).toBeVisible();
+    await expect(page.getByLabel('Код сертификата')).toHaveCount(0);
+    const remainingInputValues = await page
+      .locator('input')
+      .evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).value));
+    expect(remainingInputValues).not.toContain(plaintextCode);
+    await expect(page.locator('body')).not.toContainText(plaintextCode);
+    expect(sendCodeWasPosted).toBe(true);
   });
 });
