@@ -22,7 +22,8 @@ operator via service binding.
 only via `vault-operator`'s service binding (operator validates token, applies
 rate limit, then forwards).
 The production Wrangler environment preserves the same daily cron and still has
-no public route. It also sets `workers_dev=false` so production has no
+no public route. The top-level Wrangler config and production environment both
+set `workers_dev=false` so staging/default and production deploys have no
 `*.workers.dev` ingress.
 
 ## Bindings

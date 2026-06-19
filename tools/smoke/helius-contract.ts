@@ -147,7 +147,8 @@ transfer so duplicate replay can be verified against the public ledger.
 
 The script is fail-closed and only runs when ALLOW_HELIUS_CONTRACT_SMOKE=true.
 It prints public URLs, public addresses, and transaction signatures only. It
-never prints webhook tokens, RPC URL paths/query strings, or wallet secrets.
+never prints Helius API keys, webhook tokens, RPC URL paths/query strings, or
+wallet secrets.
 
 Contract checks:
   1. correct Bearer token returns 200
@@ -161,6 +162,7 @@ Options:
 
 Required environment:
   ALLOW_HELIUS_CONTRACT_SMOKE=true
+  HELIUS_API_KEY=<Helius API key used by the staging webhook provider>
   HELIUS_WEBHOOK_AUTH_HEADER=<staging webhook token, without Bearer prefix>
   SOLANA_CLUSTER=devnet
   HELIUS_RPC_URL=<devnet RPC URL>
@@ -339,6 +341,10 @@ function validateGate(env: NodeJS.ProcessEnv): void {
   }
 }
 
+function validateHeliusApiKeyPresence(env: NodeJS.ProcessEnv): void {
+  requiredEnv(env, 'HELIUS_API_KEY');
+}
+
 function loadWebhookToken(env: NodeJS.ProcessEnv): string {
   const token = requiredEnv(env, 'HELIUS_WEBHOOK_AUTH_HEADER');
   if (token.startsWith('Bearer ')) {
@@ -389,6 +395,7 @@ function generateWrongWebhookToken(webhookToken: string): string {
 
 function loadConfig(env: NodeJS.ProcessEnv): SmokeConfig {
   validateGate(env);
+  validateHeliusApiKeyPresence(env);
 
   const webhookUrl = validateStagingUrl(
     optionalTrimmedEnv(env, 'WEBHOOK_URL') ?? DEFAULT_WEBHOOK_URL,

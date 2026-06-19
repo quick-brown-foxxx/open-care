@@ -31,7 +31,9 @@ user gift-card handoff against staging.
 ## Key invariants
 
 - Tests are fail-closed behind `ALLOW_TG_E2E=true` and are not part of PR CI.
-- Required live env is checked before test execution; missing values skip clearly.
+- Required live env is checked before test execution. Missing or invalid values
+  skip clearly while `ALLOW_TG_E2E` is unset/false, and fail closed with a
+  non-zero pytest exit once `ALLOW_TG_E2E=true` explicitly enables live tests.
 - The suite must never print Telethon session strings, bot tokens, operator
   tokens, full Telegram user/chat IDs, or full gift-card codes.
 - The default operator base URL is `https://staging.open-care.org`; overrides must

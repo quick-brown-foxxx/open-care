@@ -224,6 +224,7 @@ devnet wallets only; never use mainnet or treasury private keys.
 ```bash
 pnpm run smoke:helius-contract -- --help
 ALLOW_HELIUS_CONTRACT_SMOKE=true \
+HELIUS_API_KEY=<Helius API key used by the staging webhook provider> \
 HELIUS_WEBHOOK_AUTH_HEADER=<staging webhook token without Bearer prefix> \
 SOLANA_CLUSTER=devnet \
 HELIUS_RPC_URL=<devnet RPC URL> \

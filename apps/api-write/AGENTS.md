@@ -20,8 +20,9 @@ operator.
 | GET    | `/health`            | Liveness check.                                                                                                                                                                                                                                                             |
 
 All routes are internal-only (no public route in any `wrangler.jsonc`
-environment). The production Wrangler environment also sets `workers_dev=false`
-so production has no `*.workers.dev` ingress.
+environment). The top-level Wrangler config and production environment both set
+`workers_dev=false` so staging/default and production deploys have no
+`*.workers.dev` ingress.
 
 ## Bindings
 

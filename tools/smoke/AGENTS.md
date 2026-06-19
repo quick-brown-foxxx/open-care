@@ -33,8 +33,8 @@ live Solana devnet checks.
   `SOLANA_CLUSTER=devnet`.
 - Helius contract smoke is fail-closed behind
   `ALLOW_HELIUS_CONTRACT_SMOKE=true`, targets only
-  `https://staging.open-care.org`, and requires `SOLANA_CLUSTER=devnet` before
-  signing its test transfer.
+  `https://staging.open-care.org`, requires `HELIUS_API_KEY` to be present, and
+  requires `SOLANA_CLUSTER=devnet` before signing its test transfer.
 - The devnet script must verify the RPC endpoint's genesis hash is Solana devnet
   before any transaction signing or sending; the Helius contract script follows
   the same preflight.
@@ -45,7 +45,7 @@ live Solana devnet checks.
   the on-chain token account owner must match the treasury address.
 - The devnet script prints only public addresses/signatures and redacts RPC query
   strings to avoid leaking API keys. Helius contract smoke follows the same rule
-  and never prints webhook tokens.
+  and never prints Helius API keys or webhook tokens.
 - Live smoke scripts must never use or request mainnet/private treasury keys; use
   only explicitly provided devnet throwaway/faucet-funded wallets.
 - Live devnet and Helius contract smokes are manual/operator tooling and are not

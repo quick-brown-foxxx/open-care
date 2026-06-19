@@ -94,6 +94,13 @@ def _skip_reason_from_env() -> str | None:
     return None
 
 
+def _fail_closed_reason_from_env() -> str | None:
+    if _env_value("ALLOW_TG_E2E") != "true":
+        return None
+
+    return _skip_reason_from_env()
+
+
 def _timeout_seconds_from_env() -> float:
     raw_timeout = _env_value("TG_E2E_TIMEOUT_SECONDS")
     if raw_timeout is None:
@@ -122,6 +129,9 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "tg_e2e: manual/nightly live Telegram staging E2E tests")
+    fail_closed_reason = _fail_closed_reason_from_env()
+    if fail_closed_reason is not None:
+        pytest.exit(fail_closed_reason, returncode=2)
 
 
 @pytest.fixture(scope="session")
@@ -142,7 +152,12 @@ def tg_e2e_config() -> TgE2EConfig:
         or tg_bot_token is None
         or operator_token is None
     ):
-        pytest.skip("Telegram E2E env became incomplete during fixture setup")
+        pytest.fail("Telegram E2E env became incomplete during fixture setup", pytrace=False)
+    assert api_id_value is not None
+    assert api_hash is not None
+    assert session_string is not None
+    assert tg_bot_token is not None
+    assert operator_token is not None
 
     return TgE2EConfig(
         api_id=int(api_id_value),

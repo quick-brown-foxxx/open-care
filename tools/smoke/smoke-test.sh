@@ -114,6 +114,7 @@ echo ""
 echo "[1/8] GET /api/health"
 HEALTH_RESP=$(fetch "$BASE_URL/api/health" 2>&1) || {
   check_fail "GET /api/health" "HTTP request failed: $HEALTH_RESP"
+  HEALTH_RESP=""
 }
 if [ -n "${HEALTH_RESP:-}" ] && echo "$HEALTH_RESP" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null; then
   check_pass "GET /api/health — HTTP 200"
@@ -145,6 +146,7 @@ echo ""
 echo "[2/8] GET /api/totals"
 TOTALS_RESP=$(fetch "$BASE_URL/api/totals" 2>&1) || {
   check_fail "GET /api/totals" "HTTP request failed: $TOTALS_RESP"
+  TOTALS_RESP=""
 }
 if [ -n "${TOTALS_RESP:-}" ] && echo "$TOTALS_RESP" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null; then
   check_pass "GET /api/totals — HTTP 200"
@@ -176,6 +178,7 @@ echo ""
 echo "[3/8] GET /api/donations"
 DONATIONS_RESP=$(fetch "$BASE_URL/api/donations" 2>&1) || {
   check_fail "GET /api/donations" "HTTP request failed: $DONATIONS_RESP"
+  DONATIONS_RESP=""
 }
 if [ -n "${DONATIONS_RESP:-}" ] && echo "$DONATIONS_RESP" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null; then
   check_pass "GET /api/donations — HTTP 200"
@@ -201,6 +204,7 @@ echo ""
 echo "[4/8] GET /api/disbursements"
 DISBURSEMENTS_RESP=$(fetch "$BASE_URL/api/disbursements" 2>&1) || {
   check_fail "GET /api/disbursements" "HTTP request failed: $DISBURSEMENTS_RESP"
+  DISBURSEMENTS_RESP=""
 }
 if [ -n "${DISBURSEMENTS_RESP:-}" ] && echo "$DISBURSEMENTS_RESP" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null; then
   check_pass "GET /api/disbursements — HTTP 200"
@@ -226,6 +230,7 @@ echo ""
 echo "[5/8] GET /api/ledger-events"
 LEDGER_RESP=$(fetch "$BASE_URL/api/ledger-events" 2>&1) || {
   check_fail "GET /api/ledger-events" "HTTP request failed: $LEDGER_RESP"
+  LEDGER_RESP=""
 }
 if [ -n "${LEDGER_RESP:-}" ] && echo "$LEDGER_RESP" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null; then
   check_pass "GET /api/ledger-events — HTTP 200"
@@ -251,6 +256,7 @@ echo ""
 echo "[6/8] GET /api/verify"
 VERIFY_RESP=$(fetch "$BASE_URL/api/verify" 2>&1) || {
   check_fail "GET /api/verify" "HTTP request failed: $VERIFY_RESP"
+  VERIFY_RESP=""
 }
 if [ -n "${VERIFY_RESP:-}" ] && echo "$VERIFY_RESP" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null; then
   check_pass "GET /api/verify — HTTP 200"
@@ -289,6 +295,7 @@ echo ""
 echo "[7/8] GET / (landing page)"
 LANDING_RESP=$(fetch "$BASE_URL/" 2>&1) || {
   check_fail "GET / (landing page)" "HTTP request failed: $LANDING_RESP"
+  LANDING_RESP=""
 }
 if [ -n "${LANDING_RESP:-}" ]; then
   check_pass "GET / (landing page) — HTTP 200"
@@ -308,6 +315,7 @@ echo ""
 echo "[8/8] GET /donate"
 DONATE_RESP=$(fetch "$BASE_URL/donate" 2>&1) || {
   check_fail "GET /donate" "HTTP request failed: $DONATE_RESP"
+  DONATE_RESP=""
 }
 if [ -n "${DONATE_RESP:-}" ]; then
   check_pass "GET /donate — HTTP 200"
