@@ -148,6 +148,42 @@ ledger path printed by the command. On machines without Solana CLI tooling,
 `--allow-skip` exits 0 with a `SKIP` message instead of failing the whole dev
 loop.
 
+## Devnet live Solana smoke
+
+The devnet smoke is a manual-only live check. It is intentionally **not** part of
+PR CI because it spends devnet SOL fees and transfers a tiny amount of devnet
+USDC. Use throwaway/faucet-funded devnet wallets only; never use mainnet or
+treasury private keys.
+
+```bash
+pnpm run smoke:devnet -- --help
+ALLOW_DEVNET_SMOKE=true \
+SOLANA_CLUSTER=devnet \
+HELIUS_RPC_URL=<devnet RPC URL> \
+ANCHOR_WALLET_SECRET=<base58 devnet keypair secret> \
+ANCHOR_WALLET_ADDRESS=<anchor wallet public key> \
+DONOR_WALLET_SECRET=<base58 devnet donor keypair secret> \
+TREASURY_WALLET_ADDRESS=<devnet treasury owner public key> \
+VAULT_USDC_ATA=<devnet vault USDC token account> \
+USDC_MINT=4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU \
+pnpm run smoke:devnet
+```
+
+Optional knobs:
+
+- `DONOR_USDC_ATA` — source token account; defaults to the donor wallet's
+  associated token account for `USDC_MINT`.
+- `DEVNET_SMOKE_USDC_MINOR_AMOUNT` — raw minor-unit transfer amount, default `1`
+  and capped at `10000`.
+
+The script validates required config, verifies the anchor secret matches the
+public anchor address, verifies the RPC endpoint reports the known Solana devnet
+genesis hash before signing, verifies `VAULT_USDC_ATA` is the associated token
+account for `TREASURY_WALLET_ADDRESS` + `USDC_MINT`, verifies the on-chain vault
+token account owner is the treasury address, sends a real `ccv-anchor:<64hex>`
+Memo transaction, fetches finalized parsed transactions with null-before-finality
+retry handling, and verifies the tiny USDC transfer lands in `VAULT_USDC_ATA`.
+
 ## The dev loop
 
 ```text
