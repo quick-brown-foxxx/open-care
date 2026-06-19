@@ -61,6 +61,8 @@ handoff). All UI is in Russian.
 
 Valibot schemas mirroring API response shapes: `totals.ts`, `donations.ts`,
 `disbursements.ts`, `ledger-events.ts`, `verify.ts`, `health.ts`, `operator.ts`.
+Schema files use type-only checks against `@open-care/api-contract`, with
+`contract-compliance.test.ts` covering the Valibot-inferred response types.
 
 ### Components
 
@@ -79,10 +81,11 @@ Valibot schemas mirroring API response shapes: `totals.ts`, `donations.ts`,
 
 ### Depends on
 
-**No shared monorepo packages.** The web app is self-contained — defines its own
-Valibot schemas rather than importing `@open-care/vault-core` or
-`@open-care/vault-db`. This is intentional: the frontend validates API responses
-independently.
+**`@open-care/api-contract` type-only imports.** The web app keeps its own
+Valibot runtime schemas rather than importing backend runtime packages such as
+`@open-care/vault-core` or `@open-care/vault-db`. This is intentional: the
+frontend validates API responses independently while compile-time checks keep the
+inferred frontend response types aligned with the shared API contracts.
 
 ### Connected to
 

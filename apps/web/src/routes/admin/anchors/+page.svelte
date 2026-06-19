@@ -96,7 +96,14 @@
   <h2>Публикация якоря</h2>
 
   {#if anchorResult}
-    {#if anchorResult.status === 'already_published'}
+    {#if anchorResult.status === 'empty_ledger'}
+      <div class="standalone-card" style="background: #eff6ff; border-color: var(--blue);">
+        <h3>Реестр пуст</h3>
+        <p>Якорь не опубликован: HEAD появится после первой записи в реестре.</p>
+        <p class="text-muted">Длительность: {anchorResult.duration_ms}ms</p>
+        <button class="btn" onclick={reset}>ОК</button>
+      </div>
+    {:else if anchorResult.status === 'already_published'}
       <div class="standalone-card" style="background: #eff6ff; border-color: var(--blue);">
         <h3>HEAD уже закреплён ранее</h3>
         <p>Текущий HEAD уже был опубликован как якорь. Новая транзакция не отправлялась.</p>

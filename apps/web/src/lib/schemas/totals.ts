@@ -1,4 +1,6 @@
 import * as v from 'valibot';
+import type { TotalsResponse as ContractTotalsResponse } from '@open-care/api-contract';
+import type { AssertAssignable } from './contract-checks.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -49,3 +51,9 @@ export const TotalsResponseSchema = v.object({
 });
 
 export type TotalsResponse = v.InferOutput<typeof TotalsResponseSchema>;
+
+export type _TotalsResponseContractCheck = AssertAssignable<TotalsResponse, ContractTotalsResponse>;
+export type _TotalsResponseContractExactCheck = AssertAssignable<
+  ContractTotalsResponse,
+  TotalsResponse
+>;

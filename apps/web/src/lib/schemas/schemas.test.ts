@@ -62,6 +62,8 @@ describe('Schema empty-ledger acceptance', () => {
   it('HealthResponseSchema accepts degraded status', () => {
     const data = {
       status: 'degraded',
+      version: '0.1.0-dev',
+      response_time_ms: 42,
       checks: {
         db_reachable: true,
         anchor_stale: true,
@@ -69,6 +71,7 @@ describe('Schema empty-ledger acceptance', () => {
         ingest_recent_or_empty: true,
         helius_inbox_backlog_ok: true,
       },
+      contact_url: null,
     };
     const result = v.safeParse(HealthResponseSchema, data);
     expect(result.success).toBe(true);

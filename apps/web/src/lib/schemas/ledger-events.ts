@@ -1,4 +1,6 @@
 import * as v from 'valibot';
+import type { LedgerEventsResponse as ContractLedgerEventsResponse } from '@open-care/api-contract';
+import type { AssertAssignable } from './contract-checks.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -40,3 +42,8 @@ export const LedgerEventsResponseSchema = v.object({
 });
 
 export type LedgerEventsResponse = v.InferOutput<typeof LedgerEventsResponseSchema>;
+
+export type _LedgerEventsResponseContractCheck = AssertAssignable<
+  LedgerEventsResponse,
+  ContractLedgerEventsResponse
+>;

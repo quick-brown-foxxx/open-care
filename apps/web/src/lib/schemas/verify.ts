@@ -1,4 +1,6 @@
 import * as v from 'valibot';
+import type { VerifyResponse as ContractVerifyResponse } from '@open-care/api-contract';
+import type { AssertAssignable } from './contract-checks.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -63,3 +65,9 @@ export const VerifyResponseSchema = v.object({
 });
 
 export type VerifyResponse = v.InferOutput<typeof VerifyResponseSchema>;
+
+export type _VerifyResponseContractCheck = AssertAssignable<VerifyResponse, ContractVerifyResponse>;
+export type _VerifyResponseContractExactCheck = AssertAssignable<
+  ContractVerifyResponse,
+  VerifyResponse
+>;
