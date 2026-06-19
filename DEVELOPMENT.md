@@ -51,8 +51,9 @@ pnpm exec wrangler d1 migrations apply bot-db --local
 pnpm run final-check   # install → secret scan → ledger guard → sync → lint/format/check/test/build
 ```
 
-This runs the exact same sequence as CI, including the secret scan and ledger mutation guard.
-All gates must exit 0.
+This runs the local pre-commit sequence, including the secret scan and ledger
+mutation guard. CI runs repository quality gates on PR/push to main and also
+runs the Chromium Playwright browser suite. All gates must exit 0.
 
 Individual gates:
 
@@ -62,6 +63,7 @@ pnpm run lint           # eslint .
 pnpm run check          # tsc -b
 pnpm run test           # vitest run
 pnpm run build          # tsc -b + SvelteKit build
+pnpm exec playwright test --project=chromium # Chromium browser smoke suite
 pnpm run final-check:secret-scan # scan repo source, docs, tools, and root files for treasury key material
 pnpm run final-check:ledger-guard # reject ledger_events UPDATE/DELETE in production src dirs
 ```
