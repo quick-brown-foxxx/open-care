@@ -14,6 +14,17 @@
 
 import { ok, err } from '@open-care/vault-core';
 import type { Result } from '@open-care/vault-core';
+import { readSolanaMockConfig } from './lib/solana.js';
+
+const DEFAULT_TRANSACTION_SIGNATURE =
+  '5KjVHqW8xRmDqKZhKJqUeMxNfVxQpGgSxKSHqM3mh8LFBvMqGqHw8RmDqKZhKJqUeMxNfVxQp';
+
+async function delayIfConfigured(delayMs: number | undefined): Promise<void> {
+  if (!delayMs || delayMs <= 0) {
+    return;
+  }
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
+}
 
 // ---------------------------------------------------------------------------
 // PublicKey
@@ -54,6 +65,10 @@ export class Keypair {
   }
 
   static fromSecretKey(secretKey: Uint8Array): Keypair {
+    const behavior = readSolanaMockConfig().createKeypair;
+    if (behavior?.kind === 'throw') {
+      throw new Error(behavior.message);
+    }
     return new Keypair(secretKey);
   }
 
@@ -126,7 +141,10 @@ export class Connection {
     return data.result;
   }
 
-  async getSignatureStatuses(signatures: string[]): Promise<{
+  async getSignatureStatuses(
+    signatures: string[],
+    _config?: { searchTransactionHistory?: boolean },
+  ): Promise<{
     context: { slot: number };
     value: ({
       confirmationStatus: string;
@@ -135,6 +153,29 @@ export class Connection {
       err: unknown;
     } | null)[];
   }> {
+    void _config;
+    const behavior = readSolanaMockConfig().getSignatureStatus;
+
+    if (behavior?.kind === 'throw' || behavior?.kind === 'failure') {
+      throw new Error(behavior.message);
+    }
+    if (behavior?.kind === 'null') {
+      return { context: { slot: 300_000_001 }, value: [null] };
+    }
+    if (behavior?.kind === 'non-finalized') {
+      return {
+        context: { slot: 300_000_001 },
+        value: [
+          {
+            confirmationStatus: behavior.confirmation_status ?? 'confirmed',
+            confirmations: 1,
+            slot: 300_000_001,
+            err: null,
+          },
+        ],
+      };
+    }
+
     const response = await fetch(this.rpcEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -183,6 +224,30 @@ export class Connection {
   ): Promise<TransactionResponse | null> {
     void _signature;
     void _config;
+    const behavior = readSolanaMockConfig().getTransaction;
+
+    if (behavior?.kind === 'throw') {
+      throw new Error(behavior.message);
+    }
+    if (behavior?.kind === 'failure') {
+      throw new Error(behavior.message);
+    }
+    if (behavior?.kind === 'null') {
+      return null;
+    }
+    if (behavior?.kind === 'non-finalized') {
+      return {
+        slot: 300_000_000,
+        blockTime: 1_712_345_678,
+        confirmationStatus: behavior.confirmation_status ?? 'confirmed',
+        transaction: {
+          message: { accountKeys: [], recentBlockhash: 'abc', instructions: [] },
+          signatures: [DEFAULT_TRANSACTION_SIGNATURE],
+        },
+        meta: { fee: 5000, err: null, preBalances: [], postBalances: [] },
+      };
+    }
+
     const response = await fetch(this.rpcEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -251,6 +316,15 @@ export async function sendAndConfirmTransaction(
   _options?: { commitment?: string },
 ): Promise<string> {
   void _options;
+  const behavior = readSolanaMockConfig().sendMemoTransaction;
+  await delayIfConfigured(behavior?.delay_ms);
+  if (behavior?.kind === 'failure') {
+    throw new Error(behavior.message);
+  }
+  if (behavior?.kind === 'throw') {
+    throw new Error(behavior.message);
+  }
+
   // Sign the transaction (mock)
   for (const signer of signers) {
     transaction.signatures.push({
@@ -271,7 +345,7 @@ export async function sendAndConfirmTransaction(
     }),
   });
   const data: { result: string } = await response.json();
-  return data.result;
+  return behavior?.kind === 'success' && behavior.signature ? behavior.signature : data.result;
 }
 
 // ---------------------------------------------------------------------------
@@ -281,6 +355,7 @@ export async function sendAndConfirmTransaction(
 export interface TransactionResponse {
   slot: number;
   blockTime: number | null;
+  confirmationStatus?: 'processed' | 'confirmed' | 'finalized';
   meta: {
     err: unknown;
     fee: number;

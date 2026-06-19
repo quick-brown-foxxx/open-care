@@ -5,6 +5,10 @@ import configShared from '../../vitest.shared';
 
 const migrationsPath = path.join(import.meta.dirname, '../../apps/ingest/migrations');
 const migrations = await readD1Migrations(migrationsPath);
+const solanaSourceTsPath = path.resolve(import.meta.dirname, 'src/lib/solana.ts');
+const solanaSourceJsPath = path.resolve(import.meta.dirname, 'src/lib/solana.js');
+const solanaSourcePath = path.resolve(import.meta.dirname, 'src/lib/solana');
+const solanaMockPath = path.resolve(import.meta.dirname, 'test/__mocks__/lib/solana.ts');
 
 // Mock Solana JSON-RPC responses for tests.
 // The @solana/web3.js Connection class uses fetch() internally;
@@ -124,10 +128,9 @@ export default defineConfig({
       // @solana/web3.js (which has CJS/ESM interop issues in workerd).
       // The mock provides FakeConnection/FakeKeypair types and returns
       // synthetic success values for all Solana operations.
-      [path.resolve(import.meta.dirname, 'src/lib/solana.ts')]: path.resolve(
-        import.meta.dirname,
-        'test/__mocks__/lib/solana.ts',
-      ),
+      [solanaSourceTsPath]: solanaMockPath,
+      [solanaSourceJsPath]: solanaMockPath,
+      [solanaSourcePath]: solanaMockPath,
       // Stub @solana/web3.js so recovery.ts's type-only import of
       // Connection resolves without pulling in the real package.
       '@solana/web3.js': path.resolve(import.meta.dirname, 'test/__mocks__/solana-web3-stub.ts'),
@@ -158,5 +161,8 @@ export default defineConfig({
   test: {
     include: ['test/**/*.test.ts', 'test/**/*.spec.ts'],
     setupFiles: ['./test/apply-migrations.ts'],
+    // Solana mock error injection is process-global within this Worker test
+    // project. Keep files sequential so per-test reset hooks cannot race.
+    fileParallelism: false,
   },
 });

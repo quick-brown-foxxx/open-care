@@ -38,7 +38,7 @@ rate limit, then forwards).
 | `src/index.ts`               | App entry point. Mounts routes, exports `scheduled` handler.                                                                                                                                      |
 | `src/lib/anchor-pipeline.ts` | `runAnchor()` — 9-step pipeline: stale lock recovery, active lock check, get head, duplicate check, build memo, create lock, sign+send tx, get balance, update to published + append ledger event |
 | `src/lib/lock.ts`            | Database-level mutex via `anchor_runs`. 10-minute lock duration. Prevents concurrent anchor attempts.                                                                                             |
-| `src/lib/recovery.ts`        | Stale lock recovery: checks Solana for tx, backfills or marks failed                                                                                                                              |
+| `src/lib/recovery.ts`        | Stale lock recovery: checks Solana for tx, backfills finalized txs, refreshes non-finalized tx locks, or marks missing txs failed                                                                 |
 | `src/lib/solana.ts`          | Solana interaction: connection creation, keypair decoding, memo tx send, balance fetch                                                                                                            |
 | `src/routes/manual.ts`       | Manual trigger handler                                                                                                                                                                            |
 
@@ -65,6 +65,6 @@ rate limit, then forwards).
 
 - **Sole holder of `ANCHOR_WALLET_SECRET`.** The anchor wallet key never leaves this Worker.
 - Lock protocol prevents concurrent anchor attempts (10-minute DB-level mutex)
-- Stale lock recovery: if lock expired, checks Solana for tx before failing; if a finalized tx exists, backfills `anchor_published` and propagates append failures.
+- Stale lock recovery: if lock expired, checks Solana for tx before failing; if a finalized tx exists, backfills `anchor_published` and propagates append failures; if a non-finalized tx exists, refreshes the lock and increments `attempt_count` for retry.
 - New anchor success: appends `anchor_published` to ledger. If this append fails after the Solana tx succeeds, logs error but does NOT fail the anchor — the on-chain record is the source of truth.
 - `last_anchor_wallet_sol_lamports` written to `anchor_runs` for health monitoring by `api-read`

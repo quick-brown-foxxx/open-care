@@ -7,6 +7,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { cleanTables, seedLedgerEvent } from './seed.js';
 import { recoverStaleLock } from '../src/lib/recovery.js';
 import * as solana from '../src/lib/solana.js';
+import { configureSolanaMock, resetSolanaMockConfig } from './__mocks__/lib/solana.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -128,11 +129,13 @@ describe('Stale lock recovery', () => {
   let db: ReturnType<typeof createVaultDb>;
 
   beforeEach(async () => {
+    resetSolanaMockConfig();
     await cleanTables();
     db = createVaultDb(env.vault_db);
   });
 
   afterEach(() => {
+    resetSolanaMockConfig();
     vi.restoreAllMocks();
   });
 
@@ -283,6 +286,85 @@ describe('Stale lock recovery', () => {
       );
       expect(matchingAnchorEvents).toHaveLength(1);
       expect(matchingAnchorEvents[0]?.event_hash).toBe(existingAnchorEvent.value.event_hash);
+    });
+
+    it('marks stale lock failed when signature status and finalized transaction are both missing', async () => {
+      /*
+      Scenario: Stale lock has a tx signature but Solana cannot find the tx
+        Given a stale sending anchor run has an expired lock and tx_signature
+        And Solana signature status lookup returns null
+        And Solana finalized getTransaction returns null
+        When stale lock recovery runs
+        Then the stale run is marked failed with lock_expired_no_tx_found
+        And no anchor_published event is appended
+      */
+      const originalHead = await seedLedgerEvent(db);
+      const staleRowId = await seedStaleLockWithTx(db, originalHead);
+      const staleRow = await getAnchorRunById(db, staleRowId);
+      configureSolanaMock({
+        getSignatureStatus: { kind: 'null' },
+        getTransaction: { kind: 'null' },
+      });
+
+      await recoverStaleLock(
+        db,
+        solana.createConnection(env.HELIUS_RPC_URL),
+        staleRow,
+        env.SOLANA_CLUSTER as Cluster,
+      );
+
+      const staleRowAfterRecovery = await getAnchorRunById(db, staleRowId);
+      expect(staleRowAfterRecovery.status).toBe('failed');
+      expect(staleRowAfterRecovery.last_error).toBe('lock_expired_no_tx_found');
+      expect(staleRowAfterRecovery.locked_until_utc).toBeNull();
+      expect(staleRowAfterRecovery.tx_signature).toBe(staleRow.tx_signature);
+
+      const anchorEvents = await getEventsPaginated(db, {
+        eventType: 'anchor_published',
+        limit: 10,
+      });
+      expect(anchorEvents.items).toHaveLength(0);
+    });
+
+    it('refreshes stale lock and increments attempt_count when tx is not finalized', async () => {
+      /*
+      Scenario: Stale lock tx exists but is not finalized yet
+        Given a stale sending anchor run has an expired lock and tx_signature
+        And Solana signature status lookup returns a non-finalized status
+        And finalized getTransaction cannot return the transaction yet
+        When stale lock recovery runs
+        Then the stale run remains sending with a refreshed lock
+        And attempt_count is incremented for the retry
+        And no anchor_published event is appended
+      */
+      const originalHead = await seedLedgerEvent(db);
+      const staleRowId = await seedStaleLockWithTx(db, originalHead);
+      const staleRow = await getAnchorRunById(db, staleRowId);
+      configureSolanaMock({
+        getSignatureStatus: { kind: 'non-finalized', confirmation_status: 'confirmed' },
+        getTransaction: { kind: 'null' },
+      });
+
+      await recoverStaleLock(
+        db,
+        solana.createConnection(env.HELIUS_RPC_URL),
+        staleRow,
+        env.SOLANA_CLUSTER as Cluster,
+      );
+
+      const staleRowAfterRecovery = await getAnchorRunById(db, staleRowId);
+      expect(staleRowAfterRecovery.status).toBe('sending');
+      expect(staleRowAfterRecovery.last_error).toBeNull();
+      expect(staleRowAfterRecovery.locked_until_utc).not.toBeNull();
+      expect(staleRowAfterRecovery.locked_until_utc).not.toBe(staleRow.locked_until_utc);
+      expect(staleRowAfterRecovery.attempt_count).toBe(staleRow.attempt_count + 1);
+      expect(staleRowAfterRecovery.tx_signature).toBe(staleRow.tx_signature);
+
+      const anchorEvents = await getEventsPaginated(db, {
+        eventType: 'anchor_published',
+        limit: 10,
+      });
+      expect(anchorEvents.items).toHaveLength(0);
     });
 
     it('propagates append failure without publishing stale row', async () => {

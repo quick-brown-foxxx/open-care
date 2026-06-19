@@ -14,6 +14,7 @@ import {
 } from './seed.js';
 import { resetLedgerEventsForTest } from './reset-ledger-events.js';
 import { runAnchor } from '../src/lib/anchor-pipeline.js';
+import { configureSolanaMock, resetSolanaMockConfig } from './__mocks__/lib/solana.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -21,6 +22,38 @@ import { runAnchor } from '../src/lib/anchor-pipeline.js';
 
 function postManual(): Request {
   return new Request('https://example.com/api/anchor/manual', { method: 'POST' });
+}
+
+async function expectOnlySeedLedgerEvent(
+  db: ReturnType<typeof createVaultDb>,
+  seedHash: string,
+): Promise<void> {
+  const allEvents = await getEventsPaginated(db, { limit: 10 });
+  expect(allEvents.items).toHaveLength(1);
+  expect(allEvents.items[0]?.event_hash).toBe(seedHash);
+
+  const anchorEvents = await getEventsPaginated(db, {
+    eventType: 'anchor_published',
+    limit: 10,
+  });
+  expect(anchorEvents.items).toHaveLength(0);
+
+  const head = await getHead(db);
+  expect(head?.event_hash).toBe(seedHash);
+}
+
+async function waitForSendingAnchorRun(db: ReturnType<typeof createVaultDb>): Promise<void> {
+  const deadline = Date.now() + 1_000;
+
+  while (Date.now() < deadline) {
+    const rows = await db.select().from(anchorRuns).where(eq(anchorRuns.status, 'sending')).all();
+    if (rows.length > 0) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+
+  throw new Error('Timed out waiting for sending anchor run');
 }
 
 // ---------------------------------------------------------------------------
@@ -31,6 +64,7 @@ describe('Anchor Cron Worker', () => {
   let db: ReturnType<typeof createVaultDb>;
 
   beforeEach(async () => {
+    resetSolanaMockConfig();
     await cleanTables();
     db = createVaultDb(env.vault_db);
   });
@@ -45,6 +79,77 @@ describe('Anchor Cron Worker', () => {
       expect(response.status).toBe(200);
       const body = (await response.json()) as { status: string };
       expect(body.status).toBe('ok');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Solana failure paths
+  // ---------------------------------------------------------------------------
+
+  describe('Solana failure paths', () => {
+    it('marks the run failed and appends no ledger event when createKeypair throws', async () => {
+      /*
+      Scenario: Invalid anchor wallet secret prevents signing
+        Given the ledger has an unanchored event
+        And keypair creation throws before any Solana transaction is sent
+        When the anchor pipeline runs
+        Then the anchor run is marked failed
+        And the donor ledger still contains only the original event
+      */
+      configureSolanaMock({
+        createKeypair: {
+          kind: 'throw',
+          message: 'invalid secret',
+        },
+      });
+      const { hash } = await seedLedgerEvent(db);
+
+      const result = await runAnchor(db, env, 'operator-manual');
+
+      expect(result.status).toBe('failed');
+      if (result.status === 'failed') {
+        expect(result.error.message).toContain('invalid secret');
+      }
+
+      const runRows = await db.select().from(anchorRuns).all();
+      expect(runRows).toHaveLength(1);
+      expect(runRows[0]?.status).toBe('failed');
+      expect(runRows[0]?.last_error).toContain('invalid secret');
+      expect(runRows[0]?.locked_until_utc).toBeNull();
+      expect(runRows[0]?.tx_signature).toBeNull();
+
+      await expectOnlySeedLedgerEvent(db, hash);
+    });
+
+    it('marks the run failed and appends no ledger event when sendMemoTransaction fails', async () => {
+      /*
+      Scenario: Solana RPC rejects the memo transaction
+        Given the ledger has an unanchored event
+        And memo transaction submission returns an RPC error
+        When the anchor pipeline runs
+        Then the anchor run is marked failed with the RPC error
+        And no anchor_published ledger event is appended
+      */
+      configureSolanaMock({
+        sendMemoTransaction: { kind: 'failure', message: 'RPC error: blockhash not found' },
+      });
+      const { hash } = await seedLedgerEvent(db);
+
+      const result = await runAnchor(db, env, 'operator-manual');
+
+      expect(result.status).toBe('failed');
+      if (result.status === 'failed') {
+        expect(result.error.message).toContain('RPC error: blockhash not found');
+      }
+
+      const runRows = await db.select().from(anchorRuns).all();
+      expect(runRows).toHaveLength(1);
+      expect(runRows[0]?.status).toBe('failed');
+      expect(runRows[0]?.last_error).toContain('RPC error: blockhash not found');
+      expect(runRows[0]?.locked_until_utc).toBeNull();
+      expect(runRows[0]?.tx_signature).toBeNull();
+
+      await expectOnlySeedLedgerEvent(db, hash);
     });
   });
 
@@ -73,6 +178,8 @@ describe('Anchor Cron Worker', () => {
     it('returns already_published when head is already anchored', async () => {
       const { hash, seq } = await seedLedgerEvent(db);
       await seedPublishedAnchor(db, hash, seq);
+      const head = await getHead(db);
+      const actualSeq = head!.sequence_no;
 
       const response = await SELF.fetch(postManual());
       expect(response.status).toBe(200);
@@ -84,7 +191,7 @@ describe('Anchor Cron Worker', () => {
       };
       expect(body.status).toBe('already_published');
       expect(body.anchored_head_hash).toBe(hash);
-      expect(body.anchored_head_sequence_no).toBe(seq);
+      expect(body.anchored_head_sequence_no).toBe(actualSeq);
       expect(body.duration_ms).toBeGreaterThan(0);
     });
   });
@@ -320,6 +427,49 @@ describe('Anchor Cron Worker', () => {
       const allRows = await db.select().from(anchorRuns).all();
       expect(allRows.length).toBe(0);
     });
+
+    it('allows only one winner when cron and manual trigger run concurrently', async () => {
+      /*
+      Scenario: Cron and operator manual trigger race for the same ledger head
+        Given the ledger has an unanchored event
+        And the cron run has created the DB lock but not finished sending
+        When cron and manual trigger are awaited together
+        Then cron publishes the anchor
+        And the manual trigger receives a 409 conflict
+      */
+      const { hash } = await seedLedgerEvent(db);
+      configureSolanaMock({ sendMemoTransaction: { kind: 'success', delay_ms: 100 } });
+
+      const cronPromise = runAnchor(db, env, 'cron');
+      await waitForSendingAnchorRun(db);
+      const manualPromise = SELF.fetch(postManual());
+
+      const [cronResult, manualResponse] = await Promise.all([cronPromise, manualPromise]);
+
+      expect(cronResult.status).toBe('published');
+      if (cronResult.status === 'published') {
+        expect(cronResult.anchored_head_hash).toBe(hash);
+      }
+      expect(manualResponse.status).toBe(409);
+      const manualBody = (await manualResponse.json()) as {
+        error: { code: string; message: string };
+      };
+      expect(manualBody.error.code).toBe('ANCHOR_RUN_IN_PROGRESS');
+
+      const runRows = await db.select().from(anchorRuns).all();
+      expect(runRows).toHaveLength(1);
+      expect(runRows[0]?.status).toBe('published');
+      expect(runRows[0]?.trigger_source).toBe('cron');
+
+      const anchorEvents = await getEventsPaginated(db, {
+        eventType: 'anchor_published',
+        limit: 10,
+      });
+      expect(anchorEvents.items).toHaveLength(1);
+      const anchorEvent = anchorEvents.items[0];
+      expect(anchorEvent?.prev_hash).toBe(hash);
+      expect(anchorEvent?.event_hash).toMatch(/^[0-9a-f]{64}$/);
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -335,13 +485,6 @@ describe('Anchor Cron Worker', () => {
   // successful run, then re-running the pipeline to verify the anchor_runs
   // row and ledger event are recovered.
   //
-  // Note: createKeypair and sendMemoTransaction failure tests cannot be
-  // implemented with the current test infrastructure because
-  // @cloudflare/vitest-pool-workers runs worker code in a separate workerd
-  // isolate where vi.mock and resolve.alias for file paths do not apply.
-  // The @solana/web3.js stub and outboundService mock always return success.
-  // Testing those failure paths would require modifying the outboundService
-  // mock in vitest.config.ts to support configurable error responses.
   // ---------------------------------------------------------------------------
 
   describe('appendLedgerEvent fails after successful on-chain tx', () => {

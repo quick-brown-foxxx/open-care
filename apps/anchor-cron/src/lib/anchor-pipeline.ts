@@ -118,7 +118,17 @@ export async function runAnchor(
   }
 
   // Step 6: Sign and send Solana transaction
-  const keypairResult = createKeypair(env.ANCHOR_WALLET_SECRET);
+  let keypairResult: ReturnType<typeof createKeypair>;
+  try {
+    keypairResult = createKeypair(env.ANCHOR_WALLET_SECRET);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    await clearLockOnFailure(db, anchorRunId, message);
+    return {
+      status: 'failed',
+      error: { code: 'ANCHOR_FAILED', message },
+    };
+  }
   if (!keypairResult.ok) {
     await clearLockOnFailure(db, anchorRunId, keypairResult.error.message);
     return {
@@ -128,7 +138,17 @@ export async function runAnchor(
   }
 
   const connection = createConnection(env.HELIUS_RPC_URL);
-  const sendResult = await sendMemoTransaction(connection, keypairResult.value, memoText);
+  let sendResult: Awaited<ReturnType<typeof sendMemoTransaction>>;
+  try {
+    sendResult = await sendMemoTransaction(connection, keypairResult.value, memoText);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    await clearLockOnFailure(db, anchorRunId, message);
+    return {
+      status: 'failed',
+      error: { code: 'ANCHOR_FAILED', message },
+    };
+  }
   if (!sendResult.ok) {
     await clearLockOnFailure(db, anchorRunId, sendResult.error.message);
     return {

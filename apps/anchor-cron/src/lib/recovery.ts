@@ -4,9 +4,10 @@ import { appendLedgerEvent } from '@open-care/vault-db';
 import type { VaultDb } from '@open-care/vault-db';
 import { parseAnchorMemo, utcNow } from '@open-care/vault-core';
 import type { Cluster } from '@open-care/vault-core';
-import { getTransaction, getBalance } from './solana';
+import { getTransaction, getSignatureStatus, getBalance } from './solana';
 import type { Connection } from '@solana/web3.js';
 import { PublicKey } from '@solana/web3.js';
+import { lockExpiresAt } from './lock';
 
 async function anchorPublishedEventExists(
   db: VaultDb,
@@ -23,6 +24,40 @@ async function anchorPublishedEventExists(
   return rows.length > 0;
 }
 
+function hasFinalizedConfirmationStatus(tx: unknown): boolean {
+  const maybeStatus = (tx as { confirmationStatus?: unknown }).confirmationStatus;
+  return maybeStatus === undefined || maybeStatus === 'finalized';
+}
+
+function hasFinalizedSignatureStatus(status: unknown): boolean {
+  const maybeStatus = (status as { confirmationStatus?: unknown }).confirmationStatus;
+  if (maybeStatus === 'finalized') {
+    return true;
+  }
+
+  // Older Solana RPC nodes may omit confirmationStatus; a null confirmations
+  // count is the legacy finalized signal.
+  if (maybeStatus === undefined || maybeStatus === null) {
+    return (status as { confirmations?: unknown }).confirmations === null;
+  }
+
+  return false;
+}
+
+async function refreshStaleLockForRetry(
+  db: VaultDb,
+  staleRow: typeof anchorRuns.$inferSelect,
+): Promise<void> {
+  await db
+    .update(anchorRuns)
+    .set({
+      locked_until_utc: lockExpiresAt(),
+      attempt_count: sql`${anchorRuns.attempt_count} + 1`,
+      updated_at_utc: utcNow(),
+    })
+    .where(eq(anchorRuns.id, staleRow.id));
+}
+
 export async function recoverStaleLock(
   db: VaultDb,
   connection: Connection,
@@ -31,8 +66,21 @@ export async function recoverStaleLock(
 ): Promise<void> {
   // If tx_signature exists, try to look it up
   if (staleRow.tx_signature) {
+    const statusResult = await getSignatureStatus(connection, staleRow.tx_signature);
+    if (statusResult.ok && statusResult.value !== null) {
+      if (!hasFinalizedSignatureStatus(statusResult.value)) {
+        await refreshStaleLockForRetry(db, staleRow);
+        return;
+      }
+    }
+
     const txResult = await getTransaction(connection, staleRow.tx_signature);
     if (txResult.ok && txResult.value !== null) {
+      if (!hasFinalizedConfirmationStatus(txResult.value)) {
+        await refreshStaleLockForRetry(db, staleRow);
+        return;
+      }
+
       // Transaction found and finalized — backfill.
       // Fetch anchor wallet balance for health monitoring.
       const balanceResult = await getBalance(

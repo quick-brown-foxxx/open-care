@@ -6,7 +6,7 @@ import {
   TransactionInstruction,
   sendAndConfirmTransaction,
 } from '@solana/web3.js';
-import type { TransactionResponse } from '@solana/web3.js';
+import type { SignatureStatus, TransactionResponse } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { ok, err } from '@open-care/vault-core';
 import type { Result } from '@open-care/vault-core';
@@ -80,6 +80,22 @@ export async function getTransaction(
   } catch (e) {
     return err(
       new Error(`Failed to get transaction: ${e instanceof Error ? e.message : String(e)}`),
+    );
+  }
+}
+
+export async function getSignatureStatus(
+  connection: Connection,
+  signature: string,
+): Promise<Result<SignatureStatus | null, Error>> {
+  try {
+    const statusResponse = await connection.getSignatureStatuses([signature], {
+      searchTransactionHistory: true,
+    });
+    return ok(statusResponse.value[0] ?? null);
+  } catch (e) {
+    return err(
+      new Error(`Failed to get signature status: ${e instanceof Error ? e.message : String(e)}`),
     );
   }
 }
