@@ -190,7 +190,7 @@ function parseTransferAmount(rawValue: string | undefined): bigint {
 function safeRpcDescription(rpcUrl: string): string {
   try {
     const parsed = new URL(rpcUrl);
-    return `${parsed.protocol}//${parsed.host}${parsed.pathname}`;
+    return parsed.origin;
   } catch {
     return '<invalid RPC URL>';
   }
@@ -567,7 +567,7 @@ async function runDevnetSmoke(env: NodeJS.ProcessEnv): Promise<void> {
   const connection = new Connection(config.rpcUrl, { commitment: 'confirmed' });
 
   console.log('Open Care devnet live smoke');
-  console.log(`RPC: ${config.safeRpcDescription} (query redacted)`);
+  console.log(`RPC: ${config.safeRpcDescription} (origin only; path/query redacted)`);
   console.log(`Cluster gate: ${env.SOLANA_CLUSTER}`);
   console.log(`Anchor wallet: ${config.anchorWallet.publicKey.toBase58()}`);
   console.log(`Donor wallet: ${config.donorWallet.publicKey.toBase58()}`);

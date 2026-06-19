@@ -67,10 +67,17 @@ describe('POST /tg/internal/send-code', () => {
     const convRow = await db.select().from(conversations).where(eq(conversations.id, convId)).get();
     expect(convRow).toBeDefined();
     expect(convRow!.status).toBe('delivered');
-    expect(convRow!.delivery_code_hash).toBeDefined();
-    expect(convRow!.delivery_code_last4).toBeDefined();
+    expect(convRow!.delivery_code_hash).toBe(await sha256Hex(code));
+    expect(convRow!.delivery_code_last4).toBe('9012');
     expect(convRow!.encrypted_code_ttl_blob).toBeNull();
     expect(convRow!.encrypted_code_expires_at_utc).toBeNull();
+    for (const [fieldName, value] of Object.entries(convRow!)) {
+      if (typeof value === 'string') {
+        expect(value, `conversation.${fieldName} must not retain the full delivery code`).not.toContain(
+          code,
+        );
+      }
+    }
   });
 
   it('stores correct code hash (SHA-256)', async () => {

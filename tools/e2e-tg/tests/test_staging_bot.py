@@ -109,34 +109,55 @@ async def test_bot_responses_do_not_contain_plaintext_telegram_ids(
     start_response = await send_bot_command(telegram_client, staging_bot_username, f"/start {unique_handle}")
     card_response = await send_bot_command(telegram_client, staging_bot_username, "/card")
     pending_request = await wait_for_pending_request(unique_handle)
+    request_needs_cleanup = True
+
+    def mark_request_closed() -> None:
+        nonlocal request_needs_cleanup
+        request_needs_cleanup = False
+
     try:
         help_response = await send_bot_command(telegram_client, staging_bot_username, "/help")
+        test_code = make_test_code()
+        delivered_message = await deliver_code_to_pending_request(
+            telegram_client,
+            staging_bot_username,
+            pending_request,
+            test_code,
+            on_delivery_accepted=mark_request_closed,
+        )
+        assert_message_has_full_code(delivered_message, test_code)
 
         assert_no_plaintext_identifiers(
-            [message_text(start_response), message_text(card_response), message_text(help_response)],
+            [
+                message_text(start_response),
+                message_text(card_response),
+                message_text(help_response),
+                message_text(delivered_message),
+            ],
             [str(user_id)],
         )
     finally:
-        await close_pending_request_with_test_code(telegram_client, staging_bot_username, pending_request)
+        if request_needs_cleanup:
+            await close_pending_request_with_test_code(telegram_client, staging_bot_username, pending_request)
 
 
 @pytest.mark.asyncio
-async def test_pending_requests_surface_has_no_full_code_fields_after_delivery(
+async def test_pending_requests_stays_code_free_after_delivery_and_excludes_delivered_row(
     telegram_client,
     staging_bot_username: str,
     unique_handle: str,
 ) -> None:
     """
-    Scenario: Pending-requests surface remains code-safe after delivery.
+    Scenario: Pending-requests surface stays code-free after delivery.
       Given a pending card request from the Telethon test user
       When the operator staging endpoint delivers a generated test gift-card code
       Then the delivery message contains the code for the user
-      And the delivered conversation is no longer present on pending-requests
-      And the remaining pending-requests surface has no full code or unsafe code fields
+      And the delivered conversation is not exposed on pending-requests
+      And the remaining pending-requests surface has no full code values or code-named fields
 
     Note: delivered rows are excluded from /tg/internal/pending-requests by
-    contract, so this test proves the post-delivery operator pending surface and
-    no-longer-pending state rather than inspecting a delivered row directly.
+    contract, so this test proves that endpoint stays code-free after delivery;
+    it does not inspect delivered-row hash or last4 retention directly.
     """
     pending_request = await create_pending_card_request(telegram_client, staging_bot_username, unique_handle)
     test_code = make_test_code()

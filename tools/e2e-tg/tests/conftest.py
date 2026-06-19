@@ -6,7 +6,7 @@ import os
 import secrets
 import string
 import time
-from collections.abc import AsyncIterator, Iterable, Mapping
+from collections.abc import AsyncIterator, Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypedDict
 from urllib.parse import urlencode, urlparse
@@ -30,7 +30,6 @@ REQUIRED_ENV_NAMES = (
     "TG_BOT_TOKEN",
     "OPERATOR_TOKEN",
 )
-CODE_FIELD_ALLOWLIST = {"delivery_code_hash", "delivery_code_last4"}
 
 
 class PendingRequestItem(TypedDict):
@@ -430,6 +429,7 @@ async def deliver_code_to_pending_request(
     staging_bot_username: str,
     pending_request: PendingRequestItem,
     code: str,
+    on_delivery_accepted: Callable[[], None] | None = None,
 ) -> Message:
     config = _config_from_env_for_helpers()
     async with telegram_client.conversation(
@@ -438,6 +438,8 @@ async def deliver_code_to_pending_request(
         exclusive=False,
     ) as conversation:
         await send_code_to_pending_request(pending_request, code)
+        if on_delivery_accepted is not None:
+            on_delivery_accepted()
         try:
             return await conversation.get_response()
         except TimeoutError:
@@ -580,7 +582,7 @@ def unsafe_code_fields(value: object) -> set[str]:
     fields: set[str] = set()
     if isinstance(value, Mapping):
         for key, nested in value.items():
-            if isinstance(key, str) and "code" in key and key not in CODE_FIELD_ALLOWLIST:
+            if isinstance(key, str) and "code" in key.lower():
                 fields.add(key)
             fields.update(unsafe_code_fields(nested))
     elif isinstance(value, list):
