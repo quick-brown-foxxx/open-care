@@ -6,6 +6,7 @@
   "scripts": {
     "lint": "eslint --fix .",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "check": "tsc -b",
     "test": "vitest run",
     "build": "tsc -b && pnpm --filter open-care-web build",
@@ -14,7 +15,7 @@
     "final-check:secret-scan": "node tools/secret-scan/check-no-treasury-key.mjs",
     "final-check:ledger-guard": "node tools/ledger-guard/check-ledger-mutations.mjs",
     "final-check:sync": "cd apps/web && pnpm exec svelte-kit sync",
-    "final-check:verify": "pnpm run lint && pnpm run format && pnpm run check && pnpm run test && pnpm run build",
+    "final-check:verify": "pnpm run lint && pnpm run format:check && pnpm run check && pnpm run test && pnpm run build",
     "cloudflare-wrangler": "wrangler",
     "seed": "cd apps/ingest && pnpm exec wrangler d1 migrations apply vault-db --local && pnpm exec wrangler d1 execute vault-db --local --file ../../tools/seed/vault-seed.sql && cd ../../apps/tg-bot && pnpm exec wrangler d1 migrations apply bot-db --local && pnpm exec wrangler d1 execute bot-db --local --file ../../tools/seed/bot-seed.sql",
     "blockchain:local-validator": "pnpm --filter @open-care/localnet run blockchain:local-validator",

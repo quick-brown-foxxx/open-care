@@ -48,7 +48,7 @@ pnpm exec wrangler d1 migrations apply bot-db --local
 ## Quality gates (run before commit/PR)
 
 ```bash
-pnpm run final-check   # install → secret scan → ledger guard → sync → lint/format/check/test/build
+pnpm run final-check   # install → secret scan → ledger guard → sync → lint/format:check/check/test/build
 ```
 
 This runs the local pre-commit sequence, including the secret scan and ledger
@@ -59,7 +59,7 @@ Individual gates:
 
 ```bash
 pnpm run format:check   # prettier --check .
-pnpm run lint           # eslint .
+pnpm run lint           # eslint --fix .
 pnpm run check          # tsc -b
 pnpm run test           # vitest run
 pnpm run build          # tsc -b + SvelteKit build

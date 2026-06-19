@@ -184,11 +184,11 @@ from staging.
 
 ## Cloudflare resources
 
-| Resource                | Name                    | Details                                                                                                      |
-| ----------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Pages project           | `open-care-web`         | SvelteKit frontend. Default domain: `open-care-web.pages.dev`. Production branch: `main`. First deploy done. |
-| Pages staging domain    | `staging.open-care.org` | Custom domain for staging. Live and serving the SvelteKit mock frontend.                                     |
-| Pages production domain | `open-care.org` (TBD)   | Custom domain for production. Set up later.                                                                  |
+| Resource                | Name                    | Details                                                                                                                 |
+| ----------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Pages project           | `open-care-web`         | SvelteKit frontend. Default domain: `open-care-web.pages.dev`. Production branch: `main`. First deploy done.            |
+| Pages staging domain    | `staging.open-care.org` | Custom domain for staging. Live and serving the SvelteKit mock frontend.                                                |
+| Pages production domain | `open-care.org` (TBD)   | Custom domain for production. Set up later.                                                                             |
 | Workers.dev subdomain   | `open-care-dev`         | Workers.dev subdomain for non-production Workers without custom routes. Production Worker envs set `workers_dev=false`. |
 
 ## D1 databases

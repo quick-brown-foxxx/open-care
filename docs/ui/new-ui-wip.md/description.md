@@ -29,12 +29,12 @@ Donations enter a pooled balance. Disbursements leave that balance. Anchors veri
 
 This distinction should influence the graph structure:
 
-* Donations branch **into** the central fund.
-* Disbursements branch **out of** the central fund.
-* Receipt proof belongs to a disbursement.
-* Anchors attach to ledger checkpoints.
-* Corrections attach to the events they supersede.
-* No arbitrary donation-to-recipient line is drawn.
+- Donations branch **into** the central fund.
+- Disbursements branch **out of** the central fund.
+- Receipt proof belongs to a disbursement.
+- Anchors attach to ledger checkpoints.
+- Corrections attach to the events they supersede.
+- No arbitrary donation-to-recipient line is drawn.
 
 That will make the design both visually strong and technically honest.
 
@@ -54,24 +54,24 @@ Open Care     История     Проверить     О проекте     [�
 
 ### Header behavior
 
-* Transparent or cream background over the landing hero.
-* Becomes a compact blurred/sticky bar after scrolling.
-* `Помочь` is always the visually dominant button.
-* Mobile uses a simple menu drawer.
-* Devnet displays a persistent but unobtrusive amber environment badge.
+- Transparent or cream background over the landing hero.
+- Becomes a compact blurred/sticky bar after scrolling.
+- `Помочь` is always the visually dominant button.
+- Mobile uses a simple menu drawer.
+- Devnet displays a persistent but unobtrusive amber environment badge.
 
 ## Footer
 
 A substantial but quiet footer:
 
-* Short Open Care description
-* История
-* Проверить
-* Вопросы
-* Контакты
-* GitHub
-* Privacy/trust note
-* Deployment version
+- Short Open Care description
+- История
+- Проверить
+- Вопросы
+- Контакты
+- GitHub
+- Privacy/trust note
+- Deployment version
 
 Suggested footer statement:
 
@@ -85,10 +85,10 @@ Suggested footer statement:
 
 The visual identity should feel:
 
-* caring, not sentimental;
-* transparent, not corporate;
-* technical, not “crypto-bro”;
-* organic, but not decorative everywhere.
+- caring, not sentimental;
+- transparent, not corporate;
+- technical, not “crypto-bro”;
+- organic, but not decorative everywhere.
 
 The botanical illustration belongs mainly on the landing page and selected empty states. Data-heavy pages should use the same palette but remain restrained.
 
@@ -124,13 +124,13 @@ The serif gives the landing page warmth. The interface remains highly readable b
 
 ## Shape and depth
 
-* Cards: 16–24px radius
-* Primary hero panel: 24–30px radius
-* Buttons: moderately rounded, not every control fully pill-shaped
-* Shadows: very soft and low contrast
-* Borders: warm gray, more important than shadows
-* Technical panels: slightly tighter radius and spacing
-* Hash values: inset neutral surface
+- Cards: 16–24px radius
+- Primary hero panel: 24–30px radius
+- Buttons: moderately rounded, not every control fully pill-shaped
+- Shadows: very soft and low contrast
+- Borders: warm gray, more important than shadows
+- Technical panels: slightly tighter radius and spacing
+- Hash values: inset neutral surface
 
 ---
 
@@ -179,8 +179,8 @@ Alternative with more personality:
 
 **Actions**
 
-* `Помочь`
-* `Открыть историю`
+- `Помочь`
+- `Открыть историю`
 
 **Trust line**
 
@@ -280,29 +280,29 @@ A lavender side branch linked visually to the affected event:
 
 Clicking or focusing a node:
 
-* highlights the selected node;
-* dims unrelated branches slightly;
-* emphasizes its path to the ledger checkpoint;
-* opens a compact inspector over the right side of the panel.
+- highlights the selected node;
+- dims unrelated branches slightly;
+- emphasizes its path to the ledger checkpoint;
+- opens a compact inspector over the right side of the panel.
 
 The landing inspector should show only:
 
-* event summary;
-* amount;
-* timestamp;
-* event hash;
-* verification status;
-* `Открыть полную запись`.
+- event summary;
+- amount;
+- timestamp;
+- event hash;
+- verification status;
+- `Открыть полную запись`.
 
 It should not expose a huge JSON payload on the landing page.
 
 ### Scroll behavior
 
-* The graph scrolls vertically inside its card.
-* The current-state header remains sticky.
-* A slim minimap is optional on desktop.
-* New events appear at the top with a subtle insertion animation.
-* Scroll position should not jump while the visitor is inspecting older data.
+- The graph scrolls vertically inside its card.
+- The current-state header remains sticky.
+- A slim minimap is optional on desktop.
+- New events appear at the top with a subtle insertion animation.
+- Scroll position should not jump while the visitor is inspecting older data.
 
 ## Below the hero
 
@@ -382,11 +382,11 @@ About 65% / 35%.
 
 A single compact toolbar:
 
-* Search by event hash, transaction, or receipt reference
-* Event-type filter
-* Date range
-* Latest/oldest sort
-* Export menu
+- Search by event hash, transaction, or receipt reference
+- Event-type filter
+- Date range
+- Latest/oldest sort
+- Export menu
 
 Filter labels:
 
@@ -444,24 +444,24 @@ A compact three-step chain:
 
 Include:
 
-* sequence number;
-* current event hash;
-* previous hash;
-* closest later anchor;
-* Solana transaction;
-* verification status.
+- sequence number;
+- current event hash;
+- previous hash;
+- closest later anchor;
+- Solana transaction;
+- verification status.
 
 ### Receipt
 
 For a disbursement:
 
-* provider;
-* count;
-* amount;
-* purchase timestamp;
-* receipt reference;
-* public beneficiary reference, only if relevant;
-* honest note about what the reference proves.
+- provider;
+- count;
+- amount;
+- purchase timestamp;
+- receipt reference;
+- public beneficiary reference, only if relevant;
+- honest note about what the reference proves.
 
 ### Privacy
 
@@ -475,9 +475,9 @@ A short explanation:
 
 Pretty JSON, collapsed by default, with:
 
-* Copy JSON
-* Download event
-* Raw payload
+- Copy JSON
+- Download event
+- Raw payload
 
 ## Deep links
 
@@ -487,12 +487,12 @@ On desktop, the route can open the explorer with the event already selected. On 
 
 ## Mobile behavior
 
-* Funding trail fills the page.
-* Inspector opens as a bottom sheet.
-* Filters open in a modal sheet.
-* Side branches become shorter but remain visible.
-* Do not collapse the graph into a plain flat list.
-* Each node remains keyboard- and touch-selectable.
+- Funding trail fills the page.
+- Inspector opens as a bottom sheet.
+- Filters open in a modal sheet.
+- Side branches become shorter but remain visible.
+- Do not collapse the graph into a plain flat list.
+- Each node remains keyboard- and touch-selectable.
 
 ---
 
@@ -677,9 +677,9 @@ HEAD #1839
 
 Actions:
 
-* `Скачать реестр JSON`
-* `Открыть транзакцию`
-* `Скопировать HEAD`
+- `Скачать реестр JSON`
+- `Открыть транзакцию`
+- `Скопировать HEAD`
 
 ## Previous anchors
 
@@ -695,10 +695,10 @@ Place the TypeScript code behind an expandable section:
 
 Another accordion:
 
-* hash mismatch;
-* anchor unavailable;
-* anchor delayed;
-* network request failed.
+- hash mismatch;
+- anchor unavailable;
+- anchor delayed;
+- network request failed.
 
 ## Stale anchor
 
@@ -730,11 +730,11 @@ The “what it does not prove” section should be visually prominent. Honest li
 
 Use accessible accordions, grouped into:
 
-* Пожертвования
-* Реестр и проверка
-* Приватность
-* Работа проекта
-* Проблемы и поддержка
+- Пожертвования
+- Реестр и проверка
+- Приватность
+- Работа проекта
+- Проблемы и поддержка
 
 Only one or two questions need to be expanded initially.
 
@@ -769,10 +769,10 @@ These states should feel designed as part of the product rather than fallback te
 
 ## Loading
 
-* Funding trail renders skeleton nodes and connectors.
-* Metrics preserve their exact width.
-* Inspector shows a structured skeleton.
-* Avoid replacing entire sections with centered `Загрузка...`.
+- Funding trail renders skeleton nodes and connectors.
+- Metrics preserve their exact width.
+- Inspector shows a structured skeleton.
+- Avoid replacing entire sections with centered `Загрузка...`.
 
 ## Error
 
@@ -875,19 +875,19 @@ Degraded checks appear directly beside this status rather than in a distant sect
 
 ### Metrics
 
-* Current balance
-* Total received
-* Total disbursed
-* Pending delivery requests
-* Latest anchor age
+- Current balance
+- Total received
+- Total disbursed
+- Pending delivery requests
+- Latest anchor age
 
 ### Primary tasks
 
 Three action cards:
 
-* `Записать оплату`
-* `Опубликовать якорь`
-* `Доставить сертификат`
+- `Записать оплату`
+- `Опубликовать якорь`
+- `Доставить сертификат`
 
 Each card can show a small contextual number:
 
@@ -929,8 +929,8 @@ A final confirmation step should say:
 
 Actions:
 
-* `Назад`
-* `Подтвердить и записать`
+- `Назад`
+- `Подтвердить и записать`
 
 The success state remains on the same screen and presents the next task:
 
@@ -963,11 +963,11 @@ HEAD #1839 · 2 часа назад · подтверждён
 
 The confirmation dialog shows:
 
-* exact HEAD;
-* memo;
-* anchor wallet;
-* estimated action;
-* reminder that only a hash goes on-chain.
+- exact HEAD;
+- memo;
+- anchor wallet;
+- estimated action;
+- reminder that only a hash goes on-chain.
 
 While running, show a progress sequence:
 
@@ -996,10 +996,10 @@ This should become a split-pane queue.
 
 ### Queue row
 
-* status;
-* internal handle;
-* time waiting;
-* related payout status.
+- status;
+- internal handle;
+- time waiting;
+- related payout status.
 
 ### Detail panel
 
@@ -1015,10 +1015,10 @@ Delivery secret
 
 Use a masked/revealable input with:
 
-* explicit temporary-value warning;
-* `Код будет удалён после отправки`;
-* send confirmation;
-* immediate clearing after success or component destruction.
+- explicit temporary-value warning;
+- `Код будет удалён после отправки`;
+- send confirmation;
+- immediate clearing after success or component destruction.
 
 ---
 
@@ -1060,8 +1060,8 @@ FundingTrail
 The landing, ledger page, and event detail route should all use the same underlying event visualization and inspector components with different density modes:
 
 ```ts
-density: "preview" | "explorer" | "compact"
-inspector: "popover" | "sidebar" | "page" | "sheet"
+density: 'preview' | 'explorer' | 'compact';
+inspector: 'popover' | 'sidebar' | 'page' | 'sheet';
 ```
 
 ---
@@ -1072,20 +1072,20 @@ Use motion to clarify relationships, not decorate the page.
 
 ### Appropriate motion
 
-* New node fades and expands into the top of the trail.
-* Selecting a node traces its connector.
-* Inspector slides in 12–20px and fades.
-* Copy success changes icon and label.
-* Anchor verification animates through its proof steps.
-* Branches subtly draw when first entering the viewport.
+- New node fades and expands into the top of the trail.
+- Selecting a node traces its connector.
+- Inspector slides in 12–20px and fades.
+- Copy success changes icon and label.
+- Anchor verification animates through its proof steps.
+- Branches subtly draw when first entering the viewport.
 
 ### Avoid
 
-* Constant pulsing nodes
-* Moving blockchain particles
-* Glowing neon
-* Parallax in data screens
-* Large scroll-jacking animations
+- Constant pulsing nodes
+- Moving blockchain particles
+- Glowing neon
+- Parallax in data screens
+- Large scroll-jacking animations
 
 Reduced-motion mode should replace all connector drawing with immediate state changes.
 
@@ -1099,32 +1099,32 @@ The next visual batch should contain six deliberate boards rather than unrelated
 
 Show:
 
-* warm editorial hero;
-* botanical hand/sprout illustration;
-* compact metrics;
-* vertical live funding trail;
-* selected receipt inspector;
-* below-fold process preview.
+- warm editorial hero;
+- botanical hand/sprout illustration;
+- compact metrics;
+- vertical live funding trail;
+- selected receipt inspector;
+- below-fold process preview.
 
 ## Board 2 — Full funding explorer
 
 Show:
 
-* summary strip;
-* filters and search;
-* large vertical funding network;
-* anchor checkpoints;
-* sticky inspector with `Обзор / Доказательство / Чек / Приватность / Данные`.
+- summary strip;
+- filters and search;
+- large vertical funding network;
+- anchor checkpoints;
+- sticky inspector with `Обзор / Доказательство / Чек / Приватность / Данные`.
 
 ## Board 3 — Event-state sheet
 
 Show detailed inspector variants for:
 
-* donation;
-* disbursement;
-* receipt;
-* anchor;
-* correction.
+- donation;
+- disbursement;
+- receipt;
+- anchor;
+- correction.
 
 This establishes the reusable component system before drawing every page.
 
@@ -1132,23 +1132,23 @@ This establishes the reusable component system before drawing every page.
 
 Two desktop screens on one board:
 
-* focused QR donation flow;
-* simplified verification status and proof chain.
+- focused QR donation flow;
+- simplified verification status and proof chain.
 
 ## Board 5 — Mobile
 
 Show:
 
-* mobile landing;
-* vertical trail;
-* selected event bottom sheet;
-* mobile donate card.
+- mobile landing;
+- vertical trail;
+- selected event bottom sheet;
+- mobile donate card.
 
 ## Board 6 — Admin workspace
 
 Show:
 
-* admin dashboard;
-* disbursement form with public preview;
-* delivery queue split pane;
-* anchor confirmation state.
+- admin dashboard;
+- disbursement form with public preview;
+- delivery queue split pane;
+- anchor confirmation state.

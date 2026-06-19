@@ -73,9 +73,10 @@ describe('POST /tg/internal/send-code', () => {
     expect(convRow!.encrypted_code_expires_at_utc).toBeNull();
     for (const [fieldName, value] of Object.entries(convRow!)) {
       if (typeof value === 'string') {
-        expect(value, `conversation.${fieldName} must not retain the full delivery code`).not.toContain(
-          code,
-        );
+        expect(
+          value,
+          `conversation.${fieldName} must not retain the full delivery code`,
+        ).not.toContain(code);
       }
     }
   });

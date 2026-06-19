@@ -27,9 +27,7 @@ import { buildAnchorMemo, utcNow, verifyChain } from '../../../packages/vault-co
 import type { SolanaGetTransactionResult } from '../../../packages/vault-core/src/schemas/solana-rpc.js';
 
 const PREFLIGHT = preflightSolanaTestValidator();
-const describeIfValidatorAvailable = PREFLIGHT.ok
-  ? describe
-  : describe.skip;
+const describeIfValidatorAvailable = PREFLIGHT.ok ? describe : describe.skip;
 
 const SUITE_NAME = PREFLIGHT.ok
   ? `local-validator blockchain tests (${PREFLIGHT.version})`
@@ -241,19 +239,23 @@ describeIfValidatorAvailable(SUITE_NAME, () => {
     Then the fetched transaction exposes the same UTF-8 memo text
     And the memo matches the anchor format.
   */
-  it('fetches and verifies a real anchor Memo transaction', async () => {
-    const memo = buildAnchorMemo(ANCHOR_HEAD_HASH);
+  it(
+    'fetches and verifies a real anchor Memo transaction',
+    async () => {
+      const memo = buildAnchorMemo(ANCHOR_HEAD_HASH);
 
-    const signature = await sendMemoTransaction(context.connection, {
-      payer: context.payer,
-      memo,
-    });
-    const fetchedMemo = await fetchParsedMemoText(context.connection, signature);
+      const signature = await sendMemoTransaction(context.connection, {
+        payer: context.payer,
+        memo,
+      });
+      const fetchedMemo = await fetchParsedMemoText(context.connection, signature);
 
-    expect(fetchedMemo.memoText).toBe(memo);
-    expect(fetchedMemo.memoText).toMatch(ANCHOR_MEMO_PATTERN);
-    expect(Buffer.from(fetchedMemo.memoText, 'utf8').toString('utf8')).toBe(memo);
-  }, TEST_TIMEOUT_MS);
+      expect(fetchedMemo.memoText).toBe(memo);
+      expect(fetchedMemo.memoText).toMatch(ANCHOR_MEMO_PATTERN);
+      expect(Buffer.from(fetchedMemo.memoText, 'utf8').toString('utf8')).toBe(memo);
+    },
+    TEST_TIMEOUT_MS,
+  );
 
   /*
   Scenario: Real checked SPL Token transfer parses as a vault donation.
@@ -261,38 +263,45 @@ describeIfValidatorAvailable(SUITE_NAME, () => {
     When a checked SPL Token transfer is sent to the vault ATA
     Then the fetched transaction parses amount, mint, and destination correctly.
   */
-  it('fetches and parses a real SPL Token transfer to the vault ATA', async () => {
-    const amount = 25_000n;
-    const tokenAccounts = await createFundedTokenAccounts(context.connection, context.payer);
+  it(
+    'fetches and parses a real SPL Token transfer to the vault ATA',
+    async () => {
+      const amount = 25_000n;
+      const tokenAccounts = await createFundedTokenAccounts(context.connection, context.payer);
 
-    const signature = await sendSplTokenTransferChecked(context.connection, {
-      payer: context.payer,
-      source: tokenAccounts.sourceTokenAccount,
-      mint: tokenAccounts.mint,
-      destination: tokenAccounts.destinationTokenAccount,
-      owner: tokenAccounts.sourceOwner,
-      amount,
-      decimals: DEFAULT_TOKEN_DECIMALS,
-    });
-    const transaction = await fetchTransactionWithRetry(context.handle.rpcUrl, signature);
-    const parserResult = parseSplTransfer(
-      transaction,
-      tokenAccounts.mint.toBase58(),
-      tokenAccounts.destinationTokenAccount.toBase58(),
-    );
-    const details = readCheckedTransferDetails(transaction, tokenAccounts.destinationTokenAccount);
+      const signature = await sendSplTokenTransferChecked(context.connection, {
+        payer: context.payer,
+        source: tokenAccounts.sourceTokenAccount,
+        mint: tokenAccounts.mint,
+        destination: tokenAccounts.destinationTokenAccount,
+        owner: tokenAccounts.sourceOwner,
+        amount,
+        decimals: DEFAULT_TOKEN_DECIMALS,
+      });
+      const transaction = await fetchTransactionWithRetry(context.handle.rpcUrl, signature);
+      const parserResult = parseSplTransfer(
+        transaction,
+        tokenAccounts.mint.toBase58(),
+        tokenAccounts.destinationTokenAccount.toBase58(),
+      );
+      const details = readCheckedTransferDetails(
+        transaction,
+        tokenAccounts.destinationTokenAccount,
+      );
 
-    expect(parserResult.ok).toBe(true);
-    if (!parserResult.ok) {
-      throw new Error(parserResult.error.message);
-    }
-    expect(parserResult.value.amount).toBe(amount.toString());
-    expect(details).toEqual({
-      amount: amount.toString(),
-      mint: tokenAccounts.mint.toBase58(),
-      destination: tokenAccounts.destinationTokenAccount.toBase58(),
-    });
-  }, TEST_TIMEOUT_MS);
+      expect(parserResult.ok).toBe(true);
+      if (!parserResult.ok) {
+        throw new Error(parserResult.error.message);
+      }
+      expect(parserResult.value.amount).toBe(amount.toString());
+      expect(details).toEqual({
+        amount: amount.toString(),
+        mint: tokenAccounts.mint.toBase58(),
+        destination: tokenAccounts.destinationTokenAccount.toBase58(),
+      });
+    },
+    TEST_TIMEOUT_MS,
+  );
 
   /*
   Scenario: Configured vault ATA filtering rejects wrong recipients.
@@ -300,39 +309,43 @@ describeIfValidatorAvailable(SUITE_NAME, () => {
     When a real SPL Token transfer is sent to a different ATA
     Then the parser rejects the transaction as having no matching vault transfer.
   */
-  it('rejects a real SPL Token transfer sent to the wrong ATA', async () => {
-    const amount = 10_000n;
-    const tokenAccounts = await createFundedTokenAccounts(context.connection, context.payer);
-    const wrongOwner = Keypair.generate();
-    const wrongAta = await createAssociatedTokenAccount(context.connection, {
-      payer: context.payer,
-      mint: tokenAccounts.mint,
-      owner: wrongOwner.publicKey,
-    });
+  it(
+    'rejects a real SPL Token transfer sent to the wrong ATA',
+    async () => {
+      const amount = 10_000n;
+      const tokenAccounts = await createFundedTokenAccounts(context.connection, context.payer);
+      const wrongOwner = Keypair.generate();
+      const wrongAta = await createAssociatedTokenAccount(context.connection, {
+        payer: context.payer,
+        mint: tokenAccounts.mint,
+        owner: wrongOwner.publicKey,
+      });
 
-    const signature = await sendSplTokenTransferChecked(context.connection, {
-      payer: context.payer,
-      source: tokenAccounts.sourceTokenAccount,
-      mint: tokenAccounts.mint,
-      destination: wrongAta,
-      owner: tokenAccounts.sourceOwner,
-      amount,
-      decimals: DEFAULT_TOKEN_DECIMALS,
-    });
-    const transaction = await fetchTransactionWithRetry(context.handle.rpcUrl, signature);
-    const parserResult = parseSplTransfer(
-      transaction,
-      tokenAccounts.mint.toBase58(),
-      tokenAccounts.destinationTokenAccount.toBase58(),
-    );
+      const signature = await sendSplTokenTransferChecked(context.connection, {
+        payer: context.payer,
+        source: tokenAccounts.sourceTokenAccount,
+        mint: tokenAccounts.mint,
+        destination: wrongAta,
+        owner: tokenAccounts.sourceOwner,
+        amount,
+        decimals: DEFAULT_TOKEN_DECIMALS,
+      });
+      const transaction = await fetchTransactionWithRetry(context.handle.rpcUrl, signature);
+      const parserResult = parseSplTransfer(
+        transaction,
+        tokenAccounts.mint.toBase58(),
+        tokenAccounts.destinationTokenAccount.toBase58(),
+      );
 
-    expect(parserResult.ok).toBe(false);
-    if (parserResult.ok) {
-      throw new Error('Expected wrong-ATA transfer to be rejected');
-    }
-    expect(parserResult.error.code).toBe('PARSE_ERROR');
-    expect(parserResult.error.message).toBe('No matching USDC transfer to vault ATA');
-  }, TEST_TIMEOUT_MS);
+      expect(parserResult.ok).toBe(false);
+      if (parserResult.ok) {
+        throw new Error('Expected wrong-ATA transfer to be rejected');
+      }
+      expect(parserResult.error.code).toBe('PARSE_ERROR');
+      expect(parserResult.error.message).toBe('No matching USDC transfer to vault ATA');
+    },
+    TEST_TIMEOUT_MS,
+  );
 
   /*
   Scenario: Duplicate signatures append only one donation event.
@@ -341,64 +354,68 @@ describeIfValidatorAvailable(SUITE_NAME, () => {
     Then one row is processed, the duplicate row is marked duplicate,
     And only one donation_confirmed ledger event exists for the signature.
   */
-  it('appends only one donation event for duplicate inbox rows with the same signature', async () => {
-    const amount = 33_000n;
-    const tokenAccounts = await createFundedTokenAccounts(context.connection, context.payer);
-    const signature = await sendSplTokenTransferChecked(context.connection, {
-      payer: context.payer,
-      source: tokenAccounts.sourceTokenAccount,
-      mint: tokenAccounts.mint,
-      destination: tokenAccounts.destinationTokenAccount,
-      owner: tokenAccounts.sourceOwner,
-      amount,
-      decimals: DEFAULT_TOKEN_DECIMALS,
-    });
-    await fetchTransactionWithRetry(context.handle.rpcUrl, signature);
+  it(
+    'appends only one donation event for duplicate inbox rows with the same signature',
+    async () => {
+      const amount = 33_000n;
+      const tokenAccounts = await createFundedTokenAccounts(context.connection, context.payer);
+      const signature = await sendSplTokenTransferChecked(context.connection, {
+        payer: context.payer,
+        source: tokenAccounts.sourceTokenAccount,
+        mint: tokenAccounts.mint,
+        destination: tokenAccounts.destinationTokenAccount,
+        owner: tokenAccounts.sourceOwner,
+        amount,
+        decimals: DEFAULT_TOKEN_DECIMALS,
+      });
+      await fetchTransactionWithRetry(context.handle.rpcUrl, signature);
 
-    const { db, sqliteDb } = createTestVaultDb();
-    const ingestDb = asIngestDb(db);
-    const receivedAtUtc = utcNow();
-    await insertIntoInbox(ingestDb, [
-      {
-        signature,
-        source: 'webhook',
-        rawPayloadJson: JSON.stringify({ signature }),
-        receivedAtUtc,
-      },
-      {
-        signature,
-        source: 'reconciliation',
-        rawPayloadJson: JSON.stringify({ signature }),
-        receivedAtUtc,
-      },
-    ]);
+      const { db, sqliteDb } = createTestVaultDb();
+      const ingestDb = asIngestDb(db);
+      const receivedAtUtc = utcNow();
+      await insertIntoInbox(ingestDb, [
+        {
+          signature,
+          source: 'webhook',
+          rawPayloadJson: JSON.stringify({ signature }),
+          receivedAtUtc,
+        },
+        {
+          signature,
+          source: 'reconciliation',
+          rawPayloadJson: JSON.stringify({ signature }),
+          receivedAtUtc,
+        },
+      ]);
 
-    const result = await processInbox(
-      ingestDb,
-      buildIngestEnv(
-        context.handle.rpcUrl,
-        tokenAccounts.mint,
-        tokenAccounts.destinationTokenAccount,
-        tokenAccounts.destinationOwner.publicKey,
-      ),
-      globalThis.fetch,
-    );
-    const inboxRows = sqliteDb
-      .prepare('SELECT status FROM helius_inbox WHERE signature = ? ORDER BY source')
-      .all(signature) as { status: string }[];
-    const donationCountRow = sqliteDb
-      .prepare(
-        `SELECT COUNT(*) AS count
+      const result = await processInbox(
+        ingestDb,
+        buildIngestEnv(
+          context.handle.rpcUrl,
+          tokenAccounts.mint,
+          tokenAccounts.destinationTokenAccount,
+          tokenAccounts.destinationOwner.publicKey,
+        ),
+        globalThis.fetch,
+      );
+      const inboxRows = sqliteDb
+        .prepare('SELECT status FROM helius_inbox WHERE signature = ? ORDER BY source')
+        .all(signature) as { status: string }[];
+      const donationCountRow = sqliteDb
+        .prepare(
+          `SELECT COUNT(*) AS count
          FROM ledger_events
          WHERE event_type = 'donation_confirmed'
            AND json_extract(payload_json, '$.tx_signature') = ?`,
-      )
-      .get(signature) as { count: number } | undefined;
+        )
+        .get(signature) as { count: number } | undefined;
 
-    expect(result).toEqual({ processed: 1, ignored: 0, failed: 0 });
-    expect(inboxRows.map((row) => row.status).sort()).toEqual(['duplicate', 'processed']);
-    expect(donationCountRow?.count).toBe(1);
-  }, TEST_TIMEOUT_MS);
+      expect(result).toEqual({ processed: 1, ignored: 0, failed: 0 });
+      expect(inboxRows.map((row) => row.status).sort()).toEqual(['duplicate', 'processed']);
+      expect(donationCountRow?.count).toBe(1);
+    },
+    TEST_TIMEOUT_MS,
+  );
 
   /*
   Scenario: Real on-chain donation and anchor data form a valid ledger chain.
@@ -407,84 +424,88 @@ describeIfValidatorAvailable(SUITE_NAME, () => {
     When the corresponding anchor event is appended
     Then the persisted ledger chain verifies end-to-end.
   */
-  it('verifies a hash chain built from real local transfer and memo transactions', async () => {
-    const amount = 44_000n;
-    const tokenAccounts = await createFundedTokenAccounts(context.connection, context.payer);
-    const transferSignature = await sendSplTokenTransferChecked(context.connection, {
-      payer: context.payer,
-      source: tokenAccounts.sourceTokenAccount,
-      mint: tokenAccounts.mint,
-      destination: tokenAccounts.destinationTokenAccount,
-      owner: tokenAccounts.sourceOwner,
-      amount,
-      decimals: DEFAULT_TOKEN_DECIMALS,
-    });
-    await fetchTransactionWithRetry(context.handle.rpcUrl, transferSignature);
+  it(
+    'verifies a hash chain built from real local transfer and memo transactions',
+    async () => {
+      const amount = 44_000n;
+      const tokenAccounts = await createFundedTokenAccounts(context.connection, context.payer);
+      const transferSignature = await sendSplTokenTransferChecked(context.connection, {
+        payer: context.payer,
+        source: tokenAccounts.sourceTokenAccount,
+        mint: tokenAccounts.mint,
+        destination: tokenAccounts.destinationTokenAccount,
+        owner: tokenAccounts.sourceOwner,
+        amount,
+        decimals: DEFAULT_TOKEN_DECIMALS,
+      });
+      await fetchTransactionWithRetry(context.handle.rpcUrl, transferSignature);
 
-    const { db } = createTestVaultDb();
-    const ingestDb = asIngestDb(db);
-    await insertIntoInbox(ingestDb, [
-      {
-        signature: transferSignature,
-        source: 'webhook',
-        rawPayloadJson: JSON.stringify({ signature: transferSignature }),
-        receivedAtUtc: utcNow(),
-      },
-    ]);
-    const processResult = await processInbox(
-      ingestDb,
-      buildIngestEnv(
-        context.handle.rpcUrl,
-        tokenAccounts.mint,
-        tokenAccounts.destinationTokenAccount,
-        tokenAccounts.destinationOwner.publicKey,
-      ),
-      globalThis.fetch,
-    );
-    expect(processResult).toEqual({ processed: 1, ignored: 0, failed: 0 });
+      const { db } = createTestVaultDb();
+      const ingestDb = asIngestDb(db);
+      await insertIntoInbox(ingestDb, [
+        {
+          signature: transferSignature,
+          source: 'webhook',
+          rawPayloadJson: JSON.stringify({ signature: transferSignature }),
+          receivedAtUtc: utcNow(),
+        },
+      ]);
+      const processResult = await processInbox(
+        ingestDb,
+        buildIngestEnv(
+          context.handle.rpcUrl,
+          tokenAccounts.mint,
+          tokenAccounts.destinationTokenAccount,
+          tokenAccounts.destinationOwner.publicKey,
+        ),
+        globalThis.fetch,
+      );
+      expect(processResult).toEqual({ processed: 1, ignored: 0, failed: 0 });
 
-    const donationPage = await getEventsPaginated(db, { limit: 10 });
-    const donationHead = donationPage.items[0];
-    expect(donationHead?.event_type).toBe('donation_confirmed');
-    if (donationHead === undefined) {
-      throw new Error('Expected donation event to be present');
-    }
+      const donationPage = await getEventsPaginated(db, { limit: 10 });
+      const donationHead = donationPage.items[0];
+      expect(donationHead?.event_type).toBe('donation_confirmed');
+      if (donationHead === undefined) {
+        throw new Error('Expected donation event to be present');
+      }
 
-    const memo = buildAnchorMemo(donationHead.event_hash);
-    const memoSignature = await sendMemoTransaction(context.connection, {
-      payer: context.payer,
-      memo,
-    });
-    const fetchedMemo = await fetchParsedMemoText(context.connection, memoSignature);
-    expect(fetchedMemo.memoText).toBe(memo);
+      const memo = buildAnchorMemo(donationHead.event_hash);
+      const memoSignature = await sendMemoTransaction(context.connection, {
+        payer: context.payer,
+        memo,
+      });
+      const fetchedMemo = await fetchParsedMemoText(context.connection, memoSignature);
+      expect(fetchedMemo.memoText).toBe(memo);
 
-    const anchorResult = await appendLedgerEvent(db, {
-      event_type: 'anchor_published',
-      payload: {
-        anchor_date: blockTimeToUtc(fetchedMemo.blockTime).slice(0, 10),
-        anchored_head_sequence_no: donationHead.sequence_no,
-        anchored_head_hash: donationHead.event_hash,
-        tx_signature: memoSignature,
-        anchor_wallet_address: context.payer.publicKey.toBase58(),
-        memo_text: fetchedMemo.memoText,
-        published_at_utc: blockTimeToUtc(fetchedMemo.blockTime),
-        cluster: 'localnet',
-      },
-      created_at_utc: utcNow(),
-    });
-    expect(anchorResult.ok).toBe(true);
-    if (!anchorResult.ok) {
-      throw new Error(anchorResult.error.message);
-    }
+      const anchorResult = await appendLedgerEvent(db, {
+        event_type: 'anchor_published',
+        payload: {
+          anchor_date: blockTimeToUtc(fetchedMemo.blockTime).slice(0, 10),
+          anchored_head_sequence_no: donationHead.sequence_no,
+          anchored_head_hash: donationHead.event_hash,
+          tx_signature: memoSignature,
+          anchor_wallet_address: context.payer.publicKey.toBase58(),
+          memo_text: fetchedMemo.memoText,
+          published_at_utc: blockTimeToUtc(fetchedMemo.blockTime),
+          cluster: 'localnet',
+        },
+        created_at_utc: utcNow(),
+      });
+      expect(anchorResult.ok).toBe(true);
+      if (!anchorResult.ok) {
+        throw new Error(anchorResult.error.message);
+      }
 
-    const chainPage = await getEventsPaginated(db, { limit: 10 });
-    const verification = await verifyChain(chainPage.items);
+      const chainPage = await getEventsPaginated(db, { limit: 10 });
+      const verification = await verifyChain(chainPage.items);
 
-    expect(chainPage.items).toHaveLength(2);
-    expect(chainPage.items.map((event) => event.event_type)).toEqual([
-      'donation_confirmed',
-      'anchor_published',
-    ]);
-    expect(verification.valid).toBe(true);
-  }, HASH_CHAIN_TEST_TIMEOUT_MS);
+      expect(chainPage.items).toHaveLength(2);
+      expect(chainPage.items.map((event) => event.event_type)).toEqual([
+        'donation_confirmed',
+        'anchor_published',
+      ]);
+      expect(verification.valid).toBe(true);
+    },
+    HASH_CHAIN_TEST_TIMEOUT_MS,
+  );
 });

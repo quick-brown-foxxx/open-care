@@ -2,12 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { SELF } from 'cloudflare:test';
 import { botSchema } from '@open-care/vault-db';
 import { eq } from 'drizzle-orm';
-import {
-  createTelegramApiMock,
-  createTestBotDb,
-  getHandleRow,
-  webhookHeaders,
-} from './helpers';
+import { createTelegramApiMock, createTestBotDb, getHandleRow, webhookHeaders } from './helpers';
 
 const { conversations } = botSchema;
 

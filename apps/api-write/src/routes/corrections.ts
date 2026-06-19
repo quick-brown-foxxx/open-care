@@ -35,20 +35,14 @@ function correctionTargetNotDisbursementResponse(
   correctsSequenceNo: number,
   requestId: string,
 ): Response {
-  return errorResponse(
-    'VALIDATION_ERROR',
-    'Request body validation failed',
-    422,
-    requestId,
-    {
-      code: 'CORRECTION_TARGET_NOT_DISBURSEMENT',
-      field_errors: {
-        corrects_sequence_no: [
-          `corrects_sequence_no (${correctsSequenceNo}) must reference a disbursement_recorded event`,
-        ],
-      },
+  return errorResponse('VALIDATION_ERROR', 'Request body validation failed', 422, requestId, {
+    code: 'CORRECTION_TARGET_NOT_DISBURSEMENT',
+    field_errors: {
+      corrects_sequence_no: [
+        `corrects_sequence_no (${correctsSequenceNo}) must reference a disbursement_recorded event`,
+      ],
     },
-  );
+  });
 }
 
 // ---------------------------------------------------------------------------

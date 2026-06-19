@@ -16,18 +16,21 @@
 ## 🔴 Critical Findings (Must Fix)
 
 ### Bug 1: Anchor crash recovery silently fails (I-4)
+
 **File:** `apps/anchor-cron/src/lib/recovery.ts:43-44`
 **What:** `new Date(blockTime * 1000).toISOString()` produces millisecond-precision timestamps (e.g. `2026-06-14T10:23:00.000Z`) that fail `isValidTimestamp()` validation. The try/catch silently swallows the error. **Crash recovery will never successfully backfill a ledger event.** The `anchor_runs` row gets updated to `published` but the `anchor_published` ledger event is missing — creating a permanent gap between on-chain anchors and the ledger.
 **Fix:** Add `.replace(/\.\d{3}Z$/, 'Z')` to the `publishedAtUtc` computation.
 **Missing test:** No test verifies that recovery backfill actually appends a valid ledger event (the existing test acknowledges the bug in comments).
 
 ### Bug 2: Corrections accepted for non-disbursement events (I-11)
+
 **File:** `apps/api-write/src/routes/corrections.ts:58-85`
 **What:** The correction endpoint validates `corrects_sequence_no < head` but does NOT check that the target event is a `disbursement_recorded`. A correction targeting a `donation_confirmed` or `anchor_published` event would be accepted and appended to the ledger, creating a semantically meaningless correction event.
 **Fix:** After validating sequence_no, fetch the target event and verify `event_type === 'disbursement_recorded'`. Reject with 422 if not.
 **Missing test:** No test for correcting a non-disbursement event type.
 
 ### Bug 3: Append-only ledger has no hard enforcement (I-1)
+
 **What:** The append-only invariant is enforced by convention (a single `appendLedgerEvent` helper) and documentation. There is no SQLite trigger preventing UPDATE/DELETE, no CI lint rule banning `.update(ledgerEvents)`, and no test that attempts mutation and expects failure. `db.delete(ledgerEvents)` succeeds at runtime (used in test seed helpers).
 **Fix:** Add SQLite triggers (`BEFORE DELETE/UPDATE ON ledger_events ... RAISE(ABORT, ...)`) via a new migration. Add a CI lint rule banning `.update(ledgerEvents)` and `.delete(ledgerEvents)` in production source directories.
 **Missing test:** Test that attempts UPDATE/DELETE on ledger_events and expects failure.
@@ -37,27 +40,32 @@
 ## 🟡 High-Impact Gaps
 
 ### Gap 1: Testing layers 5–8 entirely missing
+
 The `08-testing-strategy.md` spec claims "Status: Implemented" but 4 of 9 test levels have zero implementation:
 
-| Level | What | Status |
-|-------|------|--------|
-| 5 — Local-validator blockchain | Real Memo + SPL token flows on local validator | ❌ No files, no scripts, no infra |
-| 6 — Devnet live smoke | Real devnet send/fetch/finality | ❌ No scripts. `DONOR_WALLET_SECRET` configured but unused |
-| 7 — Helius webhook contract | Real webhook delivery to staging | ❌ No scripts |
-| 8 — Telegram E2E (Telethon) | Real user→bot→user flow | ❌ Only a session generator exists, zero pytest files |
+| Level                          | What                                           | Status                                                     |
+| ------------------------------ | ---------------------------------------------- | ---------------------------------------------------------- |
+| 5 — Local-validator blockchain | Real Memo + SPL token flows on local validator | ❌ No files, no scripts, no infra                          |
+| 6 — Devnet live smoke          | Real devnet send/fetch/finality                | ❌ No scripts. `DONOR_WALLET_SECRET` configured but unused |
+| 7 — Helius webhook contract    | Real webhook delivery to staging               | ❌ No scripts                                              |
+| 8 — Telegram E2E (Telethon)    | Real user→bot→user flow                        | ❌ Only a session generator exists, zero pytest files      |
 
 All Solana interaction is mocked. The most trust-critical behaviors (on-chain anchors, SPL transfers, webhook reliability, Telegram delivery) are never tested against real external systems. `13-post-review-hardening.md` correctly identifies these gaps and proposes slices to fill them.
 
 ### Gap 2: No Playwright in CI
+
 51 browser tests exist (4 spec files, 17 unique tests × 3 browsers) covering all public routes and admin token gate. They are well-structured and the Playwright config is ready. But they are **never executed in CI**. Frontend regressions can merge undetected.
 
 ### Gap 3: No post-deploy verification
+
 `deploy.yml` pushes to staging with zero verification. A smoke test script exists (`tools/smoke/smoke-test.sh`, 342 lines, 8 endpoint checks) but is not wired into any workflow. A broken deployment goes undetected until a human notices.
 
 ### Gap 4: No nightly CI jobs
+
 Devnet live smoke, Helius contract tests, and Telegram E2E are documented as "manual/nightly" but there is no automation to run them periodically. 5 CI secrets (`HELIUS_API_KEY`, `DONOR_WALLET_SECRET`, `TELETHON_API_ID`, `TELETHON_API_HASH`, `TELETHON_SESSION_STRING`) are configured in GitHub Actions but **orphaned** — no workflow consumes them.
 
 ### Gap 5: No production `environments` block in wrangler.jsonc
+
 `deploy-prod.yml` uses `--env production` but none of the 7 `wrangler.jsonc` files contain an `"environments"` block with production-specific overrides (different D1 database IDs, different routes/domains, different vars like mainnet wallet addresses). The `--env production` flag may have no effect.
 
 ---
@@ -65,6 +73,7 @@ Devnet live smoke, Helius contract tests, and Telegram E2E are documented as "ma
 ## 🟢 What's Working Well
 
 ### Test suite is honest and substantial
+
 - **741 tests, all passing**, 51 test files, zero failures
 - `final-check` (format → lint → typecheck → test → build) passes cleanly
 - Real D1 via Miniflare in Worker integration tests (not in-memory fakes)
@@ -75,11 +84,13 @@ Devnet live smoke, Helius contract tests, and Telegram E2E are documented as "ma
 - Strong privacy enforcement tests (HMAC stability, AES-GCM round-trip, AAD binding, schema denylist)
 
 ### Invariants are well-enforced
+
 - **6 of 11 invariants FULLY ENFORCED**: I-2 (single chain), I-3 (RFC 8785 hash), I-5 (anchor memo format), I-6 (wallet separation), I-7 (no plaintext Telegram IDs), I-8 (no sensitive public fields), I-10 (ingest reliability)
 - **4 partially enforced** with specific, fixable gaps (I-1, I-4, I-9, I-11)
 - **0 completely unenforced**
 
 ### Secrets and config are clean
+
 - All 8 staging Worker secrets set and correctly scoped
 - No `process.env` anti-patterns in Worker code
 - No hardcoded fallback defaults for secrets
@@ -89,6 +100,7 @@ Devnet live smoke, Helius contract tests, and Telegram E2E are documented as "ma
 - `.dev.vars` exists and is populated
 
 ### Architecture is sound
+
 - Clean trust boundaries (operator gateway, service bindings, separate D1 databases)
 - Well-layered packages (vault-core, vault-db, bot-crypto, api-contract)
 - Proper hash chain implementation with RFC 8785 canonicalization
@@ -98,20 +110,21 @@ Devnet live smoke, Helius contract tests, and Telegram E2E are documented as "ma
 
 ## 📊 Test Quality Metrics
 
-| Metric | Value |
-|--------|-------|
-| Total test files | 51 |
-| Total tests | 741 |
-| Real tests (test actual behavior) | ~645 (87%) |
-| Mock-only tests | ~52 (7%) |
-| Green-checkmark tests (no real assertions) | ~44 (6%) |
-| BDD scenarios fully covered | 14 of 24 (58%) |
-| BDD scenarios partially covered | 7 of 24 (29%) |
-| BDD scenarios not covered | 3 of 24 (13%) |
-| Test layers implemented | 5 of 9 (Levels 1-4 + partial Level 9) |
-| Test layers missing | 4 of 9 (Levels 5-8) |
+| Metric                                     | Value                                 |
+| ------------------------------------------ | ------------------------------------- |
+| Total test files                           | 51                                    |
+| Total tests                                | 741                                   |
+| Real tests (test actual behavior)          | ~645 (87%)                            |
+| Mock-only tests                            | ~52 (7%)                              |
+| Green-checkmark tests (no real assertions) | ~44 (6%)                              |
+| BDD scenarios fully covered                | 14 of 24 (58%)                        |
+| BDD scenarios partially covered            | 7 of 24 (29%)                         |
+| BDD scenarios not covered                  | 3 of 24 (13%)                         |
+| Test layers implemented                    | 5 of 9 (Levels 1-4 + partial Level 9) |
+| Test layers missing                        | 4 of 9 (Levels 5-8)                   |
 
 ### Top anti-patterns found:
+
 1. `expect(true).toBe(true)` in `packages/api-contract/test/compliance.test.ts` and `apps/tg-bot/test/pending-requests.test.ts`
 2. Test-only routes `/api/forbidden` and `/api/unavailable` in production `apps/operator/src/index.ts`
 3. Solana RPC mocks always return success — failure paths untestable
@@ -122,14 +135,14 @@ Devnet live smoke, Helius contract tests, and Telegram E2E are documented as "ma
 
 ## 📋 Docs-vs-Reality Gaps
 
-| Document | Claim | Reality |
-|----------|-------|---------|
-| `08-testing-strategy.md` | "Status: Implemented" | 4 of 9 layers don't exist. Should be "Partially Implemented" |
-| `08-testing-strategy.md` | `pnpm blockchain:local-validator` | Script doesn't exist |
-| `08-testing-strategy.md` | `pnpm anchor-job --dry-run verify` | Script doesn't exist |
-| `08-testing-strategy.md` | "local-validator blockchain tests pass or are explicitly skipped" | No such tests exist to pass or skip |
-| `tg-bot/AGENTS.md` | Lists 6 Solana vars as bindings | None exist in wrangler.jsonc or source code |
-| `DEVELOPMENT.md` | `pnpm run format:check` | Script doesn't exist in package.json (only `format` which auto-fixes) |
+| Document                 | Claim                                                             | Reality                                                               |
+| ------------------------ | ----------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `08-testing-strategy.md` | "Status: Implemented"                                             | 4 of 9 layers don't exist. Should be "Partially Implemented"          |
+| `08-testing-strategy.md` | `pnpm blockchain:local-validator`                                 | Script doesn't exist                                                  |
+| `08-testing-strategy.md` | `pnpm anchor-job --dry-run verify`                                | Script doesn't exist                                                  |
+| `08-testing-strategy.md` | "local-validator blockchain tests pass or are explicitly skipped" | No such tests exist to pass or skip                                   |
+| `tg-bot/AGENTS.md`       | Lists 6 Solana vars as bindings                                   | None exist in wrangler.jsonc or source code                           |
+| `DEVELOPMENT.md`         | `pnpm run format:check`                                           | Script doesn't exist in package.json (only `format` which auto-fixes) |
 
 ---
 

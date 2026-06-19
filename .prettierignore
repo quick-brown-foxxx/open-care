@@ -5,6 +5,7 @@ build/
 .wrangler/
 coverage/
 test-results/
+.pytest_cache/
 pnpm-lock.yaml
 *.sql
 *.d.ts

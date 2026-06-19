@@ -8,12 +8,12 @@ user gift-card handoff against staging.
 
 ## What lives here
 
-| File | Role |
-| --- | --- |
-| `get_session_string_draft.py` | One-time Telethon `StringSession` generator for the dedicated test account. |
-| `pyproject.toml` | Local Python project config for the E2E pytest suite and dependencies. |
-| `tests/conftest.py` | Env gate, Telethon client fixture, staging bot resolution, operator HTTP helpers, and redaction-safe assertions. |
-| `tests/test_staging_bot.py` | BDD-style staging E2E scenarios for registration, card requests, delivery, redaction, retention, duplicates, and invalid commands. |
+| File                          | Role                                                                                                                               |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `get_session_string_draft.py` | One-time Telethon `StringSession` generator for the dedicated test account.                                                        |
+| `pyproject.toml`              | Local Python project config for the E2E pytest suite and dependencies.                                                             |
+| `tests/conftest.py`           | Env gate, Telethon client fixture, staging bot resolution, operator HTTP helpers, and redaction-safe assertions.                   |
+| `tests/test_staging_bot.py`   | BDD-style staging E2E scenarios for registration, card requests, delivery, redaction, retention, duplicates, and invalid commands. |
 
 ## Connections
 

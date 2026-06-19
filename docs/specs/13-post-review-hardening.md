@@ -45,11 +45,12 @@ backfill a ledger event** — the `anchor_runs` row is updated to
 a permanent gap between on-chain anchors and the ledger.
 
 The existing test at `anchor-pipeline.test.ts:320-323` explicitly
-acknowledges this: *"The ledger event backfill is verified separately
+acknowledges this: _"The ledger event backfill is verified separately
 because the mock's blockTime produces millisecond-precision timestamps
-that fail isValidTimestamp validation in appendLedgerEvent."*
+that fail isValidTimestamp validation in appendLedgerEvent."_
 
 **Fix:**
+
 - Add `.replace(/\.\d{3}Z$/, 'Z')` to the `publishedAtUtc` computation
   in `recovery.ts:44`, matching the pattern used in `utcNow()`.
 - Remove the try/catch that silently swallows `appendLedgerEvent`
@@ -60,6 +61,7 @@ that fail isValidTimestamp validation in appendLedgerEvent."*
   workaround).
 
 **Acceptance criteria:**
+
 - Recovery backfill appends an `anchor_published` ledger event with
   `created_at_utc` matching the on-chain block time (second precision).
 - The backfill event's `event_hash` is valid and links into the chain.
@@ -84,6 +86,7 @@ event. The invariant spec says corrections are restricted to
 `disbursement_recorded` events.
 
 **Fix:**
+
 - After validating `corrects_sequence_no < head`, fetch the target event
   from `ledger_events` and verify `event_type === 'disbursement_recorded'`.
 - Reject with `422 VALIDATION_ERROR` if the target event is not a
@@ -93,6 +96,7 @@ event. The invariant spec says corrections are restricted to
   `correction_recorded` → 422.
 
 **Acceptance criteria:**
+
 - `POST /api/corrections` with `corrects_sequence_no` pointing to a
   non-disbursement event returns 422.
 - `POST /api/corrections` with `corrects_sequence_no` pointing to a
@@ -116,7 +120,9 @@ seed helpers at `apps/anchor-cron/test/anchor-pipeline.test.ts:360` and
 check would catch it. This is the trust foundation of the entire product.
 
 **Fix:**
+
 - Create a new D1 migration in `apps/ingest/migrations/` that adds:
+
   ```sql
   CREATE TRIGGER ledger_events_no_delete
   BEFORE DELETE ON ledger_events
@@ -130,6 +136,7 @@ check would catch it. This is the trust foundation of the entire product.
     SELECT RAISE(ABORT, 'ledger_events is append-only — UPDATE forbidden');
   END;
   ```
+
 - Update test seed helpers that currently use `db.delete(ledgerEvents)`
   to work within the trigger constraint (e.g., use a separate test-only
   table, or drop/recreate the table in test setup, or use
@@ -144,6 +151,7 @@ check would catch it. This is the trust foundation of the entire product.
   `db.update(ledgerEvents).set(...)` and verifies it throws/rejects.
 
 **Acceptance criteria:**
+
 - `db.delete(ledgerEvents)` throws at runtime in production D1.
 - `db.update(ledgerEvents).set(...)` throws at runtime in production D1.
 - CI fails if `.update(ledgerEvents)` or `.delete(ledgerEvents)` appears
@@ -173,6 +181,7 @@ first person to actually verify the chain end-to-end. The existing
 correctness.
 
 **Fix:**
+
 - Create `tools/verify/verify-chain.ts` — a standalone TypeScript script
   that:
   - Fetches all events from `/api/ledger-events`.
@@ -197,6 +206,7 @@ correctness.
   `health.test.ts` to test the non-null anchor path.
 
 **Acceptance criteria:**
+
 - `tools/verify/verify-chain.ts` exists and can be run against a live
   deployment.
 - A test fetches raw events from the API, recomputes the chain, and
@@ -222,6 +232,7 @@ race condition is tested for manual-only, not for `Promise.all()` cron +
 manual.
 
 **Fix:**
+
 - Add configurable error injection to the Solana RPC mock in
   `apps/anchor-cron/test/__mocks__/lib/solana.ts`: allow tests to
   configure `createKeypair` to throw, `sendMemoTransaction` to return
@@ -241,6 +252,7 @@ manual.
   Document the decision.
 
 **Acceptance criteria:**
+
 - All 5 new anchor failure path tests pass.
 - `attempt_count` is either incremented on retry or removed with a
   documented reason.
@@ -260,6 +272,7 @@ accidentally reads the head after appending the anchor event would not
 be caught.
 
 **Fix:**
+
 - Add a test that:
   - Seeds a ledger with events (head = H1).
   - Runs the anchor pipeline.
@@ -269,6 +282,7 @@ be caught.
   - Asserts H1 ≠ H2 (the anchor event is not covered by its own memo).
 
 **Acceptance criteria:**
+
 - Test explicitly verifies memo contains pre-anchor head, not
   post-anchor head.
 - Test verifies the anchor event's own hash differs from the memo's
@@ -288,6 +302,7 @@ rather than a purpose-built tool, and only scans `apps/` and `packages/`
 directories.
 
 **Fix:**
+
 - Add a vitest test (or CI script) that globs all `wrangler.jsonc` files
   and asserts:
   - `ANCHOR_WALLET_SECRET` is not declared in any `vars` block outside
@@ -301,6 +316,7 @@ directories.
   detection (as a follow-up improvement, not required for this slice).
 
 **Acceptance criteria:**
+
 - Binding allowlist test exists and passes.
 - CI secret scan covers all directories.
 - Test fails if a secret appears in the wrong Worker's config.
@@ -320,6 +336,7 @@ untested code paths.
 ### Slice 3.1 — Remove green-checkmark tests and replace with behavioral assertions
 
 **Problem:** 44 tests provide zero behavioral evidence. They include:
+
 - `expect(true).toBe(true)` tautologies
   (`packages/api-contract/test/compliance.test.ts`,
   `apps/tg-bot/test/pending-requests.test.ts`)
@@ -330,6 +347,7 @@ untested code paths.
   (`packages/bot-crypto/test/encrypt.test.ts`)
 
 **Fix:**
+
 - Remove `expect(true).toBe(true)` tests — the comments belong in docs,
   not test counts.
 - Rewrite the `encrypt.test.ts` tampered-keyVersion test to assert
@@ -346,6 +364,7 @@ untested code paths.
   correctness.
 
 **Acceptance criteria:**
+
 - Zero `expect(true).toBe(true)` tests in the suite.
 - `encrypt.test.ts` tampered-keyVersion test asserts specific failure.
 - Health check tests assert boolean values, not just key existence.
@@ -361,6 +380,7 @@ untested code paths.
 test coverage. They are publicly accessible with no auth.
 
 **Fix:**
+
 - Remove `/api/forbidden` and `/api/unavailable` routes from
   `apps/operator/src/index.ts`.
 - Configure mock service bindings in operator tests to return 403 and
@@ -370,6 +390,7 @@ test coverage. They are publicly accessible with no auth.
   instead of the removed routes.
 
 **Acceptance criteria:**
+
 - No test-only routes in production `apps/operator/src/index.ts`.
 - Operator tests still cover 403 and 503 forwarding behavior.
 - `pnpm run test` passes.
@@ -385,6 +406,7 @@ blocks until all `waitUntil` promises settle, making it impossible to
 measure the ACK timing.
 
 **Fix:**
+
 - Restructure the webhook test to measure response time: send the
   request, capture the response, and assert it arrived within ~1 second
   (before `ctx.waitUntil()` processing completes).
@@ -393,6 +415,7 @@ measure the ACK timing.
   (ACK happened) before processing completed.
 
 **Acceptance criteria:**
+
 - A test verifies the webhook returns 200 within ~1 second of receiving
   the request.
 - The test also verifies that async processing eventually completes (via
@@ -406,6 +429,7 @@ measure the ACK timing.
 
 **Problem:** 3 of 24 BDD scenarios from `08-testing-strategy.md` have
 zero test coverage:
+
 1. "Webhook ACKs fast and processes asynchronously" (addressed in Slice
    3.3)
 2. "Concurrent cron and manual anchor" (addressed in Slice 2.2)
@@ -414,6 +438,7 @@ zero test coverage:
 
 Additionally, 7 scenarios are only partially covered. The highest-impact
 partials are:
+
 - "Donate page does not treat wallet success as canonical" — warning
   text verified but no test for "pending until ledger event exists" UI
   state.
@@ -424,6 +449,7 @@ partials are:
   in Slice 2.3).
 
 **Fix:**
+
 - Add Playwright test for `/admin/disbursements` page: form renders,
   submit creates disbursement, response shows ledger sequence number and
   event hash.
@@ -436,6 +462,7 @@ partials are:
   pre-anchor-head semantics is present.
 
 **Acceptance criteria:**
+
 - Playwright tests cover `/admin/disbursements` and `/admin/bot` pages.
 - Donate page test verifies pending-state copy.
 - Verify page test verifies pre-anchor-head explanation text.
@@ -452,6 +479,7 @@ never tested in the chain-building context. Schema validation bugs in
 those event types would pass tests.
 
 **Fix:**
+
 - Add tests in `packages/vault-db/test/ledger-append.test.ts`:
   - Append a `disbursement_recorded` event → verify chain integrity.
   - Append an `anchor_published` event → verify chain integrity.
@@ -459,6 +487,7 @@ those event types would pass tests.
   - Append a mixed sequence of all 4 types → verify full chain.
 
 **Acceptance criteria:**
+
 - All 4 event types tested through `appendLedgerEvent`.
 - Mixed-event chain test verifies `verifyChain()` passes.
 - `pnpm run test` passes.
@@ -474,6 +503,7 @@ coverage**. It is the function that powers the bivalent correction API
 bivalent property of I-11 is broken.
 
 **Fix:**
+
 - Add tests in `packages/vault-db/test/query-helpers.test.ts`:
   - Empty result → returns `{ items: [], nextCursor: null }`.
   - Single page → returns items with correct `payload_json`.
@@ -483,6 +513,7 @@ bivalent property of I-11 is broken.
     original canonical JSON byte-for-byte.
 
 **Acceptance criteria:**
+
 - `getRawEventsPaginated` has test coverage for empty, single-page,
   multi-page, and byte-for-byte preservation.
 - `pnpm run test` passes.
@@ -496,16 +527,18 @@ bivalent property of I-11 is broken.
 `service_note` correction could be broken without any test catching it.
 
 **Fix:**
+
 - Add test in `apps/api-write/test/corrections.test.ts`:
   `replacement_fields: { service_note: 'Updated note' }` → 200, correction
   event appended.
 - Add test: `replacement_fields: { receipt_ref: 'NEW-REF', service_note:
-  'Updated note' }` → 200, both fields corrected.
+'Updated note' }` → 200, both fields corrected.
 - Add test: `replacement_fields: {}` → verify behavior (should be 422
   since at least one field is required, or document if empty is
   intentionally allowed).
 
 **Acceptance criteria:**
+
 - `service_note` correction happy path tested.
 - Both-fields correction tested.
 - Empty `replacement_fields` behavior tested and documented.
@@ -518,6 +551,7 @@ bivalent property of I-11 is broken.
 ### Slice 3.8 — Deduplicate test helpers
 
 **Problem:** Significant test helper duplication across the suite:
+
 - `hexToBytes()`, `HMAC_KEY_HEX`, `hmacKey` import, `webhookHeaders()`,
   `registerUser()`, `createConversation()`, and Telegram API mock setup
   copy-pasted across 6 of 7 tg-bot test files (~50+ lines each).
@@ -528,6 +562,7 @@ bivalent property of I-11 is broken.
   lock-conflict in 2 files).
 
 **Fix:**
+
 - Create `apps/tg-bot/test/helpers.ts` with shared crypto setup,
   webhook header builders, user registration, and conversation creation.
 - Create `apps/anchor-cron/test/helpers.ts` with shared seed helpers.
@@ -536,6 +571,7 @@ bivalent property of I-11 is broken.
   most appropriate test file.
 
 **Acceptance criteria:**
+
 - Shared test helper modules exist for tg-bot and anchor-cron.
 - No test scenario is tested in more than one file (unless testing
   different layers intentionally).
@@ -553,6 +589,7 @@ method, body) — they don't even verify that the code under test is
 calling them correctly.
 
 **Fix:**
+
 - Refactor `apps/anchor-cron/test/__mocks__/lib/solana.ts` to accept
   configuration options:
   - `shouldFailCreateKeypair: boolean`
@@ -566,6 +603,7 @@ calling them correctly.
   text passed to `sendMemoTransaction` matches the expected format.
 
 **Acceptance criteria:**
+
 - Solana mocks support configurable failure modes.
 - Tests exist for each failure mode (see Slice 2.2).
 - Mocks validate input shapes before returning success.
@@ -604,6 +642,7 @@ systems.
 - Document the setup in [`DEVELOPMENT.md`](../../DEVELOPMENT.md).
 
 **Acceptance criteria:**
+
 - `pnpm run blockchain:local-validator` starts a local validator and
   runs tests.
 - Fixture helpers are reusable across multiple test files.
@@ -630,6 +669,7 @@ systems.
 - Tests use the fixture helpers from Slice 4.1.
 
 **Acceptance criteria:**
+
 - At least 5 real-blockchain tests pass when `solana-test-validator` is
   available.
 - Tests skip gracefully in CI when the validator is unavailable.
@@ -652,6 +692,7 @@ systems.
 - Script is not run in PR CI.
 
 **Acceptance criteria:**
+
 - `ALLOW_DEVNET_SMOKE=true npx tsx tools/smoke/devnet-smoke.ts` runs
   and reports pass/fail for each check.
 - Script fails closed if `ALLOW_DEVNET_SMOKE` is not set.
@@ -674,6 +715,7 @@ systems.
 - Script is environment-gated and not run in PR CI.
 
 **Acceptance criteria:**
+
 - Script sends real HTTP requests to staging and verifies responses.
 - Script fails closed if required env vars are missing.
 - All 5 contract checks are verified.
@@ -700,6 +742,7 @@ systems.
   (`TELETHON_API_ID`, `TELETHON_API_HASH`, `TELETHON_SESSION_STRING`).
 
 **Acceptance criteria:**
+
 - `pytest tools/e2e-tg/tests/ -v` runs at least 6 test cases against
   the staging bot.
 - All tests pass when the staging bot is operational.
@@ -723,6 +766,7 @@ well-structured and the Playwright config is ready. But they are never
 executed in CI. Frontend regressions can merge undetected.
 
 **Fix:**
+
 - Add a `playwright` job to `.github/workflows/ci.yml`:
   ```yaml
   playwright:
@@ -740,6 +784,7 @@ executed in CI. Frontend regressions can merge undetected.
   full cross-browser testing remains a manual/nightly option.
 
 **Acceptance criteria:**
+
 - `playwright` job runs on every PR and push to main.
 - Job fails if any Playwright test fails.
 - Job completes within a reasonable CI time budget.
@@ -754,6 +799,7 @@ endpoint checks) but is not called from any workflow. A broken
 deployment goes undetected until a human notices.
 
 **Fix:**
+
 - Add a `smoke-test` job to `.github/workflows/deploy.yml` after
   `deploy-frontend`:
   ```yaml
@@ -769,6 +815,7 @@ deployment goes undetected until a human notices.
   fails.
 
 **Acceptance criteria:**
+
 - `smoke-test` job runs after every staging deploy.
 - Job fails if any endpoint check fails.
 - Failed smoke test blocks the deploy from being considered successful.
@@ -784,12 +831,13 @@ periodically. 5 CI secrets (`HELIUS_API_KEY`, `DONOR_WALLET_SECRET`,
 configured in GitHub Actions but orphaned — no workflow consumes them.
 
 **Fix:**
+
 - Create `.github/workflows/nightly.yml`:
   ```yaml
   on:
     schedule:
-      - cron: '0 3 * * *'  # 03:00 UTC daily
-    workflow_dispatch:      # manual trigger for testing
+      - cron: '0 3 * * *' # 03:00 UTC daily
+    workflow_dispatch: # manual trigger for testing
   ```
 - Jobs:
   - `devnet-smoke`: runs `tools/smoke/devnet-smoke.ts` (from Slice 4.3),
@@ -803,6 +851,7 @@ configured in GitHub Actions but orphaned — no workflow consumes them.
   not a deployment gate).
 
 **Acceptance criteria:**
+
 - Nightly workflow runs on schedule and can be triggered manually.
 - Each job consumes the currently-orphaned CI secrets.
 - Workflow reports pass/fail for each job without blocking anything.
@@ -820,6 +869,7 @@ service-binding-only Workers and internal routes must not become publicly
 reachable through `*.workers.dev` when deployed to production.
 
 **Fix:**
+
 - Add `"env.production"` blocks to each Worker's `wrangler.jsonc`:
   ```jsonc
   "env": {
@@ -848,6 +898,7 @@ reachable through `*.workers.dev` when deployed to production.
   service bindings, and cron triggers.
 
 **Acceptance criteria:**
+
 - All 6 Workers have `env.production` blocks.
 - `vars` overrides use correct mainnet values (or documented TBD
   placeholders).
@@ -866,6 +917,7 @@ not exist in `package.json`. CI should fail on unformatted code, not
 silently fix it.
 
 **Fix:**
+
 - Add `"format:check": "prettier --check ."` to root `package.json`
   scripts.
 - Change CI to run `pnpm run format:check` instead of `pnpm run format`.
@@ -873,6 +925,7 @@ silently fix it.
 - Update `DEVELOPMENT.md` if it references the old command.
 
 **Acceptance criteria:**
+
 - `pnpm run format:check` exists and exits non-zero on unformatted code.
 - CI runs `format:check`, not `format`.
 - `DEVELOPMENT.md` commands match `package.json` scripts.
@@ -885,6 +938,7 @@ silently fix it.
 deploy breaks staging, recovery is manual and ad-hoc.
 
 **Fix:**
+
 - Document a manual rollback procedure in `docs/ops/rollback.md`:
   - How to redeploy the previous commit's Workers.
   - How to revert a D1 migration (if possible) or restore from backup.
@@ -894,6 +948,7 @@ deploy breaks staging, recovery is manual and ad-hoc.
   previous commit's artifacts (deferred to a follow-up if complex).
 
 **Acceptance criteria:**
+
 - `docs/ops/rollback.md` exists with step-by-step rollback instructions.
 - Procedure covers Workers, D1, and frontend.
 
@@ -912,11 +967,13 @@ fallback (`?? '0.1.0-dev'`), so nothing breaks, but it's a documentation
 gap.
 
 **Fix:**
+
 - Add `DEPLOY_VERSION=0.1.0-dev` to `.env.example` in the "Public
   config" section.
 - Add `DEPLOY_VERSION=0.1.0-dev` to `.dev.vars` for consistency.
 
 **Acceptance criteria:**
+
 - `DEPLOY_VERSION` appears in `.env.example`.
 - `DEPLOY_VERSION` appears in `.dev.vars`.
 
@@ -930,6 +987,7 @@ gap.
 under a `contact_url` field.
 
 **Fix:**
+
 - Set `CONTACT_URL` to a real value in staging `api-read` wrangler.jsonc
   (e.g., a Telegram channel or email address).
 - Update `.env.example` with the real staging value.
@@ -937,6 +995,7 @@ under a `contact_url` field.
   production value before mainnet launch.
 
 **Acceptance criteria:**
+
 - `CONTACT_URL` in staging is a real, usable contact channel.
 - `.env.example` reflects the staging value.
 - Production placeholder is documented.
@@ -948,12 +1007,14 @@ under a `contact_url` field.
 **Problem:** The seed script fails if the database is already seeded.
 
 **Fix:**
+
 - Modify the seed script to use `INSERT OR IGNORE` or check for existing
   data before inserting.
 - Running the seed script twice against the same database must succeed
   without errors and without duplicating data.
 
 **Acceptance criteria:**
+
 - `pnpm run seed` succeeds when run twice consecutively.
 - No duplicate data after second run.
 
@@ -968,12 +1029,14 @@ under a `contact_url` field.
 any of them. Documentation bug.
 
 **Fix:**
+
 - Remove the 6 Solana vars from `apps/tg-bot/AGENTS.md` Bindings table.
 - Verify `apps/tg-bot/wrangler.jsonc` has no unused vars.
 - If any vars are intentionally kept for future use, document them with
   a "Reserved for future use" comment.
 
 **Acceptance criteria:**
+
 - `tg-bot/AGENTS.md` Bindings table matches actual `wrangler.jsonc` and
   source code.
 - No undocumented unused vars in `tg-bot/wrangler.jsonc`.
@@ -988,12 +1051,14 @@ hash `fda2610f...` matches the TypeScript implementation byte-for-byte.
 It passes but is not run in CI or `pnpm run test`.
 
 **Fix:**
+
 - Add a `test:python-verify` script to `package.json` that runs
   `python3 tools/verify/test_vector.py`.
 - Add the script to the `final-check` pipeline (or CI `test` job).
 - Ensure the script fails with non-zero exit code if verification fails.
 
 **Acceptance criteria:**
+
 - `pnpm run test:python-verify` runs the Python verifier.
 - Python verifier runs in CI.
 - CI fails if Python verification fails.
@@ -1013,6 +1078,7 @@ implementation. This creates false confidence. `DEVELOPMENT.md` line
 deferred."
 
 **Fix:**
+
 - Change status to "Status: **Partially Implemented**".
 - Add a section documenting which layers are implemented and which are
   planned (referencing this spec, `13-post-review-hardening.md`).
@@ -1023,6 +1089,7 @@ deferred."
   `pnpm blockchain:local-validator`, `pnpm anchor-job --dry-run verify`.
 
 **Acceptance criteria:**
+
 - `08-testing-strategy.md` status accurately reflects reality.
 - Documented-but-nonexistent commands are removed or marked as planned.
 - No false claims about test coverage.
@@ -1035,12 +1102,14 @@ deferred."
 that don't exist in `wrangler.jsonc` or source code.
 
 **Fix:**
+
 - Remove the 6 Solana vars from the Bindings table.
 - Ensure the documented bindings match `wrangler.jsonc` exactly:
   `bot_db` (D1), `TG_BOT_TOKEN`, `TG_WEBHOOK_SECRET`, `TG_ID_HMAC_KEY`,
   `TG_CHAT_ENC_KEY` (secrets), `ENVIRONMENT` (var).
 
 **Acceptance criteria:**
+
 - `tg-bot/AGENTS.md` Bindings table is accurate.
 - No documented bindings that don't exist in config or code.
 
@@ -1053,11 +1122,13 @@ script does not exist in `package.json`. Only `pnpm run format` exists
 (which runs `prettier --write`, not `--check`).
 
 **Fix:**
+
 - After adding `format:check` script (Slice 5.5), verify
   `DEVELOPMENT.md` references are correct.
 - Update any other stale command references in `DEVELOPMENT.md`.
 
 **Acceptance criteria:**
+
 - Every command in `DEVELOPMENT.md` exists in `package.json`.
 - `format:check` is documented as the CI/pre-commit check command.
 
@@ -1071,6 +1142,7 @@ script does not exist in `package.json`. Only `pnpm run format` exists
 9). The implementation is correct; the spec regex should be updated.
 
 **Fix:**
+
 - Update `02-invariants.md` I-8 regex from `[A-Z0-9]` to `[A-Z2-7]`.
 - Update `08-testing-strategy.md` BDD scenario regex if it appears
   there.
@@ -1078,6 +1150,7 @@ script does not exist in `package.json`. Only `pnpm run format` exists
   characters).
 
 **Acceptance criteria:**
+
 - Spec regex matches implementation regex.
 - RFC 4648 base32 choice is documented.
 
@@ -1112,6 +1185,7 @@ type-level check will catch it.
 ### Slice 8.1 — Migrate backend Workers to import contract types
 
 **Fix:**
+
 - For each Worker route handler that builds a response object, annotate
   the return value with the contract type from
   `@open-care/api-contract`:
@@ -1133,6 +1207,7 @@ type-level check will catch it.
 - Use `import type` exclusively — no runtime imports.
 
 **Acceptance criteria:**
+
 - All 6 Workers import response types from `@open-care/api-contract`
   for every endpoint they serve.
 - No Worker defines a local response interface that duplicates a
@@ -1145,6 +1220,7 @@ type-level check will catch it.
 ### Slice 8.2 — Add frontend contract type verification
 
 **Fix:**
+
 - In each frontend Valibot schema file
   (`apps/web/src/lib/schemas/*.ts`), add a type-level check that the
   Valibot-inferred type is assignable to the corresponding contract
@@ -1169,6 +1245,7 @@ type-level check will catch it.
 - Use `import type` exclusively.
 
 **Acceptance criteria:**
+
 - Every frontend Valibot-inferred response type has a compile-time
   assignability check against the corresponding contract type.
 - If a Valibot schema diverges from the contract, `pnpm run check`
@@ -1181,6 +1258,7 @@ type-level check will catch it.
 ### Slice 8.3 — Add backend compliance tests
 
 **Fix:**
+
 - Expand `packages/api-contract/test/compliance.test.ts` (or create
   per-Worker compliance test files) to verify that actual backend
   response builders return shapes assignable to the contract types:
@@ -1192,6 +1270,7 @@ type-level check will catch it.
 - Cover all 6 Workers and all endpoints.
 
 **Acceptance criteria:**
+
 - At least one compliance test per Worker that verifies a real response
   shape against the contract.
 - Tests fail if a backend response shape diverges from the contract.
@@ -1202,6 +1281,7 @@ type-level check will catch it.
 ### Slice 8.4 — Add frontend compliance tests
 
 **Fix:**
+
 - Add tests in `apps/web` (or expand
   `packages/api-contract/test/compliance.test.ts`) that verify frontend
   Valibot-inferred types are assignable to contract types:
@@ -1215,6 +1295,7 @@ type-level check will catch it.
 - Cover all response types used by the frontend.
 
 **Acceptance criteria:**
+
 - Every frontend Valibot-inferred response type has a
   `expectTypeOf`-based compliance test.
 - Tests fail if a Valibot schema diverges from the contract.
@@ -1225,6 +1306,7 @@ type-level check will catch it.
 ### Slice 8.5 — Update api-contract AGENTS.md with adoption status
 
 **Fix:**
+
 - Update `packages/api-contract/AGENTS.md` "Consumed by" table to
   reflect actual adoption after Slices 8.1–8.4 are complete.
 - Add a "Migration status" section documenting which consumers have been
@@ -1233,6 +1315,7 @@ type-level check will catch it.
   package.
 
 **Acceptance criteria:**
+
 - `AGENTS.md` accurately reflects which Workers and frontend modules
   import from the package.
 - No stale "consumed by" entries.
@@ -1241,16 +1324,16 @@ type-level check will catch it.
 
 ## Cross-reference
 
-| Epic                        | Related specs                                                                                  | Related invariants          |
-| --------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------- |
-| 1: Critical Bug Fixes       | [`02-invariants.md`](02-invariants.md), [`04-api.md`](04-api.md)                               | I-1, I-4, I-11              |
-| 2: Invariant Hardening      | [`02-invariants.md`](02-invariants.md), [`08-testing-strategy.md`](08-testing-strategy.md)     | I-4, I-5, I-6, I-7, I-9    |
-| 3: Test Quality Improvement | [`08-testing-strategy.md`](08-testing-strategy.md)                                             | I-10, I-11                  |
-| 4: Testing Layer Build-Out  | [`08-testing-strategy.md`](08-testing-strategy.md) §"Test levels", §"Blockchain test tiers"    | I-4, I-5, I-7, I-9, I-10   |
-| 5: CI/CD Pipeline           | [`05-hosting-and-deploy.md`](05-hosting-and-deploy.md)                                         | —                           |
-| 6: Environment Polish       | [`05-hosting-and-deploy.md`](05-hosting-and-deploy.md), [`ops/secrets-inventory.md`](../ops/secrets-inventory.md) | —                           |
-| 7: Docs Accuracy            | [`02-invariants.md`](02-invariants.md), [`08-testing-strategy.md`](08-testing-strategy.md)     | I-8                         |
-| 8: API Contract Adoption    | [`04-api.md`](04-api.md), [`10-frontend-architecture.md`](10-frontend-architecture.md)         | I-8                         |
+| Epic                        | Related specs                                                                                                     | Related invariants       |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| 1: Critical Bug Fixes       | [`02-invariants.md`](02-invariants.md), [`04-api.md`](04-api.md)                                                  | I-1, I-4, I-11           |
+| 2: Invariant Hardening      | [`02-invariants.md`](02-invariants.md), [`08-testing-strategy.md`](08-testing-strategy.md)                        | I-4, I-5, I-6, I-7, I-9  |
+| 3: Test Quality Improvement | [`08-testing-strategy.md`](08-testing-strategy.md)                                                                | I-10, I-11               |
+| 4: Testing Layer Build-Out  | [`08-testing-strategy.md`](08-testing-strategy.md) §"Test levels", §"Blockchain test tiers"                       | I-4, I-5, I-7, I-9, I-10 |
+| 5: CI/CD Pipeline           | [`05-hosting-and-deploy.md`](05-hosting-and-deploy.md)                                                            | —                        |
+| 6: Environment Polish       | [`05-hosting-and-deploy.md`](05-hosting-and-deploy.md), [`ops/secrets-inventory.md`](../ops/secrets-inventory.md) | —                        |
+| 7: Docs Accuracy            | [`02-invariants.md`](02-invariants.md), [`08-testing-strategy.md`](08-testing-strategy.md)                        | I-8                      |
+| 8: API Contract Adoption    | [`04-api.md`](04-api.md), [`10-frontend-architecture.md`](10-frontend-architecture.md)                            | I-8                      |
 
 ## What this spec does not change
 
@@ -1266,13 +1349,13 @@ type-level check will catch it.
 
 ## Risk assessment
 
-| Epic                        | Risk                                                                | Mitigation                                                 |
-| --------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------- |
-| 1: Critical Bug Fixes       | Low — targeted fixes with clear acceptance criteria                 | Each fix is small and independently verifiable             |
-| 2: Invariant Hardening      | Low — additive tests and scripts, no production code changes        | New tests only; existing tests must not regress            |
-| 3: Test Quality Improvement | Low — removing dead tests, adding missing coverage                  | Additive; no behavior changes                              |
-| 4: Testing Layer Build-Out  | Medium-High — new infrastructure (local validator, Telethon)        | Gate behind env flags; keep out of PR CI; document setup   |
-| 5: CI/CD Pipeline           | Medium — changes to deploy workflow could affect staging            | Add jobs don't remove existing ones; test in PR first      |
-| 6: Environment Polish       | Low — config-only changes                                           | Each slice is independent and reversible                   |
-| 7: Docs Accuracy            | Low — documentation-only                                            | No runtime impact                                          |
-| 8: API Contract Adoption    | Low — type-only changes, no runtime behavior change                 | Incremental migration; `pnpm run check` catches regressions  |
+| Epic                        | Risk                                                         | Mitigation                                                  |
+| --------------------------- | ------------------------------------------------------------ | ----------------------------------------------------------- |
+| 1: Critical Bug Fixes       | Low — targeted fixes with clear acceptance criteria          | Each fix is small and independently verifiable              |
+| 2: Invariant Hardening      | Low — additive tests and scripts, no production code changes | New tests only; existing tests must not regress             |
+| 3: Test Quality Improvement | Low — removing dead tests, adding missing coverage           | Additive; no behavior changes                               |
+| 4: Testing Layer Build-Out  | Medium-High — new infrastructure (local validator, Telethon) | Gate behind env flags; keep out of PR CI; document setup    |
+| 5: CI/CD Pipeline           | Medium — changes to deploy workflow could affect staging     | Add jobs don't remove existing ones; test in PR first       |
+| 6: Environment Polish       | Low — config-only changes                                    | Each slice is independent and reversible                    |
+| 7: Docs Accuracy            | Low — documentation-only                                     | No runtime impact                                           |
+| 8: API Contract Adoption    | Low — type-only changes, no runtime behavior change          | Incremental migration; `pnpm run check` catches regressions |

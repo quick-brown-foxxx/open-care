@@ -167,7 +167,8 @@ export function createTelegramApiMock(): TelegramApiMock {
     globalThis.fetch = vi
       .fn()
       .mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        const url =
+          typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
         if (url.includes('api.telegram.org')) {
           const rawBody = init?.body == null ? null : String(init.body);
           const attempt: TelegramApiAttempt = { url, rawBody };
@@ -181,7 +182,10 @@ export function createTelegramApiMock(): TelegramApiMock {
           }
 
           if (isSentMessage(attempt.parsedBody)) {
-            sentMessages.push({ chat_id: attempt.parsedBody.chat_id, text: attempt.parsedBody.text });
+            sentMessages.push({
+              chat_id: attempt.parsedBody.chat_id,
+              text: attempt.parsedBody.text,
+            });
           }
           return responseFactory();
         }
@@ -195,20 +199,22 @@ export function createTelegramApiMock(): TelegramApiMock {
     clearSentMessages: clearRecordedTelegramCalls,
     setupSuccess: () => {
       clearRecordedTelegramCalls();
-      setupTelegramResponse(() =>
-        new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
+      setupTelegramResponse(
+        () =>
+          new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
       );
     },
     setupFailure: () => {
       clearRecordedTelegramCalls();
-      setupTelegramResponse(() =>
-        new Response('Internal Server Error', {
-          status: 500,
-          headers: { 'Content-Type': 'text/plain' },
-        }),
+      setupTelegramResponse(
+        () =>
+          new Response('Internal Server Error', {
+            status: 500,
+            headers: { 'Content-Type': 'text/plain' },
+          }),
       );
     },
     restore: () => {

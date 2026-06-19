@@ -18,11 +18,13 @@ export interface SolanaParsedTransferInfo {
 
 export interface SolanaParsedInstruction {
   programId: string;
-  parsed?: {
-    type: string;
-    info: SolanaParsedTransferInfo;
-    [key: string]: unknown;
-  } | undefined;
+  parsed?:
+    | {
+        type: string;
+        info: SolanaParsedTransferInfo;
+        [key: string]: unknown;
+      }
+    | undefined;
   [key: string]: unknown;
 }
 
