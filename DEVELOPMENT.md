@@ -59,7 +59,8 @@ Individual gates:
 
 ```bash
 pnpm run format:check   # prettier --check .
-pnpm run lint           # eslint --fix .
+pnpm run lint           # eslint .
+pnpm run lint:fix       # eslint --fix .
 pnpm run check          # tsc -b
 pnpm run test           # vitest run
 pnpm run test:python-verify # python3 tools/verify/test_vector.py
