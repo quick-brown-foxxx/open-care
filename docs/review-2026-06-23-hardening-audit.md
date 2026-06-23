@@ -3,6 +3,7 @@
 **Type:** Read-only hardening audit. No fixes applied.
 **Scope:** Current HEAD (`b9f48f5`) against `docs/specs/13-post-review-hardening.md` and all project invariants.
 **Method:** 8 independent subagents across 2 rounds:
+
 - Round 1: spec compliance, code/business/invariant review, test quality, docs/CI/config, manual runtime verification
 - Round 2: trustworthiness architecture audit, security boundary enforcement audit, pattern-sensitive areas audit, silent failure audit (failed — covered by trustworthiness audit STV1-STV5)
 - Plus orchestrator integration and high-level architectural analysis using `architecting-changes` and `doubt-early` skills.
@@ -433,18 +434,18 @@ Additional artifacts now under `test/`: verify, smoke, localnet, e2e-tg, secret-
 
 The system has a **strong read side and trust foundation** but a **weak write side**. The patterns that protect against operator mistakes — balance checks, idempotency, dry-run, bounded retries — are the ones most conspicuously absent. This asymmetry is the signature of a system where the cryptographic trust story (hash chain, canonical JSON, append-only triggers) was prioritized over the operational safety story (what happens when the operator makes a mistake?).
 
-| Category | Strength | Weakness |
-| --- | --- | --- |
-| **Hash chain / cryptography** | Excellent — RFC 8785, normative test vector, Python cross-verification, collision retry | Concurrency race in `appendLedgerEvent` (C6) |
-| **Append-only enforcement** | Excellent — SQLite triggers, single write path, bivalent corrections | Anchor pipeline can leave ledger event missing (C7) |
-| **Privacy architecture** | Excellent — separate D1, HMAC refs, AES-GCM chat IDs | Logging policy is convention-only — `redact()` dead code (C9) |
-| **Webhook ingest** | Excellent — idempotent inbox, error classification, ACK-fast | No fetch timeout (I8), no retry backoff (I7) |
-| **Operator write safety** | **Critically weak** — no balance check (C1), no idempotency (C2, C3), no dry-run (C5) | This is the biggest gap |
-| **Anchor pipeline** | Good lock protocol, recovery path | Procedural if-else chain (I2), published-before-ledger (C7), no bounded retry (C4) |
-| **Public verification** | Good hash recomputation | Verifier doesn't independently check Solana (C8), exits 0 on skip |
-| **Security boundaries** | Good secret isolation, constant-time auth, service binding model | `workers_dev` exposes internal routes (C10), per-isolate rate limiter (I20) |
-| **State machines** | States exist in DB schemas | No explicit state machines — procedural if-else chains in anchor, inbox, bot (I2, I3, I4) |
-| **External integrations** | Good Helius RPC anti-corruption layer | Telegram API not validated (I5), anchor-cron RPC errors not classified (I6) |
+| Category                      | Strength                                                                                | Weakness                                                                                  |
+| ----------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| **Hash chain / cryptography** | Excellent — RFC 8785, normative test vector, Python cross-verification, collision retry | Concurrency race in `appendLedgerEvent` (C6)                                              |
+| **Append-only enforcement**   | Excellent — SQLite triggers, single write path, bivalent corrections                    | Anchor pipeline can leave ledger event missing (C7)                                       |
+| **Privacy architecture**      | Excellent — separate D1, HMAC refs, AES-GCM chat IDs                                    | Logging policy is convention-only — `redact()` dead code (C9)                             |
+| **Webhook ingest**            | Excellent — idempotent inbox, error classification, ACK-fast                            | No fetch timeout (I8), no retry backoff (I7)                                              |
+| **Operator write safety**     | **Critically weak** — no balance check (C1), no idempotency (C2, C3), no dry-run (C5)   | This is the biggest gap                                                                   |
+| **Anchor pipeline**           | Good lock protocol, recovery path                                                       | Procedural if-else chain (I2), published-before-ledger (C7), no bounded retry (C4)        |
+| **Public verification**       | Good hash recomputation                                                                 | Verifier doesn't independently check Solana (C8), exits 0 on skip                         |
+| **Security boundaries**       | Good secret isolation, constant-time auth, service binding model                        | `workers_dev` exposes internal routes (C10), per-isolate rate limiter (I20)               |
+| **State machines**            | States exist in DB schemas                                                              | No explicit state machines — procedural if-else chains in anchor, inbox, bot (I2, I3, I4) |
+| **External integrations**     | Good Helius RPC anti-corruption layer                                                   | Telegram API not validated (I5), anchor-cron RPC errors not classified (I6)               |
 
 ---
 
